@@ -69,6 +69,12 @@ enum SharedKeychain {
         // questo che il dito non funzionava. Qui l'elemento è normale e la
         // biometria la chiede l'app, con LAContext, prima di leggerlo.
         query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        // ...e l'app si mette da sola fra le applicazioni fidate dell'ACL.
+        // Senza, il portachiavi "login" chiede la password di sistema a ogni
+        // lettura, perché non riconosce chi sta chiedendo.
+        if let access = selfTrustedAccess() {
+            query[kSecAttrAccess as String] = access
+        }
         #endif
 
         let status = SecItemAdd(query as CFDictionary, nil)
@@ -104,4 +110,28 @@ enum SharedKeychain {
         ]
         SecItemDelete(query as CFDictionary)
     }
+
+    #if os(macOS)
+    /// ACL del portachiavi "login" che elenca questa stessa app fra quelle
+    /// fidate: così la lettura non fa comparire il pannello di sistema.
+    ///
+    /// L'ACL è legata alla firma del codice, quindi regge solo se l'app è
+    /// firmata in modo stabile (vedi DEVELOPMENT_TEAM in project.yml): con la
+    /// firma ad-hoc, che cambia a ogni build, macOS vede ogni volta un'app
+    /// diversa e ricomincia a chiedere.
+    ///
+    /// API deprecate ma tuttora l'unica strada per il portachiavi classico:
+    /// quello moderno ("data protection") richiede entitlement che questo
+    /// target, non in sandbox, non può avere.
+    private static func selfTrustedAccess() -> SecAccess? {
+        var trustedApp: SecTrustedApplication?
+        guard SecTrustedApplicationCreateFromPath(nil, &trustedApp) == errSecSuccess,
+              let trustedApp else { return nil }
+        var access: SecAccess?
+        guard SecAccessCreate("Scrigno" as CFString, [trustedApp] as CFArray, &access) == errSecSuccess else {
+            return nil
+        }
+        return access
+    }
+    #endif
 }

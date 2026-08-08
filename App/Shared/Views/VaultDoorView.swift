@@ -12,6 +12,8 @@ struct VaultDoorView: View {
     /// Gradi del volantino: gira mentre scrivi e fa il giro completo all'apertura.
     @State private var wheelAngle: Double = 0
     @State private var opening = false
+    /// Gradi di apertura dell'anta attorno al perno sinistro.
+    @State private var doorSwing: Double = 0
     @State private var rememberWithBiometry = false
     /// Col dito configurato la porta si apre da sé: la password compare solo
     /// se il dito non va (o se è il giorno in cui va comunque riscritta).
@@ -20,32 +22,60 @@ struct VaultDoorView: View {
 
     var body: some View {
         ZStack {
-            Theme.paper.ignoresSafeArea()
+            // Dietro c'è già la parete dei cassetti: quando l'anta gira la
+            // vedi comparire, prima ancora di entrarci dentro. Nessuna
+            // etichetta, però — i nomi dei progetti non si leggono da fuori.
+            LockedWallBackdrop()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
-            VStack(spacing: 34) {
-                VaultDoorShape(wheelAngle: wheelAngle)
-                    // grande e sola quando basta il dito, più piccola quando
-                    // sotto ci va il campo della password
-                    .frame(width: askPassword ? 240 : 380,
-                           height: askPassword ? 240 : 380)
-                    // all'apertura la porta avanza verso di te e sfuma
-                    .scaleEffect(opening ? 2.6 : 1)
-                    .opacity(opening ? 0 : 1)
+            // L'anta: tutto il fronte è un pezzo solo, incernierato a
+            // sinistra come una vera porta blindata.
+            ZStack {
+                Theme.paper.ignoresSafeArea()
 
-                if !opening {
-                    if askPassword {
-                        passwordControls
-                            .transition(.opacity)
-                    } else {
-                        Text("appoggia il dito sul sensore")
-                            .font(Theme.mono(11))
-                            .foregroundStyle(Theme.inkSoft)
-                            .transition(.opacity)
+                VStack(spacing: 34) {
+                    VaultDoorShape(wheelAngle: wheelAngle)
+                        // grande e sola quando basta il dito, più piccola
+                        // quando sotto ci va il campo della password
+                        .frame(width: askPassword ? 240 : 380,
+                               height: askPassword ? 240 : 380)
+
+                    if !opening {
+                        if askPassword {
+                            passwordControls
+                                .transition(.opacity)
+                        } else {
+                            Text("appoggia il dito sul sensore")
+                                .font(Theme.mono(11))
+                                .foregroundStyle(Theme.inkSoft)
+                                .transition(.opacity)
+                        }
                     }
                 }
+                // il campo trema quando sbagli, come una maniglia che non cede
+                .offset(x: wrong ? -6 : 0)
+
+                // cardini sul lato del perno
+                VStack(spacing: 90) {
+                    ForEach(0..<2, id: \.self) { _ in
+                        Rectangle()
+                            .fill(Theme.paperRaised)
+                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                            .frame(width: 26, height: 54)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 10)
             }
-            // il campo trema quando sbagli, come una maniglia che non cede
-            .offset(x: wrong ? -6 : 0)
+            // perno a sinistra: l'anta ruota attorno al proprio bordo e si
+            // apre verso di te, scoprendo la parete
+            .rotation3DEffect(
+                .degrees(doorSwing),
+                axis: (x: 0, y: 1, z: 0),
+                anchor: .leading,
+                perspective: 0.45
+            )
         }
         .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.35), value: askPassword)
@@ -151,12 +181,22 @@ struct VaultDoorView: View {
         }
     }
 
+    /// Sequenza: il volantino gira e sblocca i chiavistelli, poi l'anta si
+    /// stacca e ruota sul perno scoprendo la parete. Solo a fine corsa si
+    /// passa alla schermata vera.
     private func open() {
-        withAnimation(.easeInOut(duration: 0.9)) {
+        withAnimation(.easeInOut(duration: 0.75)) {
             wheelAngle += 720
             opening = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) { onUnlocked() }
+        // l'anta parte quando il volantino ha finito di girare
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 1.15)) {
+                doorSwing = -105
+            }
+        }
+        // ...e la parete resta scoperta un istante prima del cambio schermata
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.85) { onUnlocked() }
     }
 
     private func fail() {
@@ -167,6 +207,41 @@ struct VaultDoorView: View {
             wheelAngle -= 6
         }
         fieldFocused = true
+    }
+}
+
+/// La parete di cassetti come si vede da dietro l'anta: la stessa scena 3D
+/// della home, ma muta. Niente targhette, niente post-it, niente voci: a
+/// scrigno chiuso non si deve leggere nemmeno come si chiamano i progetti.
+private struct LockedWallBackdrop: View {
+    private let cols = 13
+    private let rows = 9
+
+    var body: some View {
+        DrawerWall3D(
+            cols: cols,
+            rows: rows,
+            visibleCols: 5,
+            visibleRows: 5,
+            centerIndex: (rows / 2) * cols + cols / 2,
+            labels: Array(repeating: nil, count: cols * rows),
+            icons: Array(repeating: nil, count: cols * rows),
+            noteColors: Array(repeating: nil, count: cols * rows),
+            entriesByCell: Array(repeating: [], count: cols * rows),
+            openCell: .constant(nil),
+            selectedFolder: .constant(nil),
+            revealFolder: .constant(nil),
+            folderBodyHeight: DrawerWall3D.folderExtractedMinH,
+            folderRect: .constant(nil),
+            creatingCell: .constant(nil),
+            plateRect: .constant(nil),
+            focusNote: .constant(false),
+            noteRect: .constant(nil),
+            draftLabel: "",
+            draftIcon: nil,
+            draftNoteColor: nil,
+            onTapNewEntry: {}
+        )
     }
 }
 

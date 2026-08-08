@@ -46,6 +46,12 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
+        # Firma stabile, non ad-hoc: l'ACL del portachiavi è legata alla firma,
+        # e con quella ad-hoc (che cambia a ogni build) macOS vede ogni volta
+        # un'app nuova e richiede la password del portachiavi "login".
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Developer ID Application"
+        DEVELOPMENT_TEAM: 69SHH7M6DY
     # Nessuna entitlement -> niente App Sandbox: l'app Mac legge/scrive
     # liberamente il file .kdbx dove lo metti tu (es. iCloud Drive).
     info:
