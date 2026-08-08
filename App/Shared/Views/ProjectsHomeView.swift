@@ -231,41 +231,24 @@ struct ProjectsHomeView: View {
 
     // Parete molto più grande di quel che la camera inquadra (5×5): coi
     // margini che strabordano e la parallasse sembra continuare all'infinito.
-    private let cols = 13
-    private let rows = 9
-    private let visibleCols = 5
-    private let visibleRows = 5
-    private var centerIndex: Int { (rows / 2) * cols + cols / 2 }
+    private let cols = WallLayout.cols
+    private let rows = WallLayout.rows
+    private let visibleCols = WallLayout.visibleCols
+    private let visibleRows = WallLayout.visibleRows
+    private var centerIndex: Int { WallLayout.centerIndex }
 
     /// Celle ordinate per distanza dal centro (il centro incluso per primo):
     /// dove finiscono i progetti, in ordine di creazione — fisso, non dipende
     /// da quale cassetto è aperto, così aprirne uno non sposta gli altri.
-    private var spiralOrder: [Int] {
-        let cRow = rows / 2, cCol = cols / 2
-        let rest = (0..<(cols * rows))
-            .filter { $0 != centerIndex }
-            .sorted {
-                let d0 = pow(Double($0 / cols - cRow), 2) + pow(Double($0 % cols - cCol), 2)
-                let d1 = pow(Double($1 / cols - cRow), 2) + pow(Double($1 % cols - cCol), 2)
-                return d0 < d1
-            }
-        return [centerIndex] + rest
-    }
+    private var spiralOrder: [Int] { WallLayout.spiralOrder }
 
     /// Cella → progetto che la occupa, in ordine di creazione (stabile).
     private var projectAtCell: [Int: VaultFileManager.Project] {
-        let order = spiralOrder
-        var map: [Int: VaultFileManager.Project] = [:]
-        for (i, p) in projects.enumerated() where i < order.count {
-            map[order[i]] = p
-        }
-        return map
+        WallLayout.projectAtCell(projects)
     }
 
     private func cellIndex(for project: VaultFileManager.Project) -> Int? {
-        guard let i = projects.firstIndex(where: { $0.id == project.id }) else { return nil }
-        let order = spiralOrder
-        return i < order.count ? order[i] : nil
+        WallLayout.cellIndex(of: project, in: projects)
     }
 
     /// Progetto del cassetto attualmente aperto (se aperto).

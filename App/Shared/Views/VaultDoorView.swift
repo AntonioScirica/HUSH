@@ -262,24 +262,27 @@ private struct WallWithHole: Shape {
     }
 }
 
-/// La parete di cassetti come si vede da dietro l'anta: la stessa scena 3D
-/// della home, ma muta. Niente targhette, niente post-it, niente voci: a
-/// scrigno chiuso non si deve leggere nemmeno come si chiamano i progetti.
+/// La parete di cassetti come si vede da dietro l'anta: è la stessa scena
+/// della home, con gli stessi progetti al loro posto (targhette e post-it
+/// compresi). Deve combaciare, altrimenti allo sblocco si vedrebbe la parete
+/// muta sfumare in quella vera.
+///
+/// Vuol dire che a scrigno chiuso i nomi dei progetti si leggono da fuori:
+/// scelta voluta, le password restano comunque dentro.
 private struct LockedWallBackdrop: View {
-    private let cols = 13
-    private let rows = 9
+    private let projects = VaultFileManager.shared.projects
 
     var body: some View {
         DrawerWall3D(
-            cols: cols,
-            rows: rows,
-            visibleCols: 5,
-            visibleRows: 5,
-            centerIndex: (rows / 2) * cols + cols / 2,
-            labels: Array(repeating: nil, count: cols * rows),
-            icons: Array(repeating: nil, count: cols * rows),
-            noteColors: Array(repeating: nil, count: cols * rows),
-            entriesByCell: Array(repeating: [], count: cols * rows),
+            cols: WallLayout.cols,
+            rows: WallLayout.rows,
+            visibleCols: WallLayout.visibleCols,
+            visibleRows: WallLayout.visibleRows,
+            centerIndex: WallLayout.centerIndex,
+            labels: WallLayout.labels(projects),
+            icons: WallLayout.icons(projects),
+            noteColors: WallLayout.noteColors(projects),
+            entriesByCell: Array(repeating: [], count: WallLayout.count),
             openCell: .constant(nil),
             selectedFolder: .constant(nil),
             revealFolder: .constant(nil),
