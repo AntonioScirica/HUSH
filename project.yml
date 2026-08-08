@@ -1,0 +1,149 @@
+# Specifica XcodeGen per Scrigno.
+#
+# Uso: installa XcodeGen una volta (`brew install xcodegen`), poi da questa
+# cartella lancia `xcodegen generate` per creare Scrigno.xcodeproj, quindi
+# aprilo con Xcode. Vedi ISTRUZIONI.md per i passaggi completi, incluso cosa
+# personalizzare (Team ID, bundle identifier, App Group).
+#
+# Info.plist ed entitlements di ogni target sono generati automaticamente da
+# XcodeGen a partire dalle sezioni `info:` / `entitlements:` qui sotto — non
+# servono file .plist scritti a mano.
+
+name: Scrigno
+options:
+  bundleIdPrefix: com.antonioscirica
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: "" # <-- inserisci qui il tuo Team ID (Xcode > Signing & Capabilities)
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+packages:
+  VaultCore:
+    path: VaultCore
+
+targets:
+  Scrigno-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: App/Shared
+      - path: App/macOS
+    dependencies:
+      - package: VaultCore
+        product: VaultCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.scrigno
+        PRODUCT_NAME: Scrigno
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+    # Nessuna entitlement -> niente App Sandbox: l'app Mac legge/scrive
+    # liberamente il file .kdbx dove lo metti tu (es. iCloud Drive).
+    info:
+      path: App/macOS/Info.plist
+      properties:
+        CFBundleDisplayName: Scrigno
+        LSApplicationCategoryType: public.app-category.utilities
+        LSMinimumSystemVersion: "14.0"
+        NSHumanReadableCopyright: "© Antonio Scirica"
+        CFBundlePackageType: APPL
+
+  Scrigno-iOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: App/Shared
+      - path: App/iOS
+    dependencies:
+      - package: VaultCore
+        product: VaultCore
+      - target: ScrignoAutoFill
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.scrigno
+        PRODUCT_NAME: Scrigno
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: App/iOS/Info.plist
+      properties:
+        CFBundleDisplayName: Scrigno
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        NSFaceIDUsageDescription: "Scrigno usa Face ID per sbloccare rapidamente il tuo vault."
+    entitlements:
+      path: App/iOS/Scrigno-iOS.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.antonioscirica.scrigno
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.antonioscirica.scrigno.shared
+
+  ScrignoAutoFill:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: AutoFillExtension
+      - path: App/Shared/Persistence
+    dependencies:
+      - package: VaultCore
+        product: VaultCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.scrigno.autofill
+        PRODUCT_NAME: ScrignoAutoFill
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+    info:
+      path: AutoFillExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Scrigno
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.authentication-services-credential-provider-ui
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).CredentialProviderViewController
+        NSFaceIDUsageDescription: "Scrigno usa Face ID per sbloccare rapidamente il tuo vault."
+    entitlements:
+      path: AutoFillExtension/ScrignoAutoFill.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.antonioscirica.scrigno
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.antonioscirica.scrigno.shared
+
+schemes:
+  Scrigno-macOS:
+    build:
+      targets:
+        Scrigno-macOS: all
+    run:
+      config: Debug
+  Scrigno-iOS:
+    build:
+      targets:
+        Scrigno-iOS: all
+        ScrignoAutoFill: all
+    run:
+      config: Debug
