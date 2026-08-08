@@ -58,6 +58,9 @@ private struct CopyButton: View {
 /// progetto (vault separato). Click sul centrale: il cassetto scorre fuori
 /// e la camera si avvicina, mostrando le cartelle (le password) dentro.
 struct ProjectsHomeView: View {
+    /// Richiude il caveau e riporta alla porta.
+    var onLock: () -> Void = {}
+
     @EnvironmentObject var vm: VaultViewModel
 
     @State private var projects: [VaultFileManager.Project] = VaultFileManager.shared.projects
@@ -422,6 +425,19 @@ struct ProjectsHomeView: View {
                             .frame(width: 200, height: barHeight)
                             .background(Theme.paper)
                             .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+
+                            Button {
+                                onLock()
+                            } label: {
+                                Image(systemName: "lock")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Theme.ink)
+                                    .frame(width: barHeight, height: barHeight)
+                                    .background(Theme.paper)
+                                    .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Richiudi lo scrigno")
 
                             Button {
                                 startCreation()
@@ -1310,19 +1326,20 @@ struct ProjectsHomeView: View {
         creatingCell = cell
     }
 
-    /// Invio sulla targhetta: crea subito il progetto, senza popup.
-    /// La master password è una sola per tutto il vault (si chiederà altrove).
+    /// Invio sulla targhetta: crea subito il progetto, senza popup. Il file
+    /// nasce cifrato con la master password della sessione — è quella che hai
+    /// digitato alla porta, non se ne chiede una per ogni progetto.
     private func confirmCreationName() {
         let name = createName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
+        guard let key = MasterKey.session else {
+            localError = "Scrigno è bloccato: riapri con la master password."
+            return
+        }
         newName = name
-        newPassword = Self.vaultPassword
+        newPassword = key
         createProject()
     }
-
-    // ponytail: password unica di sviluppo — sostituire con quella del vault
-    // quando ci sarà lo sblocco all'avvio.
-    private static let vaultPassword = "scrigno-dev-vault"
 
     /// Cerca tra le password: apre il cassetto, sfoglia fino alla cartella
     /// che matcha e la estrae al centro. Se matcha un progetto, lo attiva.

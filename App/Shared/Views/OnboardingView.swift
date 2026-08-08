@@ -1,0 +1,285 @@
+import SwiftUI
+
+/// Primo avvio: si presenta lo scrigno, si sceglie la master password e —
+/// se la macchina ce l'ha — si attiva il dito. Stessa carta, stesso
+/// inchiostro, stessi divider numerati del resto dell'app.
+struct OnboardingView: View {
+    let onDone: () -> Void
+
+    private enum Step: Int, CaseIterable {
+        case intro, password, biometry, ready
+    }
+
+    @State private var step: Step = .intro
+    @State private var password = ""
+    @State private var confirm = ""
+    @State private var reveal = false
+    @State private var error: String?
+    @FocusState private var passwordFocused: Bool
+
+    var body: some View {
+        ZStack {
+            Theme.paper.ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 26) {
+                header
+
+                Group {
+                    switch step {
+                    case .intro:    intro
+                    case .password: passwordStep
+                    case .biometry: biometryStep
+                    case .ready:    ready
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Spacer(minLength: 0)
+
+                footer
+            }
+            .padding(40)
+            .frame(width: 520, height: 560)
+        }
+        .preferredColorScheme(.light)
+    }
+
+    // MARK: - Testata
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            IndexLabel(number: step.rawValue + 1, text: title)
+            Rectangle().fill(Theme.line).frame(height: 1.2)
+        }
+    }
+
+    private var title: String {
+        switch step {
+        case .intro:    return "benvenuto"
+        case .password: return "la tua unica password"
+        case .biometry: return "sblocco col dito"
+        case .ready:    return "tutto pronto"
+        }
+    }
+
+    // MARK: - Passi
+
+    private var intro: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(alignment: .top, spacing: 0) {
+                Text("SCRIGNO")
+                    .font(Theme.display(48))
+                    .kerning(-1)
+                    .foregroundStyle(Theme.ink)
+                Text("kdbx")
+                    .font(Theme.mono(10, .bold))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Theme.yellow, in: Capsule())
+                    .rotationEffect(.degrees(-8))
+                    .offset(x: -4, y: 4)
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                bullet("un caveau, non un servizio",
+                       "i tuoi dati restano su questo computer. nessun account, nessun server.")
+                bullet("un cassetto per progetto",
+                       "ogni progetto è un file .kdbx a sé, cifrato con AES-256 e Argon2id.")
+                bullet("una password per tutto",
+                       "una sola chiave apre l'intero scrigno: quella che scegli adesso.")
+            }
+        }
+    }
+
+    private func bullet(_ head: String, _ body: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Rectangle().fill(Theme.ink).frame(width: 7, height: 7).padding(.top, 5)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(head)
+                    .font(Theme.mono(12, .semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(body)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var passwordStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("scegline una lunga e che ricordi. non si può recuperare:\nnon esiste nessuno a cui chiederla.")
+                .font(Theme.mono(11))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Group {
+                    if reveal {
+                        TextField("master password", text: $password)
+                    } else {
+                        SecureField("master password", text: $password)
+                    }
+                }
+                .textFieldStyle(PaperFieldStyle())
+                .focused($passwordFocused)
+
+                Button { reveal.toggle() } label: {
+                    Image(systemName: reveal ? "eye.slash" : "eye")
+                        .foregroundStyle(Theme.inkSoft)
+                        .frame(width: 16, height: 16)
+                }
+                .buttonStyle(.plain)
+            }
+
+            SecureField("ripetila", text: $confirm)
+                .textFieldStyle(PaperFieldStyle())
+                .onSubmit(advance)
+
+            strengthBar
+
+            if let error {
+                Text(error)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.danger)
+            }
+        }
+        .onAppear { passwordFocused = true }
+    }
+
+    /// Forza: quattro tacche, si riempiono con lunghezza e varietà.
+    private var strengthBar: some View {
+        let score = strengthScore
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(0..<4, id: \.self) { i in
+                    Rectangle()
+                        .fill(i < score ? Theme.ink : Theme.line.opacity(0.25))
+                        .frame(height: 4)
+                }
+            }
+            Text(["troppo corta", "debole", "discreta", "buona", "solida"][score])
+                .font(Theme.mono(10))
+                .foregroundStyle(Theme.inkSoft)
+        }
+    }
+
+    private var strengthScore: Int {
+        var s = 0
+        if password.count >= 8 { s += 1 }
+        if password.count >= 14 { s += 1 }
+        if password.rangeOfCharacter(from: .decimalDigits) != nil
+            && password.rangeOfCharacter(from: .letters) != nil { s += 1 }
+        if password.rangeOfCharacter(from: CharacterSet.alphanumerics.inverted) != nil { s += 1 }
+        return min(s, 4)
+    }
+
+    private var biometryStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: "touchid")
+                .font(.system(size: 46, weight: .light))
+                .foregroundStyle(Theme.ink)
+            Text("puoi aprire lo scrigno col dito invece di riscrivere la\npassword ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
+                .font(Theme.mono(11))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            if let error {
+                Text(error)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.danger)
+            }
+        }
+    }
+
+    private var ready: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("lo scrigno è chiuso a chiave.")
+                .font(Theme.display(26))
+                .foregroundStyle(Theme.ink)
+            Text("da qui in poi vedrai la parete dei cassetti: uno per\nprogetto. creane uno col + e mettici dentro la prima\npassword.")
+                .font(Theme.mono(11))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Navigazione
+
+    private var footer: some View {
+        HStack(spacing: 10) {
+            // pallini di avanzamento
+            HStack(spacing: 6) {
+                ForEach(Step.allCases, id: \.rawValue) { s in
+                    Rectangle()
+                        .fill(s.rawValue <= step.rawValue ? Theme.ink : Theme.line.opacity(0.3))
+                        .frame(width: 16, height: 3)
+                }
+            }
+
+            Spacer()
+
+            if step == .biometry {
+                Button("non ora") { step = .ready }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(width: 130)
+            }
+
+            Button(primaryLabel) { advance() }
+                .buttonStyle(InkButtonStyle(prominent: true))
+                .frame(width: 170)
+                .disabled(!canAdvance)
+                .opacity(canAdvance ? 1 : 0.4)
+        }
+    }
+
+    private var primaryLabel: String {
+        switch step {
+        case .intro:    return "comincia"
+        case .password: return "imposta"
+        case .biometry: return "attiva"
+        case .ready:    return "entra"
+        }
+    }
+
+    private var canAdvance: Bool {
+        switch step {
+        case .password:
+            return password.count >= 8 && password == confirm
+        default:
+            return true
+        }
+    }
+
+    private func advance() {
+        error = nil
+        switch step {
+        case .intro:
+            step = .password
+
+        case .password:
+            guard password.count >= 8 else {
+                error = "almeno 8 caratteri."
+                return
+            }
+            guard password == confirm else {
+                error = "le due password non combaciano."
+                return
+            }
+            MasterKey.configure(password: password)
+            step = MasterKey.biometryAvailable ? .biometry : .ready
+
+        case .biometry:
+            do {
+                try MasterKey.enableBiometry(password: password)
+                step = .ready
+            } catch {
+                self.error = "non è stato possibile attivarlo: \(error.localizedDescription)"
+            }
+
+        case .ready:
+            password = ""; confirm = ""
+            onDone()
+        }
+    }
+}

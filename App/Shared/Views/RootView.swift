@@ -3,19 +3,42 @@ import VaultCore
 
 public struct RootView: View {
     @StateObject private var vm = VaultViewModel()
+    /// Tre stati soli: mai configurato → onboarding; configurato ma chiuso →
+    /// porta del caveau; aperto → la parete dei cassetti.
+    @State private var unlocked = false
+    @State private var configured = MasterKey.isConfigured
 
     public init() {}
 
     public var body: some View {
         Group {
-            // ProjectsHomeView (la parete di cassetti 3D) è tutta l'app ormai:
-            // VaultListView era la schermata prima del rewrite e non va più
-            // mostrata — ci si finiva appena vm.isUnlocked diventava true
-            // (es. creando un progetto), dirottando "nuova password" & co.
-            // sul vecchio form invece che sul flusso nel cassetto.
-            ProjectsHomeView()
+            if !configured {
+                OnboardingView {
+                    configured = true
+                    // l'onboarding lascia già la sessione aperta
+                    unlocked = MasterKey.isUnlocked
+                }
+                .transition(.opacity)
+            } else if !unlocked {
+                VaultDoorView { unlocked = true }
+                    .transition(.opacity)
+            } else {
+                // ProjectsHomeView (la parete di cassetti 3D) è tutta l'app
+                // ormai: VaultListView era la schermata prima del rewrite e
+                // non va più mostrata — ci si finiva appena vm.isUnlocked
+                // diventava true (es. creando un progetto), dirottando
+                // "nuova password" & co. sul vecchio form.
+                ProjectsHomeView(onLock: {
+                    MasterKey.lock()
+                    vm.lock()
+                    unlocked = false
+                })
                 .environmentObject(vm)
+                .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.35), value: unlocked)
+        .animation(.easeInOut(duration: 0.35), value: configured)
         .overlay(alignment: .bottom) {
             if let toast = vm.toast {
                 Text(toast.lowercased())
