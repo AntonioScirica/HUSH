@@ -17,6 +17,9 @@ struct VaultDoorView: View {
     /// La parete dietro parte più lontana e arriva a misura mentre si apre:
     /// così l'ingresso è un avvicinamento, non un taglio netto.
     @State private var backdropScale: CGFloat = 0.82
+    /// Muro e anta insieme: crescono finché il vano non ha inghiottito lo
+    /// schermo. È la sensazione di attraversare la porta, non di guardarla.
+    @State private var frontScale: CGFloat = 1
     /// Col dito configurato la porta si apre da sé: la password compare solo
     /// se il dito non va (o se è il giorno in cui va comunque riscritta).
     @State private var askPassword = false
@@ -25,8 +28,13 @@ struct VaultDoorView: View {
     /// Diametro dell'anta: grande quando basta il dito, più piccola quando
     /// sotto ci vanno campo e bottone.
     private var doorSize: CGFloat { askPassword ? 240 : 380 }
-    /// Quanto sta sopra al centro, per far stare i controlli sotto.
-    private var doorCenterY: CGFloat { askPassword ? -80 : 0 }
+    /// Quanto sta sopra al centro, per far stare i controlli sotto. In
+    /// apertura torna al centro: si attraversa il vano, e il vano deve stare
+    /// davanti alla camera.
+    private var doorCenterY: CGFloat {
+        if opening { return 0 }
+        return askPassword ? -80 : 0
+    }
 
     var body: some View {
         // Un unico ZStack che ignora il safe area TUTTO INSIEME: prima il
@@ -41,35 +49,41 @@ struct VaultDoorView: View {
                 // parte un po' indietro e avanza mentre la porta si apre
                 .scaleEffect(backdropScale)
 
-            // Il muro davanti è fermo: si apre solo la porta, quindi il muro
-            // ha un foro tondo esattamente dove sta l'anta ed è da lì che si
-            // intravede la parete dietro.
-            WallWithHole(diameter: doorSize, centerY: doorCenterY)
-                .fill(Theme.paper, style: FillStyle(eoFill: true))
+            // Muro e anta viaggiano insieme: entrambi crescono mentre si
+            // entra, così il vano si allarga fino a superare i bordi dello
+            // schermo e ci si passa attraverso.
+            ZStack {
+                // Il muro è fermo: si apre solo la porta, quindi il muro ha un
+                // foro tondo esattamente dove sta l'anta ed è da lì che si
+                // intravede la parete dietro.
+                WallWithHole(diameter: doorSize, centerY: doorCenterY)
+                    .fill(Theme.paper, style: FillStyle(eoFill: true))
 
-            // battuta del vano: il bordo del foro
-            Circle()
-                .strokeBorder(Theme.line, lineWidth: 1.2)
+                // battuta del vano: il bordo del foro
+                Circle()
+                    .strokeBorder(Theme.line, lineWidth: 1.2)
+                    .frame(width: doorSize, height: doorSize)
+                    .offset(y: doorCenterY)
+
+                // L'anta vera e propria: solo questa ruota, sul perno sinistro.
+                ZStack {
+                    Circle().fill(Theme.paper)
+                    VaultDoorShape(wheelAngle: wheelAngle)
+                }
                 .frame(width: doorSize, height: doorSize)
                 .offset(y: doorCenterY)
-
-            // L'anta vera e propria: solo questa ruota, sul perno sinistro.
-            ZStack {
-                Circle().fill(Theme.paper)
-                VaultDoorShape(wheelAngle: wheelAngle)
+                // perno a sinistra: l'anta ruota attorno al proprio bordo e si
+                // apre verso di te, scoprendo il vano
+                .rotation3DEffect(
+                    .degrees(doorSwing),
+                    axis: (x: 0, y: 1, z: 0),
+                    anchor: .leading,
+                    perspective: 0.55
+                )
+                // trema quando sbagli, come una maniglia che non cede
+                .offset(x: wrong ? -6 : 0)
             }
-            .frame(width: doorSize, height: doorSize)
-            .offset(y: doorCenterY)
-            // perno a sinistra: l'anta ruota attorno al proprio bordo e si
-            // apre verso di te, scoprendo il vano
-            .rotation3DEffect(
-                .degrees(doorSwing),
-                axis: (x: 0, y: 1, z: 0),
-                anchor: .leading,
-                perspective: 0.55
-            )
-            // trema quando sbagli, come una maniglia che non cede
-            .offset(x: wrong ? -6 : 0)
+            .scaleEffect(frontScale)
 
             // Controlli sotto l'anta, sul muro fermo
             if !opening {
@@ -187,18 +201,25 @@ struct VaultDoorView: View {
             wheelAngle += 720
             opening = true
         }
-        // l'anta parte quando il volantino ha finito di girare, e insieme a
-        // lei la parete dietro arriva a misura: si entra avvicinandosi
+        // l'anta parte quando il volantino ha finito di girare
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 1.15)) {
+            withAnimation(.easeInOut(duration: 1.3)) {
                 doorSwing = -105
             }
-            withAnimation(.easeInOut(duration: 1.25)) {
+        }
+        // la spinta in avanti comincia ad anta già in movimento: muro e porta
+        // crescono fin oltre lo schermo, la parete dietro arriva a misura.
+        // Il fondo termina esattamente a 1, la stessa scala della home: così
+        // il passaggio di schermata non fa scatti.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
+            withAnimation(.easeIn(duration: 1.2)) {
+                frontScale = 4.2
+            }
+            withAnimation(.easeInOut(duration: 1.2)) {
                 backdropScale = 1
             }
         }
-        // ...e la parete resta scoperta un istante prima del cambio schermata
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.85) { onUnlocked() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { onUnlocked() }
     }
 
     private func fail() {
