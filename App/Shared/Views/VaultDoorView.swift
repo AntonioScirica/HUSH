@@ -13,6 +13,9 @@ struct VaultDoorView: View {
     @State private var wheelAngle: Double = 0
     @State private var opening = false
     @State private var rememberWithBiometry = false
+    /// Col dito configurato la porta si apre da sé: la password compare solo
+    /// se il dito non va (o se è il giorno in cui va comunque riscritta).
+    @State private var askPassword = false
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -21,92 +24,112 @@ struct VaultDoorView: View {
 
             VStack(spacing: 34) {
                 VaultDoorShape(wheelAngle: wheelAngle)
-                    .frame(width: 260, height: 260)
+                    // grande e sola quando basta il dito, più piccola quando
+                    // sotto ci va il campo della password
+                    .frame(width: askPassword ? 240 : 380,
+                           height: askPassword ? 240 : 380)
                     // all'apertura la porta avanza verso di te e sfuma
                     .scaleEffect(opening ? 2.6 : 1)
                     .opacity(opening ? 0 : 1)
-                    .offset(x: wrong ? 0 : 0)
 
                 if !opening {
-                    VStack(spacing: 18) {
-                        VStack(spacing: 6) {
-                            Text("SCRIGNO")
-                                .font(Theme.display(38))
-                                .kerning(-0.5)
-                                .foregroundStyle(Theme.ink)
-                            Text("una password, tutti i cassetti")
-                                .font(Theme.mono(11))
-                                .foregroundStyle(Theme.inkSoft)
-                        }
-
-                        VStack(spacing: 10) {
-                            SecureField("master password", text: $password)
-                                .textFieldStyle(PaperFieldStyle())
-                                .focused($fieldFocused)
-                                .onSubmit(attempt)
-                                .frame(width: 280)
-                                .overlay(
-                                    Rectangle()
-                                        .strokeBorder(Theme.danger, lineWidth: wrong ? 1.4 : 0)
-                                )
-
-                            if wrong {
-                                Text("password sbagliata")
-                                    .font(Theme.mono(11))
-                                    .foregroundStyle(Theme.danger)
-                            }
-
-                            Button(checking ? "apro…" : "apri") { attempt() }
-                                .buttonStyle(InkButtonStyle(prominent: true))
-                                .frame(width: 280)
-                                .disabled(password.isEmpty || checking)
-                                .opacity(password.isEmpty || checking ? 0.4 : 1)
-
-                            if MasterKey.biometryUsable {
-                                Button {
-                                    MasterKey.unlockWithBiometry { ok in
-                                        if ok { open() }
-                                        // annullare il prompt non è un errore:
-                                        // niente scrollata, resta lì com'era
-                                    }
-                                } label: {
-                                    Label("sblocca col dito", systemImage: "touchid")
-                                }
-                                .buttonStyle(OutlineButtonStyle())
-                                .frame(width: 280)
-                            } else if MasterKey.biometryEnabled {
-                                Text("oggi la password va scritta a mano,\nper non dimenticarla")
-                                    .font(Theme.mono(10))
-                                    .multilineTextAlignment(.center)
-                                    .foregroundStyle(Theme.inkSoft)
-                                    .frame(width: 280)
-                            } else if MasterKey.biometryAvailable {
-                                // via di riattivazione: se l'onboarding è stato
-                                // saltato (o non era andato a buon fine) il dito
-                                // si accende da qui, alla prossima apertura
-                                Toggle(isOn: $rememberWithBiometry) {
-                                    Text("ricordami col dito")
-                                        .font(Theme.mono(11))
-                                        .foregroundStyle(Theme.inkSoft)
-                                }
-                                .toggleStyle(.checkbox)
-                                .frame(width: 280, alignment: .leading)
-                            }
-                        }
+                    if askPassword {
+                        passwordControls
+                            .transition(.opacity)
+                    } else {
+                        Text("appoggia il dito sul sensore")
+                            .font(Theme.mono(11))
+                            .foregroundStyle(Theme.inkSoft)
+                            .transition(.opacity)
                     }
-                    .transition(.opacity)
                 }
             }
             // il campo trema quando sbagli, come una maniglia che non cede
             .offset(x: wrong ? -6 : 0)
         }
         .preferredColorScheme(.light)
-        .onAppear { fieldFocused = true }
+        .animation(.easeInOut(duration: 0.35), value: askPassword)
+        .onAppear(perform: start)
         // il volantino si muove mentre digiti: la porta "risponde"
         .onChange(of: password) { _, value in
             withAnimation(.easeOut(duration: 0.25)) {
                 wheelAngle = Double(value.count) * 9
                 wrong = false
+            }
+        }
+    }
+
+    // MARK: - Controlli password (solo quando servono)
+
+    @ViewBuilder private var passwordControls: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 6) {
+                Text("SCRIGNO")
+                    .font(Theme.display(32))
+                    .kerning(-0.5)
+                    .foregroundStyle(Theme.ink)
+                Text(MasterKey.biometryEnabled && MasterKey.mustTypePassword
+                     ? "oggi la password va scritta a mano, per non dimenticarla"
+                     : "una password, tutti i cassetti")
+                    .font(Theme.mono(11))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Theme.inkSoft)
+            }
+
+            VStack(spacing: 10) {
+                SecureField("master password", text: $password)
+                    .textFieldStyle(PaperFieldStyle())
+                    .focused($fieldFocused)
+                    .onSubmit(attempt)
+                    .frame(width: 280)
+                    .overlay(
+                        Rectangle()
+                            .strokeBorder(Theme.danger, lineWidth: wrong ? 1.4 : 0)
+                    )
+
+                if wrong {
+                    Text("password sbagliata")
+                        .font(Theme.mono(11))
+                        .foregroundStyle(Theme.danger)
+                }
+
+                Button(checking ? "apro…" : "apri") { attempt() }
+                    .buttonStyle(InkButtonStyle(prominent: true))
+                    .frame(width: 280)
+                    .disabled(password.isEmpty || checking)
+                    .opacity(password.isEmpty || checking ? 0.4 : 1)
+
+                // via di accensione del dito quando non è ancora attivo
+                if MasterKey.biometryAvailable && !MasterKey.biometryEnabled {
+                    Toggle(isOn: $rememberWithBiometry) {
+                        Text("ricordami col dito")
+                            .font(Theme.mono(11))
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                    .toggleStyle(.checkbox)
+                    .frame(width: 280, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    // MARK: - Avvio
+
+    /// Col dito pronto la porta ci prova da sola, senza far cliccare niente.
+    /// Se il dito non va — o se è scaduto il giro in cui la password va
+    /// comunque riscritta — si passa al campo, e da lì non si torna indietro.
+    private func start() {
+        guard MasterKey.biometryUsable else {
+            askPassword = true
+            fieldFocused = true
+            return
+        }
+        MasterKey.unlockWithBiometry { ok in
+            if ok {
+                open()
+            } else {
+                askPassword = true
+                fieldFocused = true
             }
         }
     }
