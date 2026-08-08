@@ -201,25 +201,26 @@ struct VaultDoorView: View {
             wheelAngle += 720
             opening = true
         }
-        // l'anta parte quando il volantino ha finito di girare
+        // l'anta parte quando il volantino ha finito di girare, e ha tutto il
+        // tempo di spalancarsi prima che ci si muova verso di lei
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 1.3)) {
+            withAnimation(.easeInOut(duration: 1.5)) {
                 doorSwing = -105
             }
         }
-        // la spinta in avanti comincia ad anta già in movimento: muro e porta
+        // la spinta in avanti entra ad anta ormai quasi aperta: muro e porta
         // crescono fin oltre lo schermo, la parete dietro arriva a misura.
         // Il fondo termina esattamente a 1, la stessa scala della home: così
         // il passaggio di schermata non fa scatti.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) {
-            withAnimation(.easeIn(duration: 1.2)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.55) {
+            withAnimation(.easeIn(duration: 1.3)) {
                 frontScale = 4.2
             }
-            withAnimation(.easeInOut(duration: 1.2)) {
+            withAnimation(.easeInOut(duration: 1.3)) {
                 backdropScale = 1
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { onUnlocked() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { onUnlocked() }
     }
 
     private func fail() {
