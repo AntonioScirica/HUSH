@@ -384,21 +384,34 @@ struct ProjectsHomeView: View {
             )
             .ignoresSafeArea()
 
-            // velatura in basso, dello stesso colore dei cassetti: stacca i
-            // comandi dal disegno della parete senza coprirla davvero
+            // Velatura dello stesso colore dei cassetti: stacca i comandi dal
+            // disegno della parete senza coprirla davvero. Sta dove stanno i
+            // comandi — in basso a cassetti chiusi, in alto quando uno è
+            // aperto (lì ci sono modifica e chiudi, e in basso non serve più).
             VStack {
-                Spacer()
-                LinearGradient(
-                    colors: [Theme.paper.opacity(0), Theme.paper],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 130)
+                if drawerOpen {
+                    LinearGradient(
+                        colors: [Theme.paper, Theme.paper.opacity(0)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 130)
+                    Spacer()
+                } else {
+                    Spacer()
+                    LinearGradient(
+                        colors: [Theme.paper.opacity(0), Theme.paper],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 130)
+                }
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
             .opacity(chromeVisible ? 1 : 0)
             .animation(.easeOut(duration: 0.45), value: chromeVisible)
+            .animation(.easeOut(duration: 0.25), value: drawerOpen)
 
             VStack {
                 // sono i comandi del PROGETTO: con una cartella estratta

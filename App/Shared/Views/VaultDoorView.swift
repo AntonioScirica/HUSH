@@ -4,6 +4,10 @@ import SwiftUI
 /// di cassetti, ma in 2D. È la schermata di sblocco — una password sola apre
 /// tutto lo scrigno, quindi qui c'è una porta sola.
 struct VaultDoorView: View {
+    /// Vero quando si arriva qui richiudendo lo scrigno, non all'avvio: in
+    /// quel caso la porta rifà l'apertura al contrario invece di comparire
+    /// già chiusa.
+    var closing = false
     let onUnlocked: () -> Void
 
     @State private var password = ""
@@ -17,6 +21,9 @@ struct VaultDoorView: View {
     /// Muro e anta insieme: crescono finché il vano non ha inghiottito lo
     /// schermo. È la sensazione di attraversare la porta, non di guardarla.
     @State private var frontScale: CGFloat = 1
+    /// Dopo una chiusura volontaria non si richiede il dito da soli: sarebbe
+    /// un riaprire subito quel che si è appena chiuso. Si aspetta un tocco.
+    @State private var waitingTap = false
     /// Col dito configurato la porta si apre da sé: la password compare solo
     /// se il dito non va (o se è il giorno in cui va comunque riscritta).
     @State private var askPassword = false
@@ -76,6 +83,12 @@ struct VaultDoorView: View {
                 )
                 // trema quando sbagli, come una maniglia che non cede
                 .offset(x: wrong ? -6 : 0)
+                // dopo una chiusura volontaria si riapre toccandola
+                .onTapGesture {
+                    guard waitingTap else { return }
+                    waitingTap = false
+                    start()
+                }
             }
             .scaleEffect(frontScale)
 
@@ -85,7 +98,8 @@ struct VaultDoorView: View {
                     if askPassword {
                         passwordControls
                     } else {
-                        Text("appoggia il dito sul sensore")
+                        Text(waitingTap ? "tocca la porta per aprire"
+                                        : "appoggia il dito sul sensore")
                             .font(Theme.mono(11))
                             .foregroundStyle(Theme.inkSoft)
                     }
@@ -97,7 +111,15 @@ struct VaultDoorView: View {
         .ignoresSafeArea()
         .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.35), value: askPassword)
-        .onAppear(perform: start)
+        .onAppear {
+            if closing {
+                // arriva già "aperta": la richiude sotto gli occhi
+                opening = true
+                playClosing()
+            } else {
+                start()
+            }
+        }
         // il volantino si muove mentre digiti: la porta "risponde"
         .onChange(of: password) { _, value in
             withAnimation(.easeOut(duration: 0.25)) {
@@ -151,6 +173,30 @@ struct VaultDoorView: View {
     }
 
     // MARK: - Avvio
+
+    /// Chiusura volontaria: si rifà l'apertura al rovescio, dal vano
+    /// spalancato fino all'anta accostata e al volantino che torna indietro.
+    private func playClosing() {
+        doorSwing = -105
+        frontScale = 4.6
+
+        withAnimation(.easeOut(duration: 0.7)) { frontScale = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            withAnimation(.easeInOut(duration: 0.9)) { doorSwing = 0 }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+            withAnimation(.easeInOut(duration: 0.5)) { wheelAngle = 0 }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+            opening = false
+            if MasterKey.biometryUsable {
+                waitingTap = true
+            } else {
+                askPassword = true
+                fieldFocused = true
+            }
+        }
+    }
 
     /// Col dito pronto la porta ci prova da sola, senza far cliccare niente.
     /// Se il dito non va — o se è scaduto il giro in cui la password va

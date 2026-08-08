@@ -738,7 +738,7 @@ struct DrawerWall3D: NSViewRepresentable {
             return SCNVector3(cell.x + Self.openOffset.x, cell.y + Self.openOffset.y, cell.z + Self.openOffset.z)
         }
 
-        func applyCameraPose(animated: Bool) {
+        func applyCameraPose(animated: Bool, duration: CFTimeInterval = 0.25) {
             guard let cameraNode, selectedFolderIdx == nil, creationCellIdx == nil else { return }
             let isOpen = openCellIdx != nil
             let base = isOpen ? (openCameraPos() ?? closedCameraPos) : closedCameraPos
@@ -755,7 +755,7 @@ struct DrawerWall3D: NSViewRepresentable {
                                base.z),
                 pitch: basePitch + mouseOffset.y * (isOpen ? 0.005 : 0.025),
                 yaw: -mouseOffset.x * (isOpen ? 0.008 : 0.045),
-                duration: animated ? 0.25 : 0,
+                duration: animated ? duration : 0,
                 timing: .easeOut
             )
         }
@@ -918,7 +918,11 @@ struct DrawerWall3D: NSViewRepresentable {
             // cassetto aperto), la camera non torna alla parete: ci pensa
             // enterCreation a portarla sul fronte con un movimento solo
             if parent?.creatingCell == nil {
-                moveCamera(to: closedCameraPos, pitch: closedCameraPitch)
+                // Diretti alla posa chiusa COMPRESA la parallasse del mouse.
+                // Prima si tornava alla posa senza parallasse e subito dopo
+                // un secondo movimento la correggeva: con un'ampiezza di 1.7
+                // quel ritocco si vedeva eccome, come uno scatto a fine corsa.
+                applyCameraPose(animated: true, duration: 0.65)
             }
         }
 

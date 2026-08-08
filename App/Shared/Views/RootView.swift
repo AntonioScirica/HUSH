@@ -7,6 +7,9 @@ public struct RootView: View {
     /// porta del caveau; aperto → la parete dei cassetti.
     @State private var unlocked = false
     @State private var configured = MasterKey.isConfigured
+    /// Distingue "richiuso col lucchetto" da "appena avviato": nel primo caso
+    /// la porta si richiude sotto gli occhi invece di comparire già chiusa.
+    @State private var lockedByHand = false
 
     public init() {}
 
@@ -36,6 +39,7 @@ public struct RootView: View {
                         onLock: {
                             MasterKey.lock()
                             vm.lock()
+                            lockedByHand = true
                             unlocked = false
                         },
                         chromeVisible: unlocked
@@ -46,7 +50,10 @@ public struct RootView: View {
                     .allowsHitTesting(unlocked)
 
                     if !unlocked {
-                        VaultDoorView { unlocked = true }
+                        VaultDoorView(closing: lockedByHand) {
+                            lockedByHand = false
+                            unlocked = true
+                        }
                     }
                 }
             }
