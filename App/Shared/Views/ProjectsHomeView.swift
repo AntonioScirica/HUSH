@@ -273,6 +273,21 @@ struct ProjectsHomeView: View {
         openCell.flatMap { projectAtCell[$0] }
     }
 
+    /// Bottoncino d'angolo, stesso tratto della barra centrale.
+    private func cornerButton(_ icon: String, help: String,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+                .frame(width: 42, height: 42)
+                .background(Theme.paper)
+                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
     /// Righe di dati della voce selezionata: da queste dipende quanto deve
     /// crescere il corpo della cartella estratta.
     private var selectedEntryRows: Int {
@@ -383,6 +398,20 @@ struct ProjectsHomeView: View {
             )
             .ignoresSafeArea()
 
+            // velatura in basso, dello stesso colore dei cassetti: stacca i
+            // comandi dal disegno della parete senza coprirla davvero
+            VStack {
+                Spacer()
+                LinearGradient(
+                    colors: [Theme.paper.opacity(0), Theme.paper],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 130)
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
             VStack {
                 // sono i comandi del PROGETTO: con una cartella estratta
                 // c'è la sua scheda a comandare, questi sparirebbero sotto
@@ -428,19 +457,6 @@ struct ProjectsHomeView: View {
                             .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
 
                             Button {
-                                onLock()
-                            } label: {
-                                Image(systemName: "lock")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(Theme.ink)
-                                    .frame(width: barHeight, height: barHeight)
-                                    .background(Theme.paper)
-                                    .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
-                            }
-                            .buttonStyle(.plain)
-                            .help("Richiudi lo scrigno")
-
-                            Button {
                                 startCreation()
                             } label: {
                                 Image(systemName: "folder.badge.plus")
@@ -483,25 +499,18 @@ struct ProjectsHomeView: View {
                 if selectedFolder != nil { selectedFolder = nil }
             }
 
-            // impostazioni: angolo in basso a sinistra, staccate dalla barra
+            // agli angoli, staccati dalla barra centrale: chiudere a sinistra,
+            // impostazioni a destra
             if !drawerOpen && creatingCell == nil {
                 VStack {
                     Spacer()
                     HStack {
-                        Button { showSettings = true } label: {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(Theme.ink)
-                                .frame(width: 42, height: 42)
-                                .background(Theme.paper)
-                                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Impostazioni")
+                        cornerButton("lock", help: "Richiudi lo scrigno") { onLock() }
                         Spacer()
+                        cornerButton("gearshape", help: "Impostazioni") { showSettings = true }
                     }
                 }
-                .padding(.leading, 22)
+                .padding(.horizontal, 22)
                 .padding(.bottom, 22)
             }
 

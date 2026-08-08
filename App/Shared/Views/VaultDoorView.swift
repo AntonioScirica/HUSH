@@ -14,6 +14,9 @@ struct VaultDoorView: View {
     @State private var opening = false
     /// Gradi di apertura dell'anta attorno al perno sinistro.
     @State private var doorSwing: Double = 0
+    /// La parete dietro parte più lontana e arriva a misura mentre si apre:
+    /// così l'ingresso è un avvicinamento, non un taglio netto.
+    @State private var backdropScale: CGFloat = 0.82
     /// Col dito configurato la porta si apre da sé: la password compare solo
     /// se il dito non va (o se è il giorno in cui va comunque riscritta).
     @State private var askPassword = false
@@ -26,20 +29,23 @@ struct VaultDoorView: View {
     private var doorCenterY: CGFloat { askPassword ? -80 : 0 }
 
     var body: some View {
+        // Un unico ZStack che ignora il safe area TUTTO INSIEME: prima il
+        // muro lo ignorava da solo e il suo centro non coincideva con quello
+        // del disco, per questo la porta risultava fuori asse rispetto al foro.
         ZStack {
             // Dietro c'è già la parete dei cassetti: quando l'anta gira la
             // vedi comparire, prima ancora di entrarci dentro. Nessuna
             // etichetta, però — i nomi dei progetti non si leggono da fuori.
             LockedWallBackdrop()
-                .ignoresSafeArea()
                 .allowsHitTesting(false)
+                // parte un po' indietro e avanza mentre la porta si apre
+                .scaleEffect(backdropScale)
 
             // Il muro davanti è fermo: si apre solo la porta, quindi il muro
             // ha un foro tondo esattamente dove sta l'anta ed è da lì che si
             // intravede la parete dietro.
             WallWithHole(diameter: doorSize, centerY: doorCenterY)
                 .fill(Theme.paper, style: FillStyle(eoFill: true))
-                .ignoresSafeArea()
 
             // battuta del vano: il bordo del foro
             Circle()
@@ -51,18 +57,6 @@ struct VaultDoorView: View {
             ZStack {
                 Circle().fill(Theme.paper)
                 VaultDoorShape(wheelAngle: wheelAngle)
-
-                // cardini appoggiati al lato del perno
-                VStack(spacing: doorSize * 0.34) {
-                    ForEach(0..<2, id: \.self) { _ in
-                        Rectangle()
-                            .fill(Theme.paperRaised)
-                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
-                            .frame(width: doorSize * 0.07, height: doorSize * 0.16)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .offset(x: -doorSize * 0.02)
             }
             .frame(width: doorSize, height: doorSize)
             .offset(y: doorCenterY)
@@ -92,6 +86,7 @@ struct VaultDoorView: View {
                 .transition(.opacity)
             }
         }
+        .ignoresSafeArea()
         .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.35), value: askPassword)
         .onAppear(perform: start)
@@ -192,10 +187,14 @@ struct VaultDoorView: View {
             wheelAngle += 720
             opening = true
         }
-        // l'anta parte quando il volantino ha finito di girare
+        // l'anta parte quando il volantino ha finito di girare, e insieme a
+        // lei la parete dietro arriva a misura: si entra avvicinandosi
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             withAnimation(.easeInOut(duration: 1.15)) {
                 doorSwing = -105
+            }
+            withAnimation(.easeInOut(duration: 1.25)) {
+                backdropScale = 1
             }
         }
         // ...e la parete resta scoperta un istante prima del cambio schermata
