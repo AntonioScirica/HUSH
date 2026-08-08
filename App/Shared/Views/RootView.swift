@@ -21,7 +21,6 @@ public struct RootView: View {
                 .transition(.opacity)
             } else if !unlocked {
                 VaultDoorView { unlocked = true }
-                    .transition(.opacity)
             } else {
                 // ProjectsHomeView (la parete di cassetti 3D) è tutta l'app
                 // ormai: VaultListView era la schermata prima del rewrite e
@@ -34,10 +33,12 @@ public struct RootView: View {
                     unlocked = false
                 })
                 .environmentObject(vm)
-                .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.35), value: unlocked)
+        // Nessuna dissolvenza fra porta e home: dietro l'anta c'è già la
+        // stessa parete, con gli stessi progetti nelle stesse celle, quindi
+        // il cambio è invisibile di suo. Incrociarle in dissolvenza faceva
+        // solo velare l'immagine a fine corsa.
         .animation(.easeInOut(duration: 0.35), value: configured)
         .overlay(alignment: .bottom) {
             if let toast = vm.toast {
