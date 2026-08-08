@@ -137,6 +137,7 @@ struct ProjectsHomeView: View {
     @State private var showOpenPasswordSheet = false
 
     @State private var localError: String?
+    @State private var showSettings = false
 
     // ponytail: voci finte solo per prototipare l'apertura del cassetto —
     // da sostituire con vm.store.allEntries quando il vault reale è collegato qui.
@@ -482,6 +483,28 @@ struct ProjectsHomeView: View {
                 if selectedFolder != nil { selectedFolder = nil }
             }
 
+            // impostazioni: angolo in basso a sinistra, staccate dalla barra
+            if !drawerOpen && creatingCell == nil {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Button { showSettings = true } label: {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Theme.ink)
+                                .frame(width: 42, height: 42)
+                                .background(Theme.paper)
+                                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Impostazioni")
+                        Spacer()
+                    }
+                }
+                .padding(.leading, 22)
+                .padding(.bottom, 22)
+            }
+
             // creazione: campo nome sovrapposto alla targhetta del cassetto
             // (nascosto durante lo zoom sul post-it, altrimenti resterebbe
             // appiccicato sopra il foglietto)
@@ -702,6 +725,9 @@ struct ProjectsHomeView: View {
             }
             .frame(width: 420, height: 560)
             .preferredColorScheme(.light)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView { showSettings = false }
         }
         .sheet(isPresented: $showIconLibrary) {
             IconLibrarySheet(selected: newIcon, search: $iconSearch, library: iconLibrary) { picked in
