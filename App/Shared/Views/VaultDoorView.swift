@@ -41,6 +41,11 @@ struct VaultDoorView: View {
         // muro lo ignorava da solo e il suo centro non coincideva con quello
         // del disco, per questo la porta risultava fuori asse rispetto al foro.
         ZStack {
+            // Fondo di carta sotto a tutto: la parete parte rimpicciolita e
+            // non arriva ai bordi, e senza questo strato dagli angoli si
+            // vedeva il bianco della finestra mentre si entra.
+            Theme.paper
+
             // Dietro c'è già la parete dei cassetti: quando l'anta gira la
             // vedi comparire, prima ancora di entrarci dentro. Nessuna
             // etichetta, però — i nomi dei progetti non si leggono da fuori.
