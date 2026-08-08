@@ -14,9 +14,6 @@ struct VaultDoorView: View {
     @State private var opening = false
     /// Gradi di apertura dell'anta attorno al perno sinistro.
     @State private var doorSwing: Double = 0
-    /// La parete dietro parte più lontana e arriva a misura mentre si apre:
-    /// così l'ingresso è un avvicinamento, non un taglio netto.
-    @State private var backdropScale: CGFloat = 0.82
     /// Muro e anta insieme: crescono finché il vano non ha inghiottito lo
     /// schermo. È la sensazione di attraversare la porta, non di guardarla.
     @State private var frontScale: CGFloat = 1
@@ -47,12 +44,16 @@ struct VaultDoorView: View {
             Theme.paper
 
             // Dietro c'è già la parete dei cassetti: quando l'anta gira la
-            // vedi comparire, prima ancora di entrarci dentro. Nessuna
-            // etichetta, però — i nomi dei progetti non si leggono da fuori.
+            // vedi comparire, prima ancora di entrarci dentro.
+            //
+            // Sta a scala 1 e non si muove mai. Rimpicciolirla per dare l'idea
+            // della lontananza faceva due danni: si vedevano i bordi della
+            // scena (i cassetti tagliati ai lati, invece della parete che
+            // continua all'infinito) e a fine corsa la misura non combaciava
+            // con quella della home, da cui lo scatto al cambio di schermata.
+            // L'avvicinamento lo dà il vano che si allarga, non lei.
             LockedWallBackdrop()
                 .allowsHitTesting(false)
-                // parte un po' indietro e avanza mentre la porta si apre
-                .scaleEffect(backdropScale)
 
             // Muro e anta viaggiano insieme: entrambi crescono mentre si
             // entra, così il vano si allarga fino a superare i bordi dello
@@ -202,30 +203,24 @@ struct VaultDoorView: View {
     /// stacca e ruota sul perno scoprendo la parete. Solo a fine corsa si
     /// passa alla schermata vera.
     private func open() {
-        withAnimation(.easeInOut(duration: 0.75)) {
+        withAnimation(.easeInOut(duration: 0.45)) {
             wheelAngle += 720
             opening = true
         }
-        // l'anta parte quando il volantino ha finito di girare, e ha tutto il
-        // tempo di spalancarsi prima che ci si muova verso di lei
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 1.5)) {
+        // l'anta parte quando il volantino ha finito di girare
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.easeInOut(duration: 0.9)) {
                 doorSwing = -105
             }
         }
         // la spinta in avanti entra ad anta ormai quasi aperta: muro e porta
-        // crescono fin oltre lo schermo, la parete dietro arriva a misura.
-        // Il fondo termina esattamente a 1, la stessa scala della home: così
-        // il passaggio di schermata non fa scatti.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.55) {
-            withAnimation(.easeIn(duration: 1.3)) {
-                frontScale = 4.2
-            }
-            withAnimation(.easeInOut(duration: 1.3)) {
-                backdropScale = 1
+        // crescono fin oltre lo schermo e ci si passa in mezzo
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
+            withAnimation(.easeIn(duration: 0.7)) {
+                frontScale = 4.6
             }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { onUnlocked() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { onUnlocked() }
     }
 
     private func fail() {
