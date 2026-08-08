@@ -12,6 +12,7 @@ struct VaultDoorView: View {
     /// Gradi del volantino: gira mentre scrivi e fa il giro completo all'apertura.
     @State private var wheelAngle: Double = 0
     @State private var opening = false
+    @State private var rememberWithBiometry = false
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
@@ -61,14 +62,35 @@ struct VaultDoorView: View {
                                 .disabled(password.isEmpty || checking)
                                 .opacity(password.isEmpty || checking ? 0.4 : 1)
 
-                            if MasterKey.biometryEnabled {
+                            if MasterKey.biometryUsable {
                                 Button {
-                                    if MasterKey.unlockWithBiometry() { open() } else { fail() }
+                                    MasterKey.unlockWithBiometry { ok in
+                                        if ok { open() }
+                                        // annullare il prompt non è un errore:
+                                        // niente scrollata, resta lì com'era
+                                    }
                                 } label: {
                                     Label("sblocca col dito", systemImage: "touchid")
                                 }
                                 .buttonStyle(OutlineButtonStyle())
                                 .frame(width: 280)
+                            } else if MasterKey.biometryEnabled {
+                                Text("oggi la password va scritta a mano,\nper non dimenticarla")
+                                    .font(Theme.mono(10))
+                                    .multilineTextAlignment(.center)
+                                    .foregroundStyle(Theme.inkSoft)
+                                    .frame(width: 280)
+                            } else if MasterKey.biometryAvailable {
+                                // via di riattivazione: se l'onboarding è stato
+                                // saltato (o non era andato a buon fine) il dito
+                                // si accende da qui, alla prossima apertura
+                                Toggle(isOn: $rememberWithBiometry) {
+                                    Text("ricordami col dito")
+                                        .font(Theme.mono(11))
+                                        .foregroundStyle(Theme.inkSoft)
+                                }
+                                .toggleStyle(.checkbox)
+                                .frame(width: 280, alignment: .leading)
                             }
                         }
                     }
@@ -94,11 +116,14 @@ struct VaultDoorView: View {
         checking = true
         // il verificatore è volutamente lento: fuori dal thread principale,
         // se no la finestra si pianta per un attimo a ogni tentativo
+        let typed = password
         DispatchQueue.global(qos: .userInitiated).async {
-            let ok = MasterKey.unlock(password: password)
+            let ok = MasterKey.unlock(password: typed)
             DispatchQueue.main.async {
                 checking = false
-                ok ? open() : fail()
+                guard ok else { fail(); return }
+                if rememberWithBiometry { try? MasterKey.enableBiometry(password: typed) }
+                open()
             }
         }
     }

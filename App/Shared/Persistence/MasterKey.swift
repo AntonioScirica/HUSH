@@ -15,6 +15,11 @@ enum MasterKey {
     private static let saltKey = "scrigno.master.salt"
     private static let verifierKey = "scrigno.master.verifier"
     private static let biometryKey = "scrigno.master.biometry"
+    private static let lastTypedKey = "scrigno.master.lastTyped"
+
+    /// Ogni tanto la password va comunque digitata: col dito soltanto la si
+    /// dimentica, e qui non c'è nessun "password dimenticata" a cui appellarsi.
+    static let typeAgainAfter: TimeInterval = 7 * 24 * 60 * 60
 
     /// Iterazioni del verificatore: rende inutile provare le password a
     /// tappeto contro il file di preferenze.
@@ -36,6 +41,7 @@ enum MasterKey {
         UserDefaults.standard.set(salt, forKey: saltKey)
         UserDefaults.standard.set(verifier(password, salt: salt), forKey: verifierKey)
         session = password
+        markTyped()
     }
 
     /// Ritorna `false` se la password non combacia (senza aprire nulla).
@@ -45,8 +51,25 @@ enum MasterKey {
               let stored = UserDefaults.standard.data(forKey: verifierKey),
               verifier(password, salt: salt) == stored else { return false }
         session = password
+        markTyped()
         return true
     }
+
+    // MARK: - Promemoria periodico
+
+    private static func markTyped() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastTypedKey)
+    }
+
+    /// Da quanto non si digita la password a mano.
+    static var sinceTyped: TimeInterval {
+        let last = UserDefaults.standard.double(forKey: lastTypedKey)
+        guard last > 0 else { return .greatestFiniteMagnitude }
+        return Date().timeIntervalSince1970 - last
+    }
+
+    /// Scaduto l'intervallo il dito non basta più: si riscrive la password.
+    static var mustTypePassword: Bool { sinceTyped >= typeAgainAfter }
 
     static func lock() { session = nil }
 
@@ -71,12 +94,51 @@ enum MasterKey {
         UserDefaults.standard.set(false, forKey: biometryKey)
     }
 
-    /// Sblocca col dito. Il prompt di sistema arriva dal Portachiavi stesso,
-    /// perché l'elemento è protetto da `biometryCurrentSet`.
-    static func unlockWithBiometry() -> Bool {
-        guard biometryEnabled,
-              let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else { return false }
-        return unlock(password: password)
+    /// Il dito è utilizzabile solo se attivo E se non è scaduto il giro in
+    /// cui la password va comunque riscritta.
+    static var biometryUsable: Bool { biometryEnabled && !mustTypePassword }
+
+    /// Sblocca col dito. Su macOS la biometria la chiede l'app (LAContext) e
+    /// solo dopo si legge il Portachiavi; su iOS ci pensa il Portachiavi.
+    static func unlockWithBiometry(completion: @escaping (Bool) -> Void) {
+        guard biometryUsable else { completion(false); return }
+
+        #if os(macOS)
+        let context = LAContext()
+        context.localizedCancelTitle = "Annulla"
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                               localizedReason: "sbloccare Scrigno") { ok, _ in
+            DispatchQueue.main.async {
+                guard ok, let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else {
+                    completion(false)
+                    return
+                }
+                // sbloccato col dito: la password NON conta come digitata,
+                // altrimenti il promemoria non scatterebbe mai
+                guard let salt = UserDefaults.standard.data(forKey: saltKey),
+                      let stored = UserDefaults.standard.data(forKey: verifierKey),
+                      verifier(password, salt: salt) == stored else {
+                    completion(false)
+                    return
+                }
+                session = password
+                completion(true)
+            }
+        }
+        #else
+        guard let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else {
+            completion(false)
+            return
+        }
+        guard let salt = UserDefaults.standard.data(forKey: saltKey),
+              let stored = UserDefaults.standard.data(forKey: verifierKey),
+              verifier(password, salt: salt) == stored else {
+            completion(false)
+            return
+        }
+        session = password
+        completion(true)
+        #endif
     }
 
     // MARK: - Interna

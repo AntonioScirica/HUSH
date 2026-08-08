@@ -45,33 +45,48 @@ enum SharedKeychain {
         guard let data = password.data(using: .utf8) else { throw KeychainError.encodingFailed }
         delete()
 
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecValueData as String: data,
+        ]
+
+        #if os(iOS)
+        // Su iOS l'elemento si protegge da sé: il sistema chiede la biometria
+        // a ogni lettura, senza passare da LocalAuthentication.
         guard let access = SecAccessControlCreateWithFlags(
             nil, kSecAttrAccessibleWhenUnlockedThisDeviceOnly, .biometryCurrentSet, nil
         ) else {
             throw KeychainError.unhandled(errSecParam)
         }
+        query[kSecAttrAccessControl as String] = access
+        #else
+        // Su macOS no: SecAccessControl con biometria vuole il portachiavi
+        // "data protection", che a sua volta pretende le entitlement di
+        // keychain-access-group. Questo target non ne ha (niente sandbox, per
+        // poter leggere i .kdbx ovunque), quindi SecItemAdd falliva ed è per
+        // questo che il dito non funzionava. Qui l'elemento è normale e la
+        // biometria la chiede l'app, con LAContext, prima di leggerlo.
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        #endif
 
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: data,
-            kSecAttrAccessControl as String: access,
-        ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else { throw KeychainError.unhandled(status) }
     }
 
-    /// La lettura richiede automaticamente Face ID/Touch ID (o il codice del
-    /// dispositivo) perché l'item è protetto da `biometryCurrentSet`.
+    /// Su iOS la lettura fa scattare da sola Face ID/Touch ID. Su macOS va
+    /// chiamata SOLO dopo che LAContext ha già autenticato l'utente.
     static func retrieve(prompt: String) throws -> String {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
             kSecReturnData as String: true,
-            kSecUseOperationPrompt as String: prompt,
         ]
+        #if os(iOS)
+        query[kSecUseOperationPrompt as String] = prompt
+        #endif
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess, let data = result as? Data, let password = String(data: data, encoding: .utf8) else {
