@@ -60,6 +60,9 @@ private struct CopyButton: View {
 struct ProjectsHomeView: View {
     /// Richiude il caveau e riporta alla porta.
     var onLock: () -> Void = {}
+    /// A scrigno chiuso la parete si vede lo stesso, attraverso il vano della
+    /// porta: i comandi però restano nascosti finché non si è entrati.
+    var chromeVisible = true
 
     @EnvironmentObject var vm: VaultViewModel
 
@@ -138,9 +141,6 @@ struct ProjectsHomeView: View {
 
     @State private var localError: String?
     @State private var showSettings = false
-    /// Comandi (ricerca, angoli, velatura): entrano in dissolvenza appena
-    /// finita l'apertura del caveau, invece di apparire di scatto.
-    @State private var chromeShown = false
 
     // ponytail: voci finte solo per prototipare l'apertura del cassetto —
     // da sostituire con vm.store.allEntries quando il vault reale è collegato qui.
@@ -397,7 +397,8 @@ struct ProjectsHomeView: View {
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
-            .opacity(chromeShown ? 1 : 0)
+            .opacity(chromeVisible ? 1 : 0)
+            .animation(.easeOut(duration: 0.45), value: chromeVisible)
 
             VStack {
                 // sono i comandi del PROGETTO: con una cartella estratta
@@ -473,7 +474,8 @@ struct ProjectsHomeView: View {
                     .padding(.bottom, 22)
                 }
             }
-            .opacity(chromeShown ? 1 : 0)
+            .opacity(chromeVisible ? 1 : 0)
+            .animation(.easeOut(duration: 0.45), value: chromeVisible)
             .animation(.easeOut(duration: 0.25), value: drawerOpen)
             // la creazione può essere annullata anche dalla scena (click fuori):
             // qualunque sia la via d'uscita, l'interfaccia della bozza
@@ -500,7 +502,8 @@ struct ProjectsHomeView: View {
                 }
                 .padding(.horizontal, 22)
                 .padding(.bottom, 22)
-                .opacity(chromeShown ? 1 : 0)
+                .opacity(chromeVisible ? 1 : 0)
+            .animation(.easeOut(duration: 0.45), value: chromeVisible)
             }
 
             // creazione: campo nome sovrapposto alla targhetta del cassetto
@@ -742,9 +745,6 @@ struct ProjectsHomeView: View {
         }, message: { Text("Il file .kdbx viene cancellato dal disco. Non si può annullare.") })
         .onAppear {
             projects = VaultFileManager.shared.projects
-            // i comandi arrivano dopo, in dissolvenza: sbucare tutti insieme
-            // nell'istante in cui la porta finisce di aprirsi era uno stacco
-            withAnimation(.easeOut(duration: 0.45).delay(0.1)) { chromeShown = true }
         }
     }
 

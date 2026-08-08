@@ -37,24 +37,12 @@ struct VaultDoorView: View {
         // Un unico ZStack che ignora il safe area TUTTO INSIEME: prima il
         // muro lo ignorava da solo e il suo centro non coincideva con quello
         // del disco, per questo la porta risultava fuori asse rispetto al foro.
+        // Sfondo trasparente: dietro c'è la home vera, quella stessa che
+        // resterà a fine animazione. Prima qui ci stava una copia della
+        // parete e allo sblocco le due viste si scambiavano — bastava un
+        // pelo di differenza fra le due camere per vedere uno scatto.
+        // Ora non c'è nessuno scambio: si toglie di mezzo solo la porta.
         ZStack {
-            // Fondo di carta sotto a tutto: la parete parte rimpicciolita e
-            // non arriva ai bordi, e senza questo strato dagli angoli si
-            // vedeva il bianco della finestra mentre si entra.
-            Theme.paper
-
-            // Dietro c'è già la parete dei cassetti: quando l'anta gira la
-            // vedi comparire, prima ancora di entrarci dentro.
-            //
-            // Sta a scala 1 e non si muove mai. Rimpicciolirla per dare l'idea
-            // della lontananza faceva due danni: si vedevano i bordi della
-            // scena (i cassetti tagliati ai lati, invece della parete che
-            // continua all'infinito) e a fine corsa la misura non combaciava
-            // con quella della home, da cui lo scatto al cambio di schermata.
-            // L'avvicinamento lo dà il vano che si allarga, non lei.
-            LockedWallBackdrop()
-                .allowsHitTesting(false)
-
             // Muro e anta viaggiano insieme: entrambi crescono mentre si
             // entra, così il vano si allarga fino a superare i bordi dello
             // schermo e ci si passa attraverso.
@@ -257,44 +245,6 @@ private struct WallWithHole: Shape {
     }
 }
 
-/// La parete di cassetti come si vede da dietro l'anta: è la stessa scena
-/// della home, con gli stessi progetti al loro posto (targhette e post-it
-/// compresi). Deve combaciare, altrimenti allo sblocco si vedrebbe la parete
-/// muta sfumare in quella vera.
-///
-/// Vuol dire che a scrigno chiuso i nomi dei progetti si leggono da fuori:
-/// scelta voluta, le password restano comunque dentro.
-private struct LockedWallBackdrop: View {
-    private let projects = VaultFileManager.shared.projects
-
-    var body: some View {
-        DrawerWall3D(
-            cols: WallLayout.cols,
-            rows: WallLayout.rows,
-            visibleCols: WallLayout.visibleCols,
-            visibleRows: WallLayout.visibleRows,
-            centerIndex: WallLayout.centerIndex,
-            labels: WallLayout.labels(projects),
-            icons: WallLayout.icons(projects),
-            noteColors: WallLayout.noteColors(projects),
-            entriesByCell: Array(repeating: [], count: WallLayout.count),
-            openCell: .constant(nil),
-            selectedFolder: .constant(nil),
-            revealFolder: .constant(nil),
-            folderBodyHeight: DrawerWall3D.folderExtractedMinH,
-            folderRect: .constant(nil),
-            creatingCell: .constant(nil),
-            plateRect: .constant(nil),
-            focusNote: .constant(false),
-            noteRect: .constant(nil),
-            parallax: false,
-            draftLabel: "",
-            draftIcon: nil,
-            draftNoteColor: nil,
-            onTapNewEntry: {}
-        )
-    }
-}
 
 /// Il disegno vero e proprio: cerchi concentrici, chiavistelli tutt'attorno
 /// e volantino a tre razze. Solo contorni, nessuna ombra — come i cassetti.

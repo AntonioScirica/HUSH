@@ -19,20 +19,36 @@ public struct RootView: View {
                     unlocked = MasterKey.isUnlocked
                 }
                 .transition(.opacity)
-            } else if !unlocked {
-                VaultDoorView { unlocked = true }
             } else {
+                // La home sta SEMPRE lì sotto, anche a scrigno chiuso: è la
+                // stessa vista che si vede attraverso il vano della porta e
+                // che resta a fine animazione. Prima erano due, e allo
+                // sblocco si scambiavano: bastava un pelo di differenza fra
+                // le due camere 3D per vedere uno scatto.
+                //
                 // ProjectsHomeView (la parete di cassetti 3D) è tutta l'app
                 // ormai: VaultListView era la schermata prima del rewrite e
                 // non va più mostrata — ci si finiva appena vm.isUnlocked
                 // diventava true (es. creando un progetto), dirottando
                 // "nuova password" & co. sul vecchio form.
-                ProjectsHomeView(onLock: {
-                    MasterKey.lock()
-                    vm.lock()
-                    unlocked = false
-                })
-                .environmentObject(vm)
+                ZStack {
+                    ProjectsHomeView(
+                        onLock: {
+                            MasterKey.lock()
+                            vm.lock()
+                            unlocked = false
+                        },
+                        chromeVisible: unlocked
+                    )
+                    .environmentObject(vm)
+                    // a scrigno chiuso si guarda soltanto: niente click che
+                    // arrivino ai cassetti attraverso il vano
+                    .allowsHitTesting(unlocked)
+
+                    if !unlocked {
+                        VaultDoorView { unlocked = true }
+                    }
+                }
             }
         }
         // Nessuna dissolvenza fra porta e home: dietro l'anta c'è già la
