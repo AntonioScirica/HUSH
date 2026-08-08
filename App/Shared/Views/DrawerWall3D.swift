@@ -51,6 +51,10 @@ struct DrawerWall3D: NSViewRepresentable {
     @Binding var focusNote: Bool
     /// Rettangolo proiettato del post-it, per ancorarci i controlli.
     @Binding var noteRect: CGRect?
+    /// Parallasse col mouse. Va spenta dove la parete fa solo da sfondo (la
+    /// porta del caveau): la camera resterebbe spostata e allo sblocco, con
+    /// la vista nuova che parte da zero, si vedrebbe un salto.
+    var parallax = true
     /// Bozza durante creazione/modifica: nome, icona e colore applicati
     /// direttamente sulla scena (niente rebuild, niente overlay volante).
     let draftLabel: String
@@ -674,6 +678,10 @@ struct DrawerWall3D: NSViewRepresentable {
         }
 
         func mouseMoved(_ offset: CGPoint, at point: CGPoint) {
+            // sfondo della porta: niente parallasse. La camera resterebbe
+            // spostata dal mouse e allo sblocco, con la vista nuova che parte
+            // da zero, la parete farebbe un salto.
+            guard parent?.parallax ?? true else { return }
             mouseOffset = offset
             // durante l'uscita dalla modifica la camera sta già animando: la
             // parallasse la strattonerebbe a metà corsa

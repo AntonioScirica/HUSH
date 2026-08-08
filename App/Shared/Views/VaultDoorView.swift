@@ -287,6 +287,7 @@ private struct LockedWallBackdrop: View {
             plateRect: .constant(nil),
             focusNote: .constant(false),
             noteRect: .constant(nil),
+            parallax: false,
             draftLabel: "",
             draftIcon: nil,
             draftNoteColor: nil,
