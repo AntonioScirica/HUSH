@@ -255,7 +255,11 @@ struct DrawerWall3D: NSViewRepresentable {
             if d >= 0 {
                 return readZ - d * aheadSpacing
             } else {
-                return readZ + min(0.26, -d * passedSpacing)   // clamp: restano dentro
+                // Quelle già sfogliate si impilano davanti, ma si fermano
+                // ben prima dell'imboccatura: arrivando a filo della "+" il
+                // cassetto sembrava traboccare e non si capiva più dove
+                // finisse la pila.
+                return readZ + min(0.12, -d * passedSpacing)
             }
         }
 
