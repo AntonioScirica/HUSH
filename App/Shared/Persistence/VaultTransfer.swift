@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import VaultCore
 
 /// Trasloco dello scrigno da un computer all'altro.
 ///
@@ -45,6 +46,56 @@ enum VaultTransfer {
         return projects.count
     }
 
+    // MARK: - Anteprima
+
+    /// Cosa c'è dentro a un file da importare, prima di importarlo.
+    struct Preview: Identifiable {
+        let id = UUID()
+        var file: URL
+        var name: String
+        var icon: String?
+        var noteColor: String?
+        /// Titoli delle voci, se il vault si è aperto.
+        var entries: [String] = []
+        /// Perché non si è potuto leggere, se non si è potuto.
+        var problem: String?
+
+        var isReadable: Bool { problem == nil }
+    }
+
+    /// Guarda dentro ai file scelti senza toccare niente.
+    ///
+    /// Serve soprattutto a scoprire subito il caso brutto: un vault che arriva
+    /// da un altro computer può essere cifrato con un'ALTRA master password.
+    /// Importato alla cieca diventerebbe un cassetto che non si apre, e uno se
+    /// ne accorgerebbe solo dopo. Meglio dirlo prima.
+    static func inspect(_ selection: [URL]) -> [Preview] {
+        let (files, manifest) = collect(selection)
+        return files.map { file in
+            let original = manifest?.progetti.first {
+                URL(fileURLWithPath: $0.path).lastPathComponent == file.lastPathComponent
+            }
+            var preview = Preview(
+                file: file,
+                name: original?.name ?? file.deletingPathExtension().lastPathComponent,
+                icon: original?.icon,
+                noteColor: original?.noteColor
+            )
+            guard let key = MasterKey.session else {
+                preview.problem = "scrigno bloccato"
+                return preview
+            }
+            do {
+                let bytes = Array(try Data(contentsOf: file))
+                let db = try Kdbx4.open(data: bytes, password: key)
+                preview.entries = db.allEntries.map(\.title)
+            } catch {
+                preview.problem = "cifrato con un'altra master password"
+            }
+            return preview
+        }
+    }
+
     // MARK: - Importazione
 
     /// Rimette dentro a questo computer i vault esportati altrove.
@@ -57,6 +108,19 @@ enum VaultTransfer {
     /// nella cartella locale e il progetto registrato col percorso nuovo.
     @discardableResult
     static func importAll(from selection: [URL]) throws -> Int {
+        let (files, manifest) = collect(selection)
+        return try copyIn(files: files, manifest: manifest)
+    }
+
+    /// Importa solo quelli confermati nell'anteprima.
+    @discardableResult
+    static func importChosen(_ previews: [Preview]) throws -> Int {
+        let (_, manifest) = collect(previews.map { $0.file.deletingLastPathComponent() })
+        return try copyIn(files: previews.map(\.file), manifest: manifest)
+    }
+
+    /// Raccoglie i .kdbx dalla selezione (cartelle o file) e l'indice.
+    private static func collect(_ selection: [URL]) -> ([URL], Manifest?) {
         let fm = FileManager.default
         var files: [URL] = []
         var manifest: Manifest?
@@ -82,7 +146,11 @@ enum VaultTransfer {
                 }
             }
         }
+        return (files, manifest)
+    }
 
+    private static func copyIn(files: [URL], manifest: Manifest?) throws -> Int {
+        let fm = FileManager.default
         var importati = 0
         for file in files {
             let dest = VaultFileManager.shared.freeProjectURL(named: file.deletingPathExtension().lastPathComponent)

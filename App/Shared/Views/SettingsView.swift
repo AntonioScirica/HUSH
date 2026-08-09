@@ -24,6 +24,8 @@ struct SettingsView: View {
     @State private var confirmRegenerate = false
     @State private var licenseText = ""
     @State private var confirmDetach = false
+    @State private var importPreviews: [VaultTransfer.Preview] = []
+    @State private var showImportPreview = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -212,10 +214,9 @@ struct SettingsView: View {
                     Button {
                         VaultTransfer.chooseImport { urls in
                             guard !urls.isEmpty else { return }
-                            do {
-                                note = "importati \(try VaultTransfer.importAll(from: urls)) cassetti. riapri lo scrigno per vederli."
-                                error = nil
-                            } catch { self.error = "importazione non riuscita: \(error.localizedDescription)" }
+                            // prima si guarda cosa c'è dentro, poi si conferma
+                            importPreviews = VaultTransfer.inspect(urls)
+                            showImportPreview = true
                         }
                     } label: {
                         Label("importa cassetti da un altro Mac", systemImage: "square.and.arrow.down.on.square")
@@ -253,6 +254,21 @@ struct SettingsView: View {
         }
         .padding(30)
         .frame(width: 460, height: 560)
+        .sheet(isPresented: $showImportPreview) {
+            ImportPreviewView(previews: importPreviews) { scelti in
+                showImportPreview = false
+                do {
+                    let n = try VaultTransfer.importChosen(scelti)
+                    note = "importati \(n) cassetti. riapri lo scrigno per vederli."
+                    error = nil
+                } catch {
+                    self.error = "importazione non riuscita: \(error.localizedDescription)"
+                }
+            } onCancel: {
+                showImportPreview = false
+            }
+            .sheetPaperLocal()
+        }
         .alert("Staccare la licenza da questo computer?", isPresented: $confirmDetach) {
             Button("annulla", role: .cancel) {}
             Button("stacca", role: .destructive) { License.detach(); onClose() }
@@ -373,5 +389,18 @@ struct SettingsView: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+}
+
+
+private extension View {
+    /// Fondo di carta su tutta la finestra della sheet (vedi sheetPaper in
+    /// ProjectsHomeView: quello è privato di quel file).
+    func sheetPaperLocal() -> some View {
+        ZStack {
+            Theme.paper.ignoresSafeArea()
+            self
+        }
+        .preferredColorScheme(.light)
     }
 }
