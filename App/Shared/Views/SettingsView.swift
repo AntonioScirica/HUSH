@@ -19,6 +19,8 @@ struct SettingsView: View {
     @State private var showImporter = false
     @State private var error: String?
     @State private var note: String?
+    /// Chiave appena generata: mostrata finché la finestra resta aperta.
+    @State private var newRecovery: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -103,6 +105,37 @@ struct SettingsView: View {
                             .toggleStyle(.switch)
                             .onChange(of: symbols) { _, v in Preferences.passwordSymbols = v }
                     }
+
+                    divider
+                    section("chiave di recupero")
+
+                    Text(RecoveryKit.exists
+                         ? "c'è già. rigenerandola la vecchia smette di funzionare."
+                         : "non ce n'è nessuna: senza, una master password dimenticata vuol dire vault persi.")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(RecoveryKit.exists ? Theme.inkSoft : Theme.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let newRecovery {
+                        Text(newRecovery)
+                            .font(Theme.mono(14, .semibold))
+                            .foregroundStyle(Theme.ink)
+                            .textSelection(.enabled)
+                            .padding(12)
+                            .frame(maxWidth: .infinity)
+                            .background(Theme.paperRaised)
+                            .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+                        Text("annotala adesso: chiudendo qui non si rivede più.")
+                            .font(Theme.mono(10, .semibold))
+                            .foregroundStyle(Theme.danger)
+                    }
+
+                    Button { regenerateRecovery() } label: {
+                        Label(RecoveryKit.exists ? "rigenera la chiave" : "genera la chiave",
+                              systemImage: "key.horizontal")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
 
                     divider
                     section("dati")
@@ -218,6 +251,21 @@ struct SettingsView: View {
         } catch {
             self.error = "non è stato possibile attivarlo: \(error.localizedDescription)"
             biometry = false
+        }
+    }
+
+    /// La chiave nuova si può fare solo a scrigno aperto: serve la master
+    /// password in chiaro per cifrarcela dentro.
+    private func regenerateRecovery() {
+        error = nil
+        guard let key = MasterKey.session else {
+            error = "scrigno bloccato: riapri e riprova."
+            return
+        }
+        do {
+            newRecovery = try RecoveryKit.create(masterPassword: key)
+        } catch {
+            self.error = "non è stato possibile generarla: \(error.localizedDescription)"
         }
     }
 

@@ -27,6 +27,10 @@ struct VaultDoorView: View {
     /// Col dito configurato la porta si apre da sé: la password compare solo
     /// se il dito non va (o se è il giorno in cui va comunque riscritta).
     @State private var askPassword = false
+    /// Recupero con la chiave di scorta.
+    @State private var showRecovery = false
+    @State private var recoveryKey = ""
+    @State private var recoveryError: String?
     @FocusState private var fieldFocused: Bool
 
     /// Diametro dell'anta: grande quando basta il dito, più piccola quando
@@ -111,6 +115,9 @@ struct VaultDoorView: View {
         .ignoresSafeArea()
         .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.35), value: askPassword)
+        .sheet(isPresented: $showRecovery) {
+            recoverySheet
+        }
         .onAppear {
             if closing {
                 // arriva già "aperta": la richiude sotto gli occhi
@@ -168,6 +175,13 @@ struct VaultDoorView: View {
                     .frame(width: 280)
                     .disabled(password.isEmpty || checking)
                     .opacity(password.isEmpty || checking ? 0.4 : 1)
+
+                if RecoveryKit.exists {
+                    Button("password dimenticata?") { showRecovery = true }
+                        .buttonStyle(.plain)
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                }
             }
         }
     }
@@ -214,6 +228,58 @@ struct VaultDoorView: View {
                 askPassword = true
                 fieldFocused = true
             }
+        }
+    }
+
+    /// Rientro con la chiave di scorta: restituisce la master password vera,
+    /// quindi non c'è niente da ricifrare — si entra e basta.
+    private var recoverySheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            IndexLabel(text: "chiave di recupero")
+            Rectangle().fill(Theme.line).frame(height: 1.2)
+
+            Text("quella generata al primo avvio. si può scrivere\nanche senza trattini.")
+                .font(Theme.mono(11))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+
+            TextField("XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX", text: $recoveryKey)
+                .textFieldStyle(PaperFieldStyle())
+                .onSubmit(attemptRecovery)
+
+            if let recoveryError {
+                Text(recoveryError).font(Theme.mono(11)).foregroundStyle(Theme.danger)
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 10) {
+                Button("annulla") { showRecovery = false; recoveryKey = ""; recoveryError = nil }
+                    .buttonStyle(OutlineButtonStyle())
+                Button("rientra") { attemptRecovery() }
+                    .buttonStyle(InkButtonStyle(prominent: true))
+                    .disabled(recoveryKey.isEmpty)
+                    .opacity(recoveryKey.isEmpty ? 0.4 : 1)
+            }
+        }
+        .padding(30)
+        .frame(width: 420, height: 320)
+        .background(Theme.paper)
+        .preferredColorScheme(.light)
+    }
+
+    private func attemptRecovery() {
+        do {
+            let master = try RecoveryKit.recover(with: recoveryKey)
+            guard MasterKey.unlock(password: master) else {
+                recoveryError = "La chiave è valida ma la password recuperata non apre più lo scrigno."
+                return
+            }
+            recoveryKey = ""
+            showRecovery = false
+            open()
+        } catch {
+            recoveryError = error.localizedDescription
         }
     }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import AppKit
 
 private extension View {
     func themedImportRow() -> some View {
@@ -17,7 +18,7 @@ struct OnboardingView: View {
     let onDone: () -> Void
 
     private enum Step: Int, CaseIterable {
-        case intro, password, biometry, importing, ready
+        case intro, password, recovery, biometry, importing, ready
     }
 
     @State private var step: Step = .intro
@@ -29,6 +30,9 @@ struct OnboardingView: View {
 
     @State private var showFileImporter = false
     @State private var importedCount = 0
+    /// Chiave di recupero: si vede solo qui, una volta.
+    @State private var recoveryKey = ""
+    @State private var recoverySaved = false
 
     var body: some View {
         ZStack {
@@ -41,6 +45,7 @@ struct OnboardingView: View {
                     switch step {
                     case .intro:     intro
                     case .password:  passwordStep
+                    case .recovery:  recoveryStep
                     case .biometry:  biometryStep
                     case .importing: importStep
                     case .ready:     ready
@@ -71,6 +76,7 @@ struct OnboardingView: View {
         switch step {
         case .intro:     return "benvenuto"
         case .password:  return "la tua unica password"
+        case .recovery:  return "la chiave di scorta"
         case .biometry:  return "sblocco col dito"
         case .importing: return "porta dentro quelle che hai già"
         case .ready:     return "tutto pronto"
@@ -188,6 +194,75 @@ struct OnboardingView: View {
             && password.rangeOfCharacter(from: .letters) != nil { s += 1 }
         if password.rangeOfCharacter(from: CharacterSet.alphanumerics.inverted) != nil { s += 1 }
         return min(s, 4)
+    }
+
+    /// La chiave di scorta si vede qui e mai più: è cifrata sul disco con sé
+    /// stessa, quindi nemmeno l'app può rileggerla.
+    private var recoveryStep: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("se dimentichi la master password, questa è l'unica via\nper rientrare. non c'è nessun altro a cui chiederla.")
+                .font(Theme.mono(11))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(recoveryKey)
+                .font(Theme.mono(15, .semibold))
+                .foregroundStyle(Theme.ink)
+                .textSelection(.enabled)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .background(Theme.paperRaised)
+                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+
+            HStack(spacing: 10) {
+                Button {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(recoveryKey, forType: .string)
+                } label: {
+                    Label("copia", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OutlineButtonStyle())
+
+                Button { saveRecoveryToFile() } label: {
+                    Label("salva su file", systemImage: "square.and.arrow.down")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OutlineButtonStyle())
+            }
+
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle").font(.system(size: 11))
+                Text("vale quanto la master password: chi ce l'ha entra. stampala o mettila in cassaforte, non lasciarla sul computer accanto ai vault.")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(Theme.mono(10))
+            .foregroundStyle(Theme.inkSoft)
+
+            if recoverySaved {
+                Text("non verrà più mostrata.")
+                    .font(Theme.mono(10, .semibold))
+                    .foregroundStyle(Theme.danger)
+            }
+        }
+    }
+
+    private func saveRecoveryToFile() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "Scrigno — chiave di recupero.txt"
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            let testo = """
+            SCRIGNO — CHIAVE DI RECUPERO
+
+            \(recoveryKey)
+
+            Serve a rientrare se dimentichi la master password.
+            Vale quanto la password stessa: chi ce l'ha apre tutto.
+            Stampala e conservala lontano dal computer.
+            """
+            try? testo.write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 
     private var biometryStep: some View {
@@ -324,6 +399,7 @@ struct OnboardingView: View {
         switch step {
         case .intro:     return "comincia"
         case .password:  return "imposta"
+        case .recovery:  return recoverySaved ? "avanti" : "l'ho messa al sicuro"
         case .biometry:  return "attiva"
         case .importing: return importedCount > 0 ? "avanti" : "scegli file"
         case .ready:     return "entra"
@@ -355,6 +431,13 @@ struct OnboardingView: View {
                 return
             }
             MasterKey.configure(password: password)
+            // la chiave di scorta nasce subito: dopo, senza la master
+            // password in mano, non si potrebbe più cifrarci dentro niente
+            recoveryKey = (try? RecoveryKit.create(masterPassword: password)) ?? ""
+            step = .recovery
+
+        case .recovery:
+            guard recoverySaved else { recoverySaved = true; return }
             step = MasterKey.biometryAvailable ? .biometry : .importing
 
         case .biometry:
