@@ -59,6 +59,10 @@ enum VaultTransfer {
         var entries: [String] = []
         /// Perché non si è potuto leggere, se non si è potuto.
         var problem: String?
+        /// Password con cui si è riusciti ad aprirlo, se diversa da quella
+        /// dello scrigno: all'importazione il file viene ricifrato con la
+        /// nostra, se no resterebbe un cassetto che non si apre.
+        var foreignPassword: String?
 
         var isReadable: Bool { problem == nil }
     }
@@ -90,7 +94,7 @@ enum VaultTransfer {
                 let db = try Kdbx4.open(data: bytes, password: key)
                 preview.entries = db.allEntries.map(\.title)
             } catch {
-                preview.problem = "cifrato con un'altra master password"
+                preview.problem = "cifrato con un'altra password"
             }
             return preview
         }
@@ -112,11 +116,44 @@ enum VaultTransfer {
         return try copyIn(files: files, manifest: manifest)
     }
 
+    /// Prova ad aprire un vault con una password diversa da quella dello
+    /// scrigno: serve per i file che arrivano da un'altra installazione, o
+    /// direttamente da KeePass.
+    static func unlock(_ preview: Preview, with password: String) -> Preview? {
+        guard let bytes = try? Data(contentsOf: preview.file),
+              let db = try? Kdbx4.open(data: Array(bytes), password: password)
+        else { return nil }
+        var aperto = preview
+        aperto.entries = db.allEntries.map(\.title)
+        aperto.problem = nil
+        aperto.foreignPassword = password
+        return aperto
+    }
+
     /// Importa solo quelli confermati nell'anteprima.
     @discardableResult
     static func importChosen(_ previews: [Preview]) throws -> Int {
         let (_, manifest) = collect(previews.map { $0.file.deletingLastPathComponent() })
-        return try copyIn(files: previews.map(\.file), manifest: manifest)
+
+        // quelli che arrivano con una password loro vanno ricifrati con la
+        // nostra: dentro allo scrigno la chiave è una sola
+        var daCopiare: [URL] = []
+        var importati = 0
+        for preview in previews {
+            guard let foreign = preview.foreignPassword, let key = MasterKey.session else {
+                daCopiare.append(preview.file)
+                continue
+            }
+            let bytes = Array(try Data(contentsOf: preview.file))
+            let db = try Kdbx4.open(data: bytes, password: foreign)
+            let riscritto = try Kdbx4.save(database: db, password: key)
+            let dest = VaultFileManager.shared.freeProjectURL(named: preview.name)
+            try Data(riscritto).write(to: dest, options: .atomic)
+            try VaultFileManager.shared.addProject(name: preview.name, url: dest,
+                                                   icon: preview.icon, noteColor: preview.noteColor)
+            importati += 1
+        }
+        return importati + (try copyIn(files: daCopiare, manifest: manifest))
     }
 
     /// Raccoglie i .kdbx dalla selezione (cartelle o file) e l'indice.

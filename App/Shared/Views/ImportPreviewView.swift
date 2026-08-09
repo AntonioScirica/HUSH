@@ -7,12 +7,16 @@ import SwiftUI
 /// qui dentro diventerebbe un cassetto che non si apre. Qui si vede subito, e
 /// quei cassetti non si possono nemmeno spuntare.
 struct ImportPreviewView: View {
-    let previews: [VaultTransfer.Preview]
+    @State var previews: [VaultTransfer.Preview]
     let onConfirm: ([VaultTransfer.Preview]) -> Void
     let onCancel: () -> Void
 
     @State private var chosen: Set<UUID> = []
     @State private var expanded: Set<UUID> = []
+    /// Riga per cui si sta chiedendo la sua password.
+    @State private var unlocking: VaultTransfer.Preview?
+    @State private var foreignPassword = ""
+    @State private var unlockError: String?
 
     private var selectable: [VaultTransfer.Preview] { previews.filter(\.isReadable) }
     private var selected: [VaultTransfer.Preview] { previews.filter { chosen.contains($0.id) } }
@@ -60,6 +64,52 @@ struct ImportPreviewView: View {
         // di norma si vuole tutto: le spunte partono già messe, tranne su
         // quelli che non si aprono
         .onAppear { chosen = Set(selectable.map(\.id)) }
+        .sheet(item: $unlocking) { p in
+            VStack(alignment: .leading, spacing: 16) {
+                IndexLabel(text: "password di «\(p.name)»")
+                Rectangle().fill(Theme.line).frame(height: 1.2)
+
+                Text("questo cassetto è cifrato con un'altra password.\nscrivila: verrà riscritto con quella dello scrigno.")
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                SecureField("password del file", text: $foreignPassword)
+                    .textFieldStyle(PaperFieldStyle())
+                    .onSubmit { tentaSblocco(p) }
+
+                if let unlockError {
+                    Text(unlockError).font(Theme.mono(11)).foregroundStyle(Theme.danger)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 10) {
+                    Button("annulla") { unlocking = nil }
+                        .buttonStyle(OutlineButtonStyle())
+                    Button("apri") { tentaSblocco(p) }
+                        .buttonStyle(InkButtonStyle(prominent: true))
+                        .disabled(foreignPassword.isEmpty)
+                        .opacity(foreignPassword.isEmpty ? 0.4 : 1)
+                }
+            }
+            .padding(30)
+            .frame(width: 420, height: 300)
+            .background(Theme.paper)
+            .preferredColorScheme(.light)
+        }
+    }
+
+    private func tentaSblocco(_ p: VaultTransfer.Preview) {
+        guard let aperto = VaultTransfer.unlock(p, with: foreignPassword) else {
+            unlockError = "password sbagliata."
+            return
+        }
+        if let i = previews.firstIndex(where: { $0.id == p.id }) {
+            previews[i] = aperto
+            chosen.insert(aperto.id)
+        }
+        unlocking = nil
     }
 
     private func riga(_ p: VaultTransfer.Preview) -> some View {
@@ -84,6 +134,17 @@ struct ImportPreviewView: View {
                     Text(problem)
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.danger)
+                    // se la password ce l'hai, il cassetto non è perso: si
+                    // apre e si ricifra con quella dello scrigno
+                    Button("ho la password") {
+                        unlocking = p
+                        foreignPassword = ""
+                        unlockError = nil
+                    }
+                    .buttonStyle(.plain)
+                    .font(Theme.mono(10, .semibold))
+                    .foregroundStyle(Theme.ink)
+                    .underline()
                 } else {
                     Text(p.entries.isEmpty ? "vuoto" : "\(p.entries.count) voci")
                         .font(Theme.mono(10))
