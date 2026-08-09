@@ -172,8 +172,10 @@ struct ProjectsHomeView: View {
     @State private var newEntryUser = ""
     @State private var newEntryPassword = ""
     @State private var newEntryURLs: [IdentifiedString] = [IdentifiedString()]
-    /// "nota sicura": più di una nota, stesso pattern degli url in accesso.
-    @State private var newSecureNotes: [IdentifiedString] = [IdentifiedString()]
+    /// "nota sicura": più note, ognuna col suo titolo (label) e il suo testo
+    /// (value) — dentro una cartella "documenti" ci stanno appunti diversi,
+    /// e senza un titolo per ciascuno non si distinguono.
+    @State private var newSecureNotes: [CustomField] = [CustomField()]
     @State private var newEntryFields: [CustomField] = []
     @State private var newEntryNotes = ""
     @State private var revealNewEntryPassword = false
@@ -958,7 +960,25 @@ struct ProjectsHomeView: View {
                     .menuStyle(.borderlessButton)
                     .disabled(projects.count <= 1)
 
-                    AutoFocusField(placeholder: "titolo", text: $newEntryName)
+                    // Il titolo è il nome della CARTELLA, non un campo come
+                    // gli altri: sta in cima, staccato, con la sua etichetta.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("nome della cartella")
+                            .font(Theme.mono(10, .semibold))
+                            .tracking(1.2)
+                            .textCase(.uppercase)
+                            .foregroundStyle(Theme.inkSoft)
+                        AutoFocusField(placeholder: "titolo", text: $newEntryName)
+                    }
+
+                    Rectangle().fill(Theme.line.opacity(0.4)).frame(height: 1)
+                        .padding(.vertical, 2)
+
+                    Text("cosa c'è dentro")
+                        .font(Theme.mono(10, .semibold))
+                        .tracking(1.2)
+                        .textCase(.uppercase)
+                        .foregroundStyle(Theme.inkSoft)
 
                     switch newEntryKind {
                     case .login, .password:
@@ -1130,23 +1150,27 @@ struct ProjectsHomeView: View {
     /// File leggero allegato: copiato negli allegati dell'app alla creazione,
     /// così resta raggiungibile anche se l'originale sparisce.
     @ViewBuilder private var secureNoteFields: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach($newSecureNotes) { $note in
-                HStack(spacing: 8) {
-                    TextField("nota", text: $note.value, axis: .vertical)
-                        .textFieldStyle(PaperFieldStyle())
-                        .lineLimit(3...5)
-                    if newSecureNotes.count > 1 {
-                        Button {
-                            newSecureNotes.removeAll { $0.id == note.id }
-                        } label: {
-                            Image(systemName: "minus.circle").foregroundStyle(Theme.danger)
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array($newSecureNotes.enumerated()), id: \.element.id) { i, $note in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        TextField("titolo della nota \(i + 1)", text: $note.label)
+                            .textFieldStyle(PaperFieldStyle())
+                        if newSecureNotes.count > 1 {
+                            Button {
+                                newSecureNotes.removeAll { $0.id == note.id }
+                            } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Theme.danger)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    TextField("testo", text: $note.value, axis: .vertical)
+                        .textFieldStyle(PaperFieldStyle())
+                        .lineLimit(3...6)
                 }
             }
-            Button { newSecureNotes.append(IdentifiedString()) } label: {
+            Button { newSecureNotes.append(CustomField()) } label: {
                 Label("aggiungi un'altra nota", systemImage: "plus")
             }
             .buttonStyle(.plain)
@@ -1221,7 +1245,7 @@ struct ProjectsHomeView: View {
         if closeSheet { showEntryFlow = false }
         newEntryName = ""; newEntryUser = ""; newEntryPassword = ""
         newEntryURLs = [IdentifiedString()]; newEntryFields = []; newEntryNotes = ""
-        newSecureNotes = [IdentifiedString()]
+        newSecureNotes = [CustomField()]
         revealNewEntryPassword = false
         newCardHolder = ""; newCardNumber = ""; newCardExpiry = ""; newCardCVV = ""; newCardPIN = ""
         newIdentityFirstName = ""; newIdentityLastName = ""; newIdentityAddress = ""
@@ -1259,8 +1283,11 @@ struct ProjectsHomeView: View {
             entryDetails[name] = extras
         case .secureNote:
             entryDetails[name] = newSecureNotes.enumerated()
-                .filter { !$0.element.value.isEmpty }
-                .map { ("nota \($0.offset + 1)", $0.element.value) }
+                .filter { !$0.element.value.trimmingCharacters(in: .whitespaces).isEmpty }
+                .map { i, note in
+                    let title = note.label.trimmingCharacters(in: .whitespaces)
+                    return (title.isEmpty ? "nota \(i + 1)" : title, note.value)
+                }
         case .card:
             entryDetails[name] = [
                 ("intestatario", newCardHolder),
