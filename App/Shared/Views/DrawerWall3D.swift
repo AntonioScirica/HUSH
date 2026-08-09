@@ -650,6 +650,12 @@ struct DrawerWall3D: NSViewRepresentable {
                 folderPivots[idx].eulerAngles.x = 0
                 folderPivots[idx].position.x = 0
             }
+            // il nastro torna all'inizio: chiudendo una cartella si vuole
+            // rivedere il cassetto intero, non ripartire da dove si era
+            // arrivati sfogliando
+            folderFocus = 0
+            scrollUnderflow = 0
+            revealedFolderIdx = nil
             applyFolderScroll()
             SCNTransaction.commit()
         }
