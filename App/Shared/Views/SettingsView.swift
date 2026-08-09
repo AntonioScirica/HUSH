@@ -51,7 +51,6 @@ struct SettingsView: View {
                             Text("30 giorni").tag(30)
                         }
                         .labelsHidden()
-                        .frame(width: 130)
                         .onChange(of: typeAgain) { _, v in Preferences.typeAgainDays = v }
                     }
 
@@ -71,7 +70,6 @@ struct SettingsView: View {
                             Text("mai").tag(0)
                         }
                         .labelsHidden()
-                        .frame(width: 130)
                         .onChange(of: autolock) { _, v in Preferences.autolockMinutes = v }
                     }
 
@@ -84,7 +82,6 @@ struct SettingsView: View {
                             Text("mai").tag(0)
                         }
                         .labelsHidden()
-                        .frame(width: 130)
                         .onChange(of: clipboard) { _, v in Preferences.clipboardSeconds = v }
                     }
 
@@ -96,7 +93,6 @@ struct SettingsView: View {
                             ForEach([12, 16, 20, 24, 32], id: \.self) { Text("\($0)").tag($0) }
                         }
                         .labelsHidden()
-                        .frame(width: 130)
                         .onChange(of: length) { _, v in Preferences.passwordLength = v }
                     }
 
@@ -111,7 +107,7 @@ struct SettingsView: View {
                     section("dati")
 
                     Button { showImporter = true } label: {
-                        Label("importa da un .csv…", systemImage: "square.and.arrow.down")
+                        Label("importa da un .csv", systemImage: "square.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
@@ -179,11 +175,12 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            // colonna di larghezza fissa allineata a destra: menu a tendina e
-            // interruttori hanno ingombri diversi e, lasciati liberi, i loro
-            // bordi destri non cadevano sulla stessa linea
+            // Colonna allineata a destra. I controlli NON hanno una larghezza
+            // propria: dandogliela, il menu a tendina si centrava dentro il
+            // suo riquadro e restava più stretto dell'interruttore. Liberi e
+            // allineati in coda, i bordi destri cadono sulla stessa linea.
             control()
-                .frame(width: 130, alignment: .trailing)
+                .fixedSize()
         }
     }
 

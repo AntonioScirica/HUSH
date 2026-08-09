@@ -230,7 +230,7 @@ struct OnboardingView: View {
                 .themedImportRow()
             } else {
                 Button { showFileImporter = true } label: {
-                    Label("scegli un file .csv…", systemImage: "doc.badge.plus")
+                    Label("scegli un file .csv", systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(OutlineButtonStyle())
