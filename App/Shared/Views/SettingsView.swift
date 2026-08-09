@@ -212,6 +212,26 @@ struct SettingsView: View {
                     .buttonStyle(OutlineButtonStyle())
 
                     Button {
+                        VaultTransfer.chooseOnePasswordArchive { archivio in
+                            guard let archivio else { return }
+                            note = "leggo l'archivio…"; error = nil
+                            Task {
+                                do {
+                                    let n = try await VaultTransfer.importOnePassword(archivio)
+                                    note = "importati \(n) cassetti da 1Password."
+                                } catch {
+                                    self.error = "importazione non riuscita: \(error.localizedDescription)"
+                                    note = nil
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("importa da 1Password (.1pux)", systemImage: "lock.shield")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+
+                    Button {
                         VaultTransfer.chooseExportFolder { folder in
                             guard let folder else { return }
                             Task { do {

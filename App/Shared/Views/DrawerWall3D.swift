@@ -612,15 +612,52 @@ struct DrawerWall3D: NSViewRepresentable {
                     node.eulerAngles.x = self.openCameraPitch
                     SCNTransaction.commit()
 
-                    // a fine corsa, proietta il corpo della cartella sullo
-                    // schermo e passa il rettangolo all'overlay SwiftUI
+                    // a fine corsa si centra per davvero e poi si proietta il
+                    // rettangolo del corpo per l'overlay SwiftUI
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
                         guard let self, self.selectedFolderIdx == idx else { return }
+                        self.centerExtractedFolder(idx)
                         self.folderExtracted = true
-                        self.reportFolderRect(idx)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.24) { [weak self] in
+                            self?.reportFolderRect(idx)
+                        }
                     }
                 }
             }
+        }
+
+        /// Mette la cartella estratta esattamente al centro dello schermo.
+        ///
+        /// La posizione era un numero trovato a occhio, tarato su una sola
+        /// misura di cartella e su una sola forma di finestra: appena il corpo
+        /// cresce coi dati, o cambia la posa della camera, il centro non è più
+        /// il centro. Qui invece si guarda dove il corpo finisce davvero sullo
+        /// schermo e lo si sposta di quel tanto che serve.
+        func centerExtractedFolder(_ idx: Int) {
+            guard let view, idx < folderPivots.count, view.bounds.height > 0 else { return }
+            let node = folderPivots[idx]
+
+            // centro del CORPO, non dell'origine del nodo (che sta alla base)
+            let bodyCenterLocal = SCNVector3(0, folderBodyH / 2, 0)
+            let worldCenter = node.convertPosition(bodyCenterLocal, to: nil)
+            let projected = view.projectPoint(worldCenter)
+
+            // dove vorremmo che fosse: il centro della vista, stessa profondità
+            let target = SCNVector3(view.bounds.midX, view.bounds.midY, CGFloat(projected.z))
+            let desiredWorld = view.unprojectPoint(target)
+
+            // lo scarto in coordinate del padre, così si somma alla posizione
+            let parent = node.parent
+            let from = parent?.convertPosition(worldCenter, from: nil) ?? worldCenter
+            let to = parent?.convertPosition(desiredWorld, from: nil) ?? desiredWorld
+
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = 0.22
+            SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeOut)
+            node.position = SCNVector3(node.position.x + (to.x - from.x),
+                                       node.position.y + (to.y - from.y),
+                                       node.position.z)
+            SCNTransaction.commit()
         }
 
         /// Proietta i 4 angoli del corpo della cartella estratta in coordinate

@@ -471,7 +471,9 @@ struct ProjectsHomeView: View {
             // comandi — in basso a cassetti chiusi, in alto quando uno è
             // aperto (lì ci sono modifica e chiudi, e in basso non serve più).
             VStack {
-                if drawerOpen {
+                // con una cartella estratta i comandi in alto non ci sono, e
+                // la sfumatura resterebbe a velare la scheda per niente
+                if drawerOpen && selectedFolder == nil {
                     LinearGradient(
                         colors: [Theme.paper, Theme.paper.opacity(0)],
                         startPoint: .top,

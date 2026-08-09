@@ -310,6 +310,61 @@ enum VaultTransfer {
         return importati
     }
 
+    // MARK: - Da 1Password
+
+    /// Crea un cassetto per ogni vault di 1Password, con dentro le sue voci.
+    /// Il lavoro pesante (un Argon2id per cassetto) sta fuori dal thread
+    /// principale, così la finestra non si pianta con archivi grossi.
+    @MainActor
+    static func importOnePassword(_ archive: URL) async throws -> Int {
+        guard let key = MasterKey.session else { return 0 }
+        let vaults = try await Task.detached(priority: .userInitiated) {
+            try OnePasswordImport.read(archive)
+        }.value
+
+        struct Pronto { let name: String; let bytes: [UInt8] }
+        let pronti: [Pronto] = await Task.detached(priority: .userInitiated) {
+            vaults.compactMap { vault in
+                let db = VaultDatabase.createNew(name: vault.name)
+                for e in vault.entries {
+                    db.addEntry(VaultEntry(
+                        title: e.title, username: e.username, password: e.password,
+                        url: e.url, notes: e.notes,
+                        customFields: [VaultCustomField(key: "scrigno.kind", value: "login")]
+                    ))
+                }
+                for d in vault.details {
+                    db.addEntry(VaultEntry(
+                        title: d.title,
+                        customFields: [VaultCustomField(key: "scrigno.kind",
+                                                        value: d.kind == "extra" ? "secureNote" : d.kind)]
+                            + d.fields.map { VaultCustomField(key: $0.label, value: $0.value) }
+                    ))
+                }
+                guard let bytes = try? Kdbx4.save(database: db, password: key) else { return nil }
+                return Pronto(name: vault.name, bytes: bytes)
+            }
+        }.value
+
+        for p in pronti {
+            let dest = VaultFileManager.shared.freeProjectURL(named: p.name)
+            try Data(p.bytes).write(to: dest, options: .atomic)
+            try VaultFileManager.shared.addProject(name: p.name, url: dest,
+                                                   icon: "lock.shield",
+                                                   noteColor: "#A8D8B9")
+        }
+        return pronti.count
+    }
+
+    static func chooseOnePasswordArchive(completion: @escaping (URL?) -> Void) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.prompt = "Importa"
+        panel.message = "Scegli l'archivio .1pux esportato da 1Password"
+        panel.begin { completion($0 == .OK ? panel.url : nil) }
+    }
+
     // MARK: - Pannelli
 
     static func chooseExportFolder(completion: @escaping (URL?) -> Void) {
