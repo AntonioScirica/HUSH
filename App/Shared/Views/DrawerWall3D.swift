@@ -728,6 +728,16 @@ struct DrawerWall3D: NSViewRepresentable {
         func applyFolderScroll() {
             for (i, pivot) in folderPivots.enumerated() {
                 pivot.position.z = Self.conveyorZ(index: i, focus: folderFocus)
+
+                // Quelle già passate svaniscono nel giro di poche cartelle.
+                // Impilarle tutte davanti voleva dire, in un cassetto pieno,
+                // decine di sagome alla stessa profondità coi titoli
+                // sovrastampati: sembravano una cosa sola incollata alla "+".
+                if i > 0 {
+                    let d = CGFloat(i) - folderFocus
+                    pivot.opacity = d < 0 ? max(0, 1 + d / 2.5) : 1
+                }
+
                 if i == 0 {
                     // sempre alzata quanto basta per leggere il "+", ferma
                     pivot.position.y = folderBaseY + 0.30
