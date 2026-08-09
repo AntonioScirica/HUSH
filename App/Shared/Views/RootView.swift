@@ -10,8 +10,20 @@ public struct RootView: View {
     /// Distingue "richiuso col lucchetto" da "appena avviato": nel primo caso
     /// la porta si richiude sotto gli occhi invece di comparire già chiusa.
     @State private var lockedByHand = false
+    /// Richiude lo scrigno lasciato lì aperto.
+    @StateObject private var idle = IdleWatcher()
 
-    public init() {}
+    public init() {
+        Preferences.registerDefaults()
+    }
+
+    private func lockUp() {
+        MasterKey.lock()
+        vm.lock()
+        idle.stop()
+        lockedByHand = true
+        unlocked = false
+    }
 
     public var body: some View {
         Group {
@@ -20,6 +32,10 @@ public struct RootView: View {
                     configured = true
                     // l'onboarding lascia già la sessione aperta
                     unlocked = MasterKey.isUnlocked
+                    if unlocked {
+                        idle.onIdle = { lockUp() }
+                        idle.start()
+                    }
                 }
                 .transition(.opacity)
             } else {
@@ -36,12 +52,7 @@ public struct RootView: View {
                 // "nuova password" & co. sul vecchio form.
                 ZStack {
                     ProjectsHomeView(
-                        onLock: {
-                            MasterKey.lock()
-                            vm.lock()
-                            lockedByHand = true
-                            unlocked = false
-                        },
+                        onLock: { lockUp() },
                         chromeVisible: unlocked
                     )
                     .environmentObject(vm)
@@ -53,6 +64,10 @@ public struct RootView: View {
                         VaultDoorView(closing: lockedByHand) {
                             lockedByHand = false
                             unlocked = true
+                            // il conto dell'inattività parte da qui: prima
+                            // non c'era niente di aperto da richiudere
+                            idle.onIdle = { lockUp() }
+                            idle.start()
                         }
                     }
                 }

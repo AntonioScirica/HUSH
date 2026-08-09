@@ -19,7 +19,9 @@ enum MasterKey {
 
     /// Ogni tanto la password va comunque digitata: col dito soltanto la si
     /// dimentica, e qui non c'è nessun "password dimenticata" a cui appellarsi.
-    static let typeAgainAfter: TimeInterval = 7 * 24 * 60 * 60
+    static var typeAgainAfter: TimeInterval {
+        TimeInterval(Preferences.typeAgainDays) * 24 * 60 * 60
+    }
 
     /// Iterazioni del verificatore: rende inutile provare le password a
     /// tappeto contro il file di preferenze.

@@ -4,11 +4,24 @@ import VaultCore
 
 /// Copia negli appunti con un click: i campi si vedono solo in sola lettura
 /// finché non premi "modifica", quindi copiarli deve essere immediato.
+///
+/// La copia si cancella da sola dopo il tempo scelto nelle impostazioni: una
+/// password lasciata negli appunti la legge qualunque cosa incolli dopo. Si
+/// svuota solo se nel frattempo non hai copiato altro, per non portarti via
+/// roba che non è nostra.
 private func copyToClipboard(_ text: String) {
     guard !text.isEmpty else { return }
     let pb = NSPasteboard.general
     pb.clearContents()
     pb.setString(text, forType: .string)
+
+    let seconds = Preferences.clipboardSeconds
+    guard seconds > 0 else { return }
+    DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(seconds)) {
+        if NSPasteboard.general.string(forType: .string) == text {
+            NSPasteboard.general.clearContents()
+        }
+    }
 }
 
 /// Campo che prende il fuoco da solo appena compare. Deve essere una view a
@@ -741,7 +754,9 @@ struct ProjectsHomeView: View {
             .preferredColorScheme(.light)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView { showSettings = false }.sheetPaper()
+            SettingsView(onClose: { showSettings = false },
+                         onImport: { consumePendingImport() })
+                .sheetPaper()
         }
         .sheet(isPresented: $showIconLibrary) {
             IconLibrarySheet(selected: newIcon, search: $iconSearch, library: iconLibrary) { picked in
@@ -1197,8 +1212,9 @@ struct ProjectsHomeView: View {
     }
 
     private static func randomPassword() -> String {
-        let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!?#%&"
-        return String((0..<16).compactMap { _ in chars.randomElement() })
+        var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        if Preferences.passwordSymbols { chars += "!?#%&*+-=@" }
+        return String((0..<Preferences.passwordLength).compactMap { _ in chars.randomElement() })
     }
 
     private func resetNewEntryForm(closeSheet: Bool = true) {
