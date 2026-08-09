@@ -98,6 +98,29 @@ enum VaultTransfer {
         }.value
     }
 
+    // MARK: - Aspetto dei cassetti importati
+
+    /// Icone per i cassetti che arrivano da fuori.
+    ///
+    /// Si pescano in ordine e senza ripetersi finché ce n'è: importando
+    /// diciotto vault tutti uguali non si distinguerebbe più niente, e la
+    /// parete serve proprio a riconoscere i progetti a colpo d'occhio. I
+    /// colori invece possono ripetersi, sono pochi di proposito.
+    private static let iconePerImport = [
+        "folder", "briefcase", "house", "globe", "cart", "creditcard",
+        "person.2", "building.2", "gamecontroller", "airplane", "car",
+        "heart", "graduationcap", "music.note", "camera", "leaf",
+        "bolt", "cross.case", "hammer", "chart.bar", "envelope", "phone",
+        "book", "gift", "ticket", "shippingbox", "server.rack", "wifi",
+        "key", "lock.shield", "star", "flag"
+    ]
+
+    static func aspetto(perIndice i: Int) -> (icon: String, color: String) {
+        let icona = iconePerImport[i % iconePerImport.count]
+        let colori = ["#FADA5C", "#F4A9A8", "#A8D8B9", "#9EC5E8", "#D9B8E8", "#F0C9A0"]
+        return (icona, colori[i % colori.count])
+    }
+
     // MARK: - Anteprima
 
     /// Da dove arriva un cassetto da importare. Le tre provenienze si
@@ -153,17 +176,25 @@ enum VaultTransfer {
         await Task.detached(priority: .userInitiated) {
             var previews: [Preview] = []
             var perKdbx: [URL] = []
+            // contatore unico su tutta l'importazione: due vault non devono
+            // ritrovarsi con la stessa icona solo perché arrivano da file diversi
+            var prossimo = 0
+            func aspettoSuccessivo() -> (icon: String, color: String) {
+                defer { prossimo += 1 }
+                return aspetto(perIndice: prossimo)
+            }
 
             for url in selection {
                 switch url.pathExtension.lowercased() {
                 case "csv", "txt":
                     if let entries = try? CSVImport.parse(contentsOf: url) {
+                        let look = aspettoSuccessivo()
                         previews.append(Preview(
                             origin: .csv(entries),
                             file: url,
                             name: url.deletingPathExtension().lastPathComponent,
-                            icon: "tablecells",
-                            noteColor: "#F0C9A0",
+                            icon: look.icon,
+                            noteColor: look.color,
                             entries: entries.map(\.title)
                         ))
                     } else {
@@ -175,12 +206,13 @@ enum VaultTransfer {
                 case "1pux":
                     if let vaults = try? OnePasswordImport.read(url) {
                         for v in vaults {
+                            let look = aspettoSuccessivo()
                             previews.append(Preview(
                                 origin: .onePassword(v),
                                 file: url,
                                 name: v.name,
-                                icon: "lock.shield",
-                                noteColor: "#A8D8B9",
+                                icon: look.icon,
+                                noteColor: look.color,
                                 entries: v.entries.map(\.title) + v.details.map(\.title)
                             ))
                         }

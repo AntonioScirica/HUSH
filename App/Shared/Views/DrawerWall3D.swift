@@ -270,7 +270,12 @@ struct DrawerWall3D: NSViewRepresentable {
                 return
             }
             guard !isAnimatingDrawer, !folderPivots.isEmpty, selectedFolderIdx == nil else { return }
-            let proposed = folderFocus - deltaY * 0.006
+            // Passo proporzionato a quanto è pieno il cassetto: con un passo
+            // fisso, novantaquattro voci volevano novantaquattro scatti di
+            // rotella. Sotto la dozzina resta com'era, così i cassetti piccoli
+            // si sfogliano ancora con precisione.
+            let passo = 0.006 * max(1, maxFolderFocus / 12)
+            let proposed = folderFocus - deltaY * passo
             if proposed < 0 {
                 // già alla prima: continuare a scrollare indietro chiude il cassetto
                 scrollUnderflow += -proposed - folderFocus
