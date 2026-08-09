@@ -1,4 +1,14 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+private extension View {
+    func themedImportRow() -> some View {
+        padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.paperRaised)
+            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+    }
+}
 
 /// Primo avvio: si presenta lo scrigno, si sceglie la master password e —
 /// se la macchina ce l'ha — si attiva il dito. Stessa carta, stesso
@@ -7,7 +17,7 @@ struct OnboardingView: View {
     let onDone: () -> Void
 
     private enum Step: Int, CaseIterable {
-        case intro, password, biometry, ready
+        case intro, password, biometry, importing, ready
     }
 
     @State private var step: Step = .intro
@@ -16,6 +26,9 @@ struct OnboardingView: View {
     @State private var reveal = false
     @State private var error: String?
     @FocusState private var passwordFocused: Bool
+
+    @State private var showFileImporter = false
+    @State private var importedCount = 0
 
     var body: some View {
         ZStack {
@@ -26,10 +39,11 @@ struct OnboardingView: View {
 
                 Group {
                     switch step {
-                    case .intro:    intro
-                    case .password: passwordStep
-                    case .biometry: biometryStep
-                    case .ready:    ready
+                    case .intro:     intro
+                    case .password:  passwordStep
+                    case .biometry:  biometryStep
+                    case .importing: importStep
+                    case .ready:     ready
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -55,10 +69,11 @@ struct OnboardingView: View {
 
     private var title: String {
         switch step {
-        case .intro:    return "benvenuto"
-        case .password: return "la tua unica password"
-        case .biometry: return "sblocco col dito"
-        case .ready:    return "tutto pronto"
+        case .intro:     return "benvenuto"
+        case .password:  return "la tua unica password"
+        case .biometry:  return "sblocco col dito"
+        case .importing: return "porta dentro quelle che hai già"
+        case .ready:     return "tutto pronto"
         }
     }
 
@@ -192,6 +207,69 @@ struct OnboardingView: View {
         }
     }
 
+    /// Import da un altro gestore. Il CSV è il minimo comun denominatore:
+    /// 1Password, Bitwarden, LastPass, Chrome e Safari lo esportano tutti.
+    private var importStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: "square.and.arrow.down")
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(Theme.ink)
+
+            Text("se usi già 1Password, Bitwarden, LastPass o le password\ndel browser, esporta un .csv da lì e caricalo qui: finisce\ntutto in un cassetto solo, che poi puoi riordinare.")
+                .font(Theme.mono(11))
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if importedCount > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                    Text("\(importedCount) voci pronte da mettere dentro")
+                        .font(Theme.mono(12, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+                .themedImportRow()
+            } else {
+                Button { showFileImporter = true } label: {
+                    Label("scegli un file .csv…", systemImage: "doc.badge.plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OutlineButtonStyle())
+            }
+
+            // il file esportato contiene le password in chiaro: dirlo qui,
+            // dove l'utente ce l'ha ancora in mano
+            Text("il file esportato contiene le password in chiaro:\ncancellalo appena finito.")
+                .font(Theme.mono(10))
+                .foregroundStyle(Theme.danger)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let error {
+                Text(error)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.danger)
+            }
+        }
+        .fileImporter(isPresented: $showFileImporter,
+                      allowedContentTypes: [.commaSeparatedText, .text, .plainText]) { result in
+            handleCSV(result)
+        }
+    }
+
+    private func handleCSV(_ result: Result<URL, Error>) {
+        error = nil
+        guard case .success(let url) = result else { return }
+        let accessed = url.startAccessingSecurityScopedResource()
+        defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+        do {
+            let entries = try CSVImport.parse(contentsOf: url)
+            PendingImport.entries = entries
+            PendingImport.projectName = url.deletingPathExtension().lastPathComponent
+            importedCount = entries.count
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
     private var ready: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("lo scrigno è chiuso a chiave.")
@@ -220,7 +298,12 @@ struct OnboardingView: View {
             Spacer()
 
             if step == .biometry {
-                Button("non ora") { step = .ready }
+                Button("non ora") { step = .importing }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(width: 130)
+            }
+            if step == .importing && importedCount == 0 {
+                Button("salta") { step = .ready }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(width: 130)
             }
@@ -235,10 +318,11 @@ struct OnboardingView: View {
 
     private var primaryLabel: String {
         switch step {
-        case .intro:    return "comincia"
-        case .password: return "imposta"
-        case .biometry: return "attiva"
-        case .ready:    return "entra"
+        case .intro:     return "comincia"
+        case .password:  return "imposta"
+        case .biometry:  return "attiva"
+        case .importing: return importedCount > 0 ? "avanti" : "scegli file"
+        case .ready:     return "entra"
         }
     }
 
@@ -267,15 +351,18 @@ struct OnboardingView: View {
                 return
             }
             MasterKey.configure(password: password)
-            step = MasterKey.biometryAvailable ? .biometry : .ready
+            step = MasterKey.biometryAvailable ? .biometry : .importing
 
         case .biometry:
             do {
                 try MasterKey.enableBiometry(password: password)
-                step = .ready
+                step = .importing
             } catch {
                 self.error = "non è stato possibile attivarlo: \(error.localizedDescription)"
             }
+
+        case .importing:
+            if importedCount > 0 { step = .ready } else { showFileImporter = true }
 
         case .ready:
             password = ""; confirm = ""

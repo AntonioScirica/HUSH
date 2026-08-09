@@ -759,6 +759,51 @@ struct ProjectsHomeView: View {
         }, message: { Text("Il file .kdbx viene cancellato dal disco. Non si può annullare.") })
         .onAppear {
             projects = VaultFileManager.shared.projects
+            consumePendingImport()
+        }
+    }
+
+    /// Le voci scelte in onboarding finiscono in un cassetto loro. Va fatto
+    /// qui e non nell'onboarding: là il vault non esiste ancora, nasce con la
+    /// master password appena scelta.
+    private func consumePendingImport() {
+        guard !PendingImport.isEmpty, let key = MasterKey.session else { return }
+        let name = PendingImport.projectName
+        let imported = PendingImport.entries
+        PendingImport.clear()
+
+        vm.createNew(name: name, password: key)
+        Task { @MainActor in
+            guard let bytes = await vm.save() else { return }
+            do {
+                let url = VaultFileManager.shared.freeProjectURL(named: name)
+                try Data(bytes).write(to: url, options: .atomic)
+                try VaultFileManager.shared.addProject(name: name, url: url,
+                                                       icon: "square.and.arrow.down",
+                                                       noteColor: Self.noteColors.first)
+                projects = VaultFileManager.shared.projects
+                guard let created = projects.first(where: { $0.path == url.path }) else { return }
+
+                // nomi doppi nello stesso cassetto renderebbero ambigue le
+                // schede, che sono indicizzate per titolo
+                var used = Set<String>()
+                var titles: [String] = []
+                for entry in imported {
+                    var title = entry.title
+                    var n = 2
+                    while used.contains(title) { title = "\(entry.title) (\(n))"; n += 1 }
+                    used.insert(title)
+                    titles.append(title)
+                    entryKinds[title] = .login
+                    entryOverrides[title] = (user: entry.username,
+                                             password: entry.password,
+                                             url: entry.url,
+                                             notes: entry.notes)
+                }
+                entriesByProject[created.id] = titles
+            } catch {
+                localError = "Import non riuscito: \(error.localizedDescription)"
+            }
         }
     }
 

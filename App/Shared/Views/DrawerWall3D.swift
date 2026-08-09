@@ -564,11 +564,7 @@ struct DrawerWall3D: NSViewRepresentable {
             folderExtracted = false
 
             // niente hover sulla cartella estratta (resterebbe nera)
-            if let h = hoveredFolder {
-                folderFillMats[h]?.forEach { $0.diffuse.contents = DrawerWall3D.paper }
-                folderTextMats[h]?.forEach { $0.diffuse.contents = DrawerWall3D.ink }
-                hoveredFolder = nil
-            }
+            clearHover()
 
             // camera inchiodata alla posa base: da qui in poi non si muove più
             if let pos = openCameraPos() {
@@ -736,6 +732,18 @@ struct DrawerWall3D: NSViewRepresentable {
             return nil
         }
 
+        /// Spegne l'evidenziazione della cartella sotto al mouse.
+        ///
+        /// L'hover riempie la cartella di nero: se il cassetto si chiude
+        /// mentre una è evidenziata (per esempio premendo "modifica"), quella
+        /// resta nera e riaffiora come un rettangolo scuro sulla parete.
+        func clearHover() {
+            guard let h = hoveredFolder else { return }
+            folderFillMats[h]?.forEach { $0.diffuse.contents = DrawerWall3D.paper }
+            folderTextMats[h]?.forEach { $0.diffuse.contents = DrawerWall3D.ink }
+            hoveredFolder = nil
+        }
+
         func updateHover(at point: CGPoint) {
             guard let view, selectedFolderIdx == nil else { return }
             let hits = view.hitTest(point, options: [SCNHitTestOption.searchMode: SCNHitTestSearchMode.all.rawValue])
@@ -893,6 +901,9 @@ struct DrawerWall3D: NSViewRepresentable {
 
         func closeDrawer() {
             guard let idx = openCellIdx, let node = cellDrawerNodes[idx], let cameraNode else { return }
+            // se una cartella era evidenziata resterebbe nera dentro al
+            // cassetto chiuso, e si intravede sulla parete
+            clearHover()
             // se una cartella era estratta/alzata, riportala giù PRIMA di
             // salvare lo stato: altrimenti al prossimo apri risulta ancora
             // estratta, con la posizione sbagliata. Animato insieme alla
