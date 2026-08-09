@@ -47,21 +47,41 @@ enum VaultTransfer {
 
     // MARK: - Importazione
 
-    /// Rimette i vault di una cartella esportata dentro a questo computer.
+    /// Rimette dentro a questo computer i vault esportati altrove.
+    ///
+    /// Accetta indifferentemente la cartella dell'esportazione o i singoli
+    /// `.kdbx` scelti a mano: chi importa non deve indovinare cosa gli si
+    /// aspetta.
     ///
     /// I percorsi dell'altro Mac non valgono qui: ogni file viene ricollocato
     /// nella cartella locale e il progetto registrato col percorso nuovo.
     @discardableResult
-    static func importAll(from folder: URL) throws -> Int {
+    static func importAll(from selection: [URL]) throws -> Int {
         let fm = FileManager.default
-        let manifestURL = folder.appendingPathComponent(manifestName)
-        let manifest = (try? Data(contentsOf: manifestURL))
-            .flatMap { try? JSONDecoder().decode(Manifest.self, from: $0) }
+        var files: [URL] = []
+        var manifest: Manifest?
 
-        // senza indice si importano comunque i .kdbx trovati: meglio i vault
-        // senza icone che nessun vault
-        let files = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension.lowercased() == "kdbx" } ?? []
+        for url in selection {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+            if isDir.boolValue {
+                let contents = (try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+                files += contents.filter { $0.pathExtension.lowercased() == "kdbx" }
+                // l'indice con nomi, icone e colori, se la cartella ce l'ha
+                if manifest == nil,
+                   let data = try? Data(contentsOf: url.appendingPathComponent(manifestName)) {
+                    manifest = try? JSONDecoder().decode(Manifest.self, from: data)
+                }
+            } else if url.pathExtension.lowercased() == "kdbx" {
+                files.append(url)
+                // scelto il file da solo: l'indice sta comunque accanto
+                if manifest == nil,
+                   let data = try? Data(contentsOf: url.deletingLastPathComponent()
+                                                      .appendingPathComponent(manifestName)) {
+                    manifest = try? JSONDecoder().decode(Manifest.self, from: data)
+                }
+            }
+        }
 
         var importati = 0
         for file in files {
@@ -93,12 +113,16 @@ enum VaultTransfer {
         panel.begin { completion($0 == .OK ? panel.url : nil) }
     }
 
-    static func chooseImportFolder(completion: @escaping (URL?) -> Void) {
+    /// Pannello d'importazione: accetta la cartella esportata **oppure** i
+    /// singoli .kdbx. Prima prendeva solo cartelle, e i file esportati
+    /// risultavano spenti e non selezionabili.
+    static func chooseImport(completion: @escaping ([URL]) -> Void) {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
-        panel.canChooseFiles = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = true
         panel.prompt = "Importa"
-        panel.message = "Scegli la cartella esportata dall'altro computer"
-        panel.begin { completion($0 == .OK ? panel.url : nil) }
+        panel.message = "Scegli la cartella esportata, oppure i file .kdbx"
+        panel.begin { completion($0 == .OK ? panel.urls : []) }
     }
 }

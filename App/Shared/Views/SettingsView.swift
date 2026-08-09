@@ -35,6 +35,52 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    section("licenza")
+
+                    if let info = License.active {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.seal")
+                            Text("attiva · \(info.email)")
+                                .font(Theme.mono(11, .semibold))
+                        }
+                        .foregroundStyle(Theme.ink)
+
+                        Text("vale per un computer. per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(Theme.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button { confirmDetach = true } label: {
+                            Label("stacca da questo computer", systemImage: "rectangle.portrait.and.arrow.right")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                    } else {
+                        Text(License.trialDaysLeft > 0
+                             ? "prova: mancano \(License.trialDaysLeft) giorni."
+                             : "la prova è finita: inserisci la licenza per continuare.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(License.trialDaysLeft > 0 ? Theme.inkSoft : Theme.danger)
+
+                        TextField("incolla qui la licenza", text: $licenseText, axis: .vertical)
+                            .textFieldStyle(PaperFieldStyle())
+                            .lineLimit(2...4)
+
+                        Button {
+                            if License.register(licenseText) != nil {
+                                licenseText = ""; note = "licenza attivata."; error = nil
+                            } else {
+                                error = "questa licenza non è valida."
+                            }
+                        } label: {
+                            Label("attiva", systemImage: "checkmark.seal")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                        .disabled(licenseText.isEmpty)
+                    }
+
+                    divider
                     section("chiave d'accesso")
 
                     if MasterKey.biometryAvailable {
@@ -110,52 +156,6 @@ struct SettingsView: View {
                     }
 
                     divider
-                    section("licenza")
-
-                    if let info = License.active {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.seal")
-                            Text("attiva · \(info.email)")
-                                .font(Theme.mono(11, .semibold))
-                        }
-                        .foregroundStyle(Theme.ink)
-
-                        Text("vale per un computer. per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
-                            .font(Theme.mono(10))
-                            .foregroundStyle(Theme.inkSoft)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Button { confirmDetach = true } label: {
-                            Label("stacca da questo computer", systemImage: "rectangle.portrait.and.arrow.right")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(OutlineButtonStyle())
-                    } else {
-                        Text(License.trialDaysLeft > 0
-                             ? "prova: mancano \(License.trialDaysLeft) giorni."
-                             : "la prova è finita: inserisci la licenza per continuare.")
-                            .font(Theme.mono(10))
-                            .foregroundStyle(License.trialDaysLeft > 0 ? Theme.inkSoft : Theme.danger)
-
-                        TextField("incolla qui la licenza", text: $licenseText, axis: .vertical)
-                            .textFieldStyle(PaperFieldStyle())
-                            .lineLimit(2...4)
-
-                        Button {
-                            if License.register(licenseText) != nil {
-                                licenseText = ""; note = "licenza attivata."; error = nil
-                            } else {
-                                error = "questa licenza non è valida."
-                            }
-                        } label: {
-                            Label("attiva", systemImage: "checkmark.seal")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(OutlineButtonStyle())
-                        .disabled(licenseText.isEmpty)
-                    }
-
-                    divider
                     section("chiave di recupero")
 
                     Text(RecoveryKit.exists
@@ -210,10 +210,10 @@ struct SettingsView: View {
                     .buttonStyle(OutlineButtonStyle())
 
                     Button {
-                        VaultTransfer.chooseImportFolder { folder in
-                            guard let folder else { return }
+                        VaultTransfer.chooseImport { urls in
+                            guard !urls.isEmpty else { return }
                             do {
-                                note = "importati \(try VaultTransfer.importAll(from: folder)) cassetti. riapri lo scrigno per vederli."
+                                note = "importati \(try VaultTransfer.importAll(from: urls)) cassetti. riapri lo scrigno per vederli."
                                 error = nil
                             } catch { self.error = "importazione non riuscita: \(error.localizedDescription)" }
                         }
