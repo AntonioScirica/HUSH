@@ -236,10 +236,6 @@ struct SettingsView: View {
                     .buttonStyle(OutlineButtonStyle())
                     .disabled(leggendo)
 
-                    Text("da un altro Mac, da 1Password (.1pux), da un .csv esportato da Bitwarden, LastPass o dal browser.")
-                        .font(Theme.mono(10))
-                        .foregroundStyle(Theme.inkSoft)
-                        .fixedSize(horizontal: false, vertical: true)
 
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting(
@@ -250,10 +246,6 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
-
-                    Text("i .kdbx stanno lì: copiali dove vuoi per farne un backup.")
-                        .font(Theme.mono(10))
-                        .foregroundStyle(Theme.inkSoft)
 
                     if importando {
                         HStack(spacing: 8) {
