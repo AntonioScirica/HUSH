@@ -131,6 +131,15 @@ struct ImportPreviewView: View {
         }
     }
 
+    /// Da dove arriva questo cassetto, detto in due parole.
+    private func provenienza(_ p: VaultTransfer.Preview) -> String? {
+        switch p.origin {
+        case .csv: return "csv"
+        case .onePassword: return "1password"
+        case .kdbx: return nil
+        }
+    }
+
     private func riga(_ p: VaultTransfer.Preview) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
@@ -141,6 +150,14 @@ struct ImportPreviewView: View {
 
                 if let icon = p.icon {
                     Image(systemName: icon).font(.system(size: 12)).foregroundStyle(Theme.ink)
+                }
+                if let da = provenienza(p) {
+                    Text(da)
+                        .font(Theme.mono(9, .semibold))
+                        .foregroundStyle(Theme.inkSoft)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .overlay(Rectangle().strokeBorder(Theme.line.opacity(0.5), lineWidth: 1))
                 }
 
                 Text(p.name.lowercased())

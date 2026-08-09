@@ -100,9 +100,22 @@ enum VaultTransfer {
 
     // MARK: - Anteprima
 
+    /// Da dove arriva un cassetto da importare. Le tre provenienze si
+    /// comportano diversamente in scrittura, ma nell'anteprima si guardano
+    /// tutte allo stesso modo: nome, quante voci, quali.
+    enum Origin {
+        /// un .kdbx già cifrato: si copia, o si ricifra se ha una sua password
+        case kdbx
+        /// righe lette da un .csv
+        case csv([ImportedEntry])
+        /// un vault di 1Password
+        case onePassword(OnePasswordImport.Vault)
+    }
+
     /// Cosa c'è dentro a un file da importare, prima di importarlo.
     struct Preview: Identifiable {
         let id = UUID()
+        var origin: Origin = .kdbx
         var file: URL
         var name: String
         var icon: String?
@@ -130,6 +143,60 @@ enum VaultTransfer {
     static func inspect(_ selection: [URL], key: String?) async -> [Preview] {
         await Task.detached(priority: .userInitiated) {
             inspectSync(selection, key: key)
+        }.value
+    }
+
+    /// Guarda dentro a qualunque cosa sia stata scelta: cartelle, .kdbx,
+    /// .csv, archivi .1pux. Un solo comando d'importazione, e a capire cosa
+    /// sia ci pensa lui.
+    static func inspectAny(_ selection: [URL], key: String?) async -> [Preview] {
+        await Task.detached(priority: .userInitiated) {
+            var previews: [Preview] = []
+            var perKdbx: [URL] = []
+
+            for url in selection {
+                switch url.pathExtension.lowercased() {
+                case "csv", "txt":
+                    if let entries = try? CSVImport.parse(contentsOf: url) {
+                        previews.append(Preview(
+                            origin: .csv(entries),
+                            file: url,
+                            name: url.deletingPathExtension().lastPathComponent,
+                            icon: "tablecells",
+                            noteColor: "#F0C9A0",
+                            entries: entries.map(\.title)
+                        ))
+                    } else {
+                        previews.append(Preview(file: url,
+                                                name: url.lastPathComponent,
+                                                problem: "csv illeggibile"))
+                    }
+
+                case "1pux":
+                    if let vaults = try? OnePasswordImport.read(url) {
+                        for v in vaults {
+                            previews.append(Preview(
+                                origin: .onePassword(v),
+                                file: url,
+                                name: v.name,
+                                icon: "lock.shield",
+                                noteColor: "#A8D8B9",
+                                entries: v.entries.map(\.title) + v.details.map(\.title)
+                            ))
+                        }
+                    } else {
+                        previews.append(Preview(file: url,
+                                                name: url.lastPathComponent,
+                                                problem: "archivio illeggibile"))
+                    }
+
+                default:
+                    perKdbx.append(url)
+                }
+            }
+
+            previews += inspectSync(perKdbx, key: key)
+            return previews
         }.value
     }
 
@@ -208,12 +275,53 @@ enum VaultTransfer {
         struct Pronto { let name: String; let icon: String?; let noteColor: String?; let bytes: [UInt8]?; let source: URL }
         let pronti: [Pronto] = await Task.detached(priority: .userInitiated) {
             previews.map { p in
-                guard let foreign = p.foreignPassword, let key,
-                      let data = try? Data(contentsOf: p.file),
-                      let db = try? Kdbx4.open(data: Array(data), password: foreign),
-                      let riscritto = try? Kdbx4.save(database: db, password: key)
-                else { return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor, bytes: nil, source: p.file) }
-                return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor, bytes: riscritto, source: p.file)
+                func vuoto() -> Pronto {
+                    Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor, bytes: nil, source: p.file)
+                }
+                switch p.origin {
+                case .csv(let entries):
+                    guard let key else { return vuoto() }
+                    let db = VaultDatabase.createNew(name: p.name)
+                    for e in entries {
+                        db.addEntry(VaultEntry(
+                            title: e.title, username: e.username, password: e.password,
+                            url: e.url, notes: e.notes,
+                            customFields: [VaultCustomField(key: "scrigno.kind", value: "login")]
+                        ))
+                    }
+                    return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor,
+                                  bytes: try? Kdbx4.save(database: db, password: key), source: p.file)
+
+                case .onePassword(let vault):
+                    guard let key else { return vuoto() }
+                    let db = VaultDatabase.createNew(name: vault.name)
+                    for e in vault.entries {
+                        db.addEntry(VaultEntry(
+                            title: e.title, username: e.username, password: e.password,
+                            url: e.url, notes: e.notes,
+                            customFields: [VaultCustomField(key: "scrigno.kind", value: "login")]
+                        ))
+                    }
+                    for d in vault.details {
+                        db.addEntry(VaultEntry(
+                            title: d.title,
+                            customFields: [VaultCustomField(key: "scrigno.kind",
+                                                            value: d.kind == "extra" ? "secureNote" : d.kind)]
+                                + d.fields.map { VaultCustomField(key: $0.label, value: $0.value) }
+                        ))
+                    }
+                    return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor,
+                                  bytes: try? Kdbx4.save(database: db, password: key), source: p.file)
+
+                case .kdbx:
+                    guard let foreign = p.foreignPassword, let key,
+                          let data = try? Data(contentsOf: p.file),
+                          let db = try? Kdbx4.open(data: Array(data), password: foreign),
+                          let riscritto = try? Kdbx4.save(database: db, password: key)
+                    else { return vuoto() }
+                    return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor,
+                                  bytes: riscritto, source: p.file)
+                }
             }
         }.value
         _ = cartellaVault
@@ -386,7 +494,7 @@ enum VaultTransfer {
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = true
         panel.prompt = "Importa"
-        panel.message = "Scegli la cartella esportata, oppure i file .kdbx"
+        panel.message = "Cassetti esportati, file .kdbx, .csv o archivi .1pux di 1Password"
         panel.begin { completion($0 == .OK ? panel.urls : []) }
     }
 }

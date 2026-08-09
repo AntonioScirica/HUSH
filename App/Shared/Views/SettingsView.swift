@@ -32,6 +32,8 @@ struct SettingsView: View {
         let previews: [VaultTransfer.Preview]
     }
     @State private var importJob: ImportJob?
+    @State private var leggendo = false
+    @State private var importando = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -205,63 +207,39 @@ struct SettingsView: View {
                     divider
                     section("dati")
 
-                    Button { showImporter = true } label: {
-                        Label("importa da un .csv", systemImage: "square.and.arrow.down")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(OutlineButtonStyle())
-
-                    Button {
-                        VaultTransfer.chooseOnePasswordArchive { archivio in
-                            guard let archivio else { return }
-                            note = "leggo l'archivio…"; error = nil
-                            Task {
-                                do {
-                                    let esito = try await VaultTransfer.importOnePassword(archivio)
-                                    note = "importati \(esito.cassetti) cassetti, \(esito.voci) voci."
-                                } catch {
-                                    self.error = "importazione non riuscita: \(error.localizedDescription)"
-                                    note = nil
-                                }
-                            }
-                        }
-                    } label: {
-                        Label("importa da 1Password (.1pux)", systemImage: "lock.shield")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(OutlineButtonStyle())
-
-                    Button {
-                        VaultTransfer.chooseExportFolder { folder in
-                            guard let folder else { return }
-                            Task { do {
-                                let esito = try await VaultTransfer.exportAsync(to: folder)
-                                note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
-                                error = nil
-                                NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
-                            } catch { self.error = "esportazione non riuscita: \(error.localizedDescription)" } }
-                        }
-                    } label: {
-                        Label("esporta tutti i cassetti", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(OutlineButtonStyle())
-
+                    // Un comando solo: a capire cosa gli hai dato (cassetti
+                    // esportati, .kdbx, .csv, archivi .1pux) ci pensa lui.
                     Button {
                         VaultTransfer.chooseImport { urls in
                             guard !urls.isEmpty else { return }
-                            // prima si guarda cosa c'è dentro, poi si conferma
                             let chiave = MasterKey.session
+                            leggendo = true
+                            note = nil; error = nil
                             Task {
-                                let previews = await VaultTransfer.inspect(urls, key: chiave)
+                                let previews = await VaultTransfer.inspectAny(urls, key: chiave)
+                                leggendo = false
                                 importJob = ImportJob(previews: previews)
                             }
                         }
                     } label: {
-                        Label("importa cassetti da un altro Mac", systemImage: "square.and.arrow.down.on.square")
-                            .frame(maxWidth: .infinity)
+                        HStack(spacing: 8) {
+                            if leggendo {
+                                ProgressView().controlSize(.small)
+                                Text("leggo…")
+                            } else {
+                                Image(systemName: "square.and.arrow.down")
+                                Text("importa password")
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
+                    .disabled(leggendo)
+
+                    Text("da un altro Mac, da 1Password (.1pux), da un .csv esportato da Bitwarden, LastPass o dal browser.")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting(
@@ -277,6 +255,13 @@ struct SettingsView: View {
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
 
+                    if importando {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("importo i cassetti…").font(Theme.mono(11))
+                        }
+                        .foregroundStyle(Theme.ink)
+                    }
                     if let note {
                         Text(note).font(Theme.mono(11)).foregroundStyle(Theme.ink)
                     }
@@ -296,16 +281,19 @@ struct SettingsView: View {
         .sheet(item: $importJob) { job in
             ImportPreviewView(previews: job.previews) { scelti in
                 importJob = nil
-                // la ricifratura di ogni cassetto è un Argon2id: fuori dal
+                importando = true
+                let voci = scelti.reduce(0) { $0 + $1.entries.count }
+                // la cifratura di ogni cassetto è un Argon2id: fuori dal
                 // thread principale, se no la finestra si pianta
                 Task {
                     do {
                         let n = try await VaultTransfer.importChosenAsync(scelti)
-                        note = "importati \(n) cassetti."
+                        note = "importati \(n) cassetti, \(voci) voci."
                         error = nil
                     } catch {
                         self.error = "importazione non riuscita: \(error.localizedDescription)"
                     }
+                    importando = false
                 }
             } onCancel: {
                 importJob = nil
