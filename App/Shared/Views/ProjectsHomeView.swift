@@ -97,8 +97,6 @@ struct ProjectsHomeView: View {
     @State private var plateRect: CGRect?
     @State private var createName = ""
     @FocusState private var plateNameFocused: Bool
-    /// Modifiche fatte dalla scheda, in memoria (finché non c'è il vault vero).
-    @State private var entryOverrides: [String: (user: String, password: String, url: String, notes: String)] = [:]
 
     @State private var showCreate = false
     @State private var newName = ""
@@ -159,7 +157,6 @@ struct ProjectsHomeView: View {
     // da sostituire con vm.store.allEntries quando il vault reale è collegato qui.
     // Una lista per progetto: un cassetto nuovo parte vuoto, non eredita
     // quelle di un altro (prima era un unico array condiviso da tutti).
-    @State private var entriesByProject: [String: [String]] = [:]
     /// Un solo sheet per tutto il flusso "nuova voce": passare da categoria
     /// a modulo cambia solo `entryStep`, non chiude/riapre un secondo sheet
     /// — quello causava un frame con la categoria vecchia prima di aggiornarsi.
@@ -223,15 +220,6 @@ struct ProjectsHomeView: View {
         }
     }
 
-    /// Voce → tipo con cui è stata creata (per sapere come mostrarla).
-    @State private var entryKinds: [String: EntryKind] = [:]
-    /// Voce → campi salvati, etichetta/valore, nell'ordine in cui li vede
-    /// l'utente. Copre i tipi diversi da "accesso"/"password", che usano
-    /// invece `entryOverrides` (ha già un editor dedicato, EntryCard).
-    @State private var entryDetails: [String: [(label: String, value: String)]] = [:]
-    /// Voce "documento" → percorso locale del file allegato (copiato, non
-    /// un riferimento all'originale: non si perde se sposti/cancelli quello).
-    @State private var entryAttachments: [String: URL] = [:]
 
     /// Campo extra libero (stile 1Password): etichetta + valore, testo o
     /// mascherato come una password.
@@ -303,14 +291,13 @@ struct ProjectsHomeView: View {
     /// Righe di dati della voce selezionata: da queste dipende quanto deve
     /// crescere il corpo della cartella estratta.
     private var selectedEntryRows: Int {
-        guard let folder = selectedFolder, folder >= 1, folder - 1 < openEntries.count else { return 3 }
-        let name = openEntries[folder - 1]
-        switch entryKinds[name] ?? .login {
+        guard let entry = selectedEntry else { return 3 }
+        switch kind(of: entry) {
         case .login, .password:
             // utente + password + url + note (in modifica c'è sempre) + extra
-            return 4 + (entryDetails[name]?.count ?? 0)
+            return 4 + EntryMapping.details(of: entry).count
         default:
-            return max(1, entryDetails[name]?.count ?? 1)
+            return max(1, EntryMapping.details(of: entry).count)
         }
     }
 
@@ -327,21 +314,74 @@ struct ProjectsHomeView: View {
 
     /// Le sole voci con editor in-place (le altre sono in sola lettura).
     private var isSelectedEntryEditable: Bool {
-        guard let folder = selectedFolder, folder >= 1, folder - 1 < openEntries.count else { return false }
-        let kind = entryKinds[openEntries[folder - 1]] ?? .login
-        return kind == .login || kind == .password
+        guard let entry = selectedEntry else { return false }
+        let k = kind(of: entry)
+        return k == .login || k == .password
     }
 
-    /// Voci del cassetto aperto (vuoto se nessuno, o progetto senza voci).
-    private var openEntries: [String] {
-        guard let id = openProjectEntry?.id else { return [] }
-        return entriesByProject[id] ?? []
+    /// Riscrive una voce nel suo vault. L'archivio segna il progetto come da
+    /// salvare e ci pensa lui a mettere su disco, poco dopo.
+    private func saveEdits(to entry: VaultEntry, kind: EntryKind,
+                           user: String = "", password: String = "",
+                           url: String = "", notes: String = "",
+                           extras: [CustomField]) {
+        guard let project = openProjectEntry else { return }
+        let fields = extras
+            .filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
+            .map { (label: $0.label.isEmpty ? "campo" : $0.label, value: $0.value) }
+
+        var updated: VaultEntry
+        switch kind {
+        case .login, .password:
+            updated = EntryMapping.credentialEntry(
+                id: entry.id, kind: kind.rawValue, title: entry.title,
+                user: user, password: password, url: url, notes: notes,
+                extras: fields
+            )
+        default:
+            updated = EntryMapping.detailEntry(
+                id: entry.id, kind: kind.rawValue, title: entry.title, fields: fields
+            )
+        }
+        updated.created = entry.created
+        updated.modified = Date()
+        library.update(updated, in: project)
     }
+
+    /// La voce attualmente estratta al centro.
+    private var selectedEntry: VaultEntry? {
+        guard let folder = selectedFolder, folder >= 1 else { return nil }
+        let list = openEntryList
+        return folder - 1 < list.count ? list[folder - 1] : nil
+    }
+
+    /// Le voci ora vivono nei file .kdbx, non più in memoria: l'archivio le
+    /// apre quando servono e le riscrive da sé dopo un attimo di quiete.
+    @ObservedObject private var library = VaultLibrary.shared
+
+    /// Voci vere del progetto aperto.
+    private var openEntryList: [VaultEntry] {
+        openProjectEntry.map { library.entries(of: $0) } ?? []
+    }
+
+    private func kind(of entry: VaultEntry) -> EntryKind {
+        EntryKind(rawValue: EntryMapping.kind(of: entry)) ?? .login
+    }
+
+    /// Titoli del cassetto aperto.
+    private var openEntries: [String] { openEntryList.map(\.title) }
 
     /// Voci per ogni cella della parete, nello stesso ordine di `cellLabels`.
     private var cellEntries: [[String]] {
         let assignments = projectAtCell
-        return (0..<(cols * rows)).map { assignments[$0].flatMap { entriesByProject[$0.id] } ?? [] }
+        return (0..<(cols * rows)).map { i in
+            guard let p = assignments[i] else { return [] }
+            // solo i vault già aperti: chiederli tutti qui vorrebbe dire
+            // decifrare ogni progetto per disegnare cartelle che, a cassetto
+            // chiuso, non si vedono comunque
+            guard library.isLoaded(p) else { return [] }
+            return library.entries(of: p).map(\.title)
+        }
     }
 
     // NB: labels/icone/colori riflettono SOLO lo stato salvato: la bozza in
@@ -682,30 +722,24 @@ struct ProjectsHomeView: View {
 
             // dati sovrapposti ESATTAMENTE al corpo della cartella estratta
             // (rettangolo proiettato dalla scena 3D — sono la stessa cosa)
-            if let folder = selectedFolder, folder >= 1, folder - 1 < openEntries.count,
-               let rect = folderRect {
-                let name = openEntries[folder - 1]
-                let kind = entryKinds[name] ?? .login
+            if let folder = selectedFolder, let entry = selectedEntry, let rect = folderRect {
+                let entryKind = kind(of: entry)
 
-                if kind == .login || kind == .password {
-                    let host = name.replacingOccurrences(of: " ", with: "")
-                    let saved = entryOverrides[name]
+                if entryKind == .login || entryKind == .password {
                     EntryCard(
                         number: folder,
-                        name: name,
-                        user: saved?.user ?? "antonio@\(host).com",
-                        password: saved?.password ?? "scrigno-\(host)-24",
-                        url: saved?.url ?? "https://\(host).com",
-                        notes: saved?.notes ?? "",
-                        extras: (entryDetails[name] ?? []).map {
+                        name: entry.title,
+                        user: entry.username,
+                        password: entry.password,
+                        url: entry.url,
+                        notes: entry.notes,
+                        extras: EntryMapping.details(of: entry).map {
                             var f = CustomField(); f.label = $0.label; f.value = $0.value; return f
                         },
                         onSave: { u, p, r, n, extras in
-                            // ponytail: override in memoria — si salva nel vault reale quando collegato.
-                            entryOverrides[name] = (u, p, r, n)
-                            entryDetails[name] = extras.map {
-                                (label: $0.label.isEmpty ? "campo" : $0.label, value: $0.value)
-                            }
+                            saveEdits(to: entry, kind: entryKind,
+                                      user: u, password: p, url: r, notes: n,
+                                      extras: extras)
                         },
                         onClose: { selectedFolder = nil }
                     )
@@ -720,15 +754,13 @@ struct ProjectsHomeView: View {
                     // modificabili come quelli delle credenziali
                     GenericEntryCard(
                         number: folder,
-                        name: name,
-                        icon: kind.icon,
-                        rows: (entryDetails[name] ?? []).map {
+                        name: entry.title,
+                        icon: entryKind.icon,
+                        rows: EntryMapping.details(of: entry).map {
                             var f = CustomField(); f.label = $0.label; f.value = $0.value; return f
                         },
                         onSave: { rows in
-                            entryDetails[name] = rows.map {
-                                (label: $0.label.isEmpty ? "campo" : $0.label, value: $0.value)
-                            }
+                            saveEdits(to: entry, kind: entryKind, extras: rows)
                         },
                         onClose: { selectedFolder = nil }
                     )
@@ -788,6 +820,9 @@ struct ProjectsHomeView: View {
         .onAppear {
             projects = VaultFileManager.shared.projects
             consumePendingImport()
+            // i vault si aprono in anticipo, in sottofondo: così cliccando un
+            // cassetto le cartelle ci sono già invece di comparire dopo
+            Task { await library.preload(projects) }
         }
     }
 
@@ -813,22 +848,25 @@ struct ProjectsHomeView: View {
                 guard let created = projects.first(where: { $0.path == url.path }) else { return }
 
                 // nomi doppi nello stesso cassetto renderebbero ambigue le
-                // schede, che sono indicizzate per titolo
+                // schede, che si cercano per titolo
                 var used = Set<String>()
-                var titles: [String] = []
-                for entry in imported {
-                    var title = entry.title
+                for imp in imported {
+                    var title = imp.title
                     var n = 2
-                    while used.contains(title) { title = "\(entry.title) (\(n))"; n += 1 }
+                    while used.contains(title) { title = "\(imp.title) (\(n))"; n += 1 }
                     used.insert(title)
-                    titles.append(title)
-                    entryKinds[title] = .login
-                    entryOverrides[title] = (user: entry.username,
-                                             password: entry.password,
-                                             url: entry.url,
-                                             notes: entry.notes)
+                    library.add(
+                        EntryMapping.credentialEntry(
+                            kind: EntryKind.login.rawValue, title: title,
+                            user: imp.username, password: imp.password,
+                            url: imp.url, notes: imp.notes, extras: []
+                        ),
+                        to: created
+                    )
                 }
-                entriesByProject[created.id] = titles
+                // le voci importate valgono la scrittura subito: sono tante e
+                // averle solo in memoria fino al prossimo respiro è un rischio
+                library.flush(created)
             } catch {
                 localError = "Import non riuscito: \(error.localizedDescription)"
             }
@@ -840,8 +878,10 @@ struct ProjectsHomeView: View {
     private var searchSuggestions: [(project: VaultFileManager.Project, folder: Int, name: String)] {
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return [] }
-        return projects.flatMap { p -> [(project: VaultFileManager.Project, folder: Int, name: String)] in
-            (entriesByProject[p.id] ?? []).enumerated()
+        // solo fra i vault già aperti: cercare ovunque vorrebbe dire
+        // decifrare ogni progetto a ogni lettera digitata
+        return projects.filter { library.isLoaded($0) }.flatMap { p -> [(project: VaultFileManager.Project, folder: Int, name: String)] in
+            library.entries(of: p).map(\.title).enumerated()
                 .filter { $0.element.lowercased().contains(q) }
                 .map { (project: p, folder: $0.offset + 1, name: $0.element) }
         }
@@ -942,7 +982,7 @@ struct ProjectsHomeView: View {
 
     private var newEntrySheet: some View {
         VStack(alignment: .leading, spacing: 14) {
-            IndexLabel(number: (entriesByProject[newEntryProjectID ?? ""]?.count ?? 0) + 1, text: "nuovo · \(newEntryKind.label)")
+            IndexLabel(number: (currentNewEntryProject.map { library.entries(of: $0).count } ?? 0) + 1, text: "nuovo · \(newEntryKind.label)")
                 .padding(.bottom, 6)
 
             ScrollView {
@@ -984,6 +1024,9 @@ struct ProjectsHomeView: View {
                         .disabled(projects.count <= 1)
 
                         if showEntryProjectList {
+                            // bassa e scrollabile: con molti progetti l'elenco
+                            // aperto spingeva fuori dal modulo tutto il resto
+                            ScrollView {
                             VStack(spacing: 0) {
                                 ForEach(Array(projects.enumerated()), id: \.element.id) { i, p in
                                     Button {
@@ -1016,6 +1059,9 @@ struct ProjectsHomeView: View {
                                     }
                                 }
                             }
+                            }
+                            .scrollBounceBehavior(.basedOnSize)
+                            .frame(maxHeight: 132)
                             .background(Theme.paper)
                             .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
                         }
@@ -1329,24 +1375,18 @@ struct ProjectsHomeView: View {
         pendingDocumentURL = nil
     }
 
-    /// Aggiunge la voce finta e chiude il modulo — niente apertura/animazione
-    /// del cassetto: solo la schermata di creazione, come richiesto. I campi
-    /// salvati dipendono dal tipo: login/password hanno l'editor dedicato
-    /// (EntryCard, con `entryOverrides`); gli altri finiscono in una lista
-    /// etichetta/valore generica (`entryDetails`), mostrata in sola lettura.
+    /// Costruisce la voce e la mette nel vault del progetto. I campi cambiano
+    /// col tipo: accesso e password usano i campi canonici del KDBX, gli altri
+    /// i campi liberi, che il formato prevede.
     private func confirmNewEntry() {
         let name = newEntryName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty, let projectID = newEntryProjectID else { return }
-        entryKinds[name] = newEntryKind
+        guard !name.isEmpty,
+              let projectID = newEntryProjectID,
+              let project = projects.first(where: { $0.id == projectID }) else { return }
 
+        let entry: VaultEntry
         switch newEntryKind {
         case .login, .password:
-            entryOverrides[name] = (
-                user: newEntryUser,
-                password: newEntryPassword.isEmpty ? Self.randomPassword() : newEntryPassword,
-                url: newEntryURLs.first?.value ?? "",
-                notes: newEntryNotes
-            )
             // url in più e campi personalizzati: vanno conservati, o in
             // modifica sparirebbero pezzi di quel che avevi inserito
             var extras: [(label: String, value: String)] = []
@@ -1356,44 +1396,53 @@ struct ProjectsHomeView: View {
             extras += newEntryFields
                 .filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
                 .map { ($0.label.isEmpty ? "campo" : $0.label, $0.value) }
-            entryDetails[name] = extras
+            entry = EntryMapping.credentialEntry(
+                kind: newEntryKind.rawValue, title: name,
+                user: newEntryUser,
+                password: newEntryPassword.isEmpty ? Self.randomPassword() : newEntryPassword,
+                url: newEntryURLs.first?.value ?? "",
+                notes: newEntryNotes,
+                extras: extras
+            )
+
         case .secureNote:
-            entryDetails[name] = newSecureNotes.enumerated()
+            let notes = newSecureNotes.enumerated()
                 .filter { !$0.element.value.trimmingCharacters(in: .whitespaces).isEmpty }
-                .map { i, note in
+                .map { i, note -> (label: String, value: String) in
                     let title = note.label.trimmingCharacters(in: .whitespaces)
                     return (title.isEmpty ? "nota \(i + 1)" : title, note.value)
                 }
+            entry = EntryMapping.detailEntry(kind: newEntryKind.rawValue, title: name, fields: notes)
+
         case .card:
-            entryDetails[name] = [
-                ("intestatario", newCardHolder),
-                ("numero carta", newCardNumber),
-                ("scadenza", newCardExpiry),
-                ("cvv", newCardCVV),
-                ("pin", newCardPIN),
-                ("note", newEntryNotes)
-            ].filter { !$0.1.isEmpty }
+            entry = EntryMapping.detailEntry(kind: newEntryKind.rawValue, title: name, fields: [
+                ("intestatario", newCardHolder), ("numero carta", newCardNumber),
+                ("scadenza", newCardExpiry), ("cvv", newCardCVV),
+                ("pin", newCardPIN), ("note", newEntryNotes)
+            ].filter { !$0.1.isEmpty })
+
         case .identity:
-            entryDetails[name] = [
-                ("nome", newIdentityFirstName),
-                ("cognome", newIdentityLastName),
-                ("indirizzo", newIdentityAddress),
-                ("telefono", newIdentityPhone),
-                ("email", newIdentityEmail),
-                ("note", newEntryNotes)
-            ].filter { !$0.1.isEmpty }
+            entry = EntryMapping.detailEntry(kind: newEntryKind.rawValue, title: name, fields: [
+                ("nome", newIdentityFirstName), ("cognome", newIdentityLastName),
+                ("indirizzo", newIdentityAddress), ("telefono", newIdentityPhone),
+                ("email", newIdentityEmail), ("note", newEntryNotes)
+            ].filter { !$0.1.isEmpty })
+
         case .document:
             var fields = [("note", newEntryNotes)].filter { !$0.1.isEmpty }
             if let src = pendingDocumentURL {
                 do {
+                    // il file viene copiato negli allegati dell'app: nel vault
+                    // finisce il percorso, così resta raggiungibile anche se
+                    // l'originale viene spostato
                     let saved = try VaultFileManager.shared.storeAttachment(from: src)
-                    entryAttachments[name] = saved
                     fields.insert(("file", src.lastPathComponent), at: 0)
+                    fields.append(("scrigno.allegato", saved.path))
                 } catch {
                     localError = "Impossibile allegare il file: \(error.localizedDescription)"
                 }
             }
-            entryDetails[name] = fields
+            entry = EntryMapping.detailEntry(kind: newEntryKind.rawValue, title: name, fields: fields)
         }
 
         resetNewEntryForm()   // chiude il modulo
@@ -1402,13 +1451,11 @@ struct ProjectsHomeView: View {
         // cassetto): farlo mentre la sheet si sta chiudendo dava un lampo
         // nero. Prima si chiude, poi si tocca la scena.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            entriesByProject[projectID, default: []].append(name)
+            library.add(entry, to: project)
             // appena creata si alza nel nastro, come arrivandoci scrollando
-            if let project = projects.first(where: { $0.id == projectID }) {
-                let cell = cellIndex(for: project)
-                if openCell != cell { openCell = cell }
-                revealFolder = entriesByProject[projectID]?.count
-            }
+            let cell = cellIndex(for: project)
+            if openCell != cell { openCell = cell }
+            revealFolder = library.entries(of: project).count
         }
     }
 
@@ -1507,7 +1554,6 @@ struct ProjectsHomeView: View {
     private func deleteEditedProject() {
         guard let id = editingProjectID else { return }
         VaultFileManager.shared.deleteProject(id: id)
-        entriesByProject[id] = nil
         projects = VaultFileManager.shared.projects
         openCell = nil
         selectedFolder = nil

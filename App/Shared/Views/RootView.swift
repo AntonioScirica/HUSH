@@ -18,6 +18,9 @@ public struct RootView: View {
     }
 
     private func lockUp() {
+        // prima si scrive quel che è in sospeso, poi si butta via la chiave:
+        // invertendo l'ordine il salvataggio non avrebbe più con cosa cifrare
+        VaultLibrary.shared.closeAll(VaultFileManager.shared.projects)
         MasterKey.lock()
         vm.lock()
         idle.stop()

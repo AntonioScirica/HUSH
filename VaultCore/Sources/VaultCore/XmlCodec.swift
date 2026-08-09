@@ -151,10 +151,28 @@ enum XmlCodec {
             return ""
         }
 
+        // Tutto ciò che non è uno dei cinque canonici è un campo libero, e va
+        // conservato: buttarlo via al primo salvataggio vorrebbe dire perdere
+        // i dati messi da un altro programma, oltre ai nostri.
+        let standard: Set<String> = ["Title", "UserName", "Password", "URL", "Notes"]
+        var extras: [VaultCustomField] = []
+        for stringEl in el.elements(forName: "String") {
+            guard let key = stringEl.elements(forName: "Key").first?.stringValue,
+                  !standard.contains(key),
+                  let valueEl = stringEl.elements(forName: "Value").first
+            else { continue }
+            let isProtected = valueEl.attribute(forName: "Protected")?.stringValue == "True"
+            let value = isProtected
+                ? (protectedValues[ObjectIdentifier(valueEl)] ?? "")
+                : (valueEl.stringValue ?? "")
+            extras.append(VaultCustomField(key: key, value: value, isProtected: isProtected))
+        }
+
         return VaultEntry(
             id: uuid, title: field("Title"), username: field("UserName"),
             password: field("Password"), url: field("URL"), notes: field("Notes"),
-            iconId: iconId, created: created, modified: modified
+            iconId: iconId, created: created, modified: modified,
+            customFields: extras
         )
     }
 
@@ -251,6 +269,9 @@ enum XmlCodec {
         el.addChild(stringField("Password", entry.password, protected: true))
         el.addChild(stringField("URL", entry.url))
         el.addChild(stringField("Notes", entry.notes))
+        for extra in entry.customFields {
+            el.addChild(stringField(extra.key, extra.value, protected: extra.isProtected))
+        }
         return el
     }
 }

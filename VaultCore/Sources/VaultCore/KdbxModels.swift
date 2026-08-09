@@ -1,5 +1,25 @@
 import Foundation
 
+/// Campo libero di una voce, oltre ai cinque canonici.
+///
+/// Il KDBX non ha un elenco chiuso di campi: una voce è una lista di coppie
+/// chiave/valore, e Title, UserName, Password, URL e Notes sono soltanto
+/// quelle che tutti i programmi conoscono. Qui stanno le altre — i dati di
+/// una carta, di un documento d'identità — che così restano leggibili anche
+/// aprendo il file con KeePass o strumenti simili.
+public struct VaultCustomField: Equatable, Hashable {
+    public var key: String
+    public var value: String
+    /// Cifrato dentro al file, come la password.
+    public var isProtected: Bool
+
+    public init(key: String, value: String, isProtected: Bool = false) {
+        self.key = key
+        self.value = value
+        self.isProtected = isProtected
+    }
+}
+
 public struct VaultEntry: Identifiable, Equatable, Hashable {
     public var id: UUID
     public var title: String
@@ -12,6 +32,8 @@ public struct VaultEntry: Identifiable, Equatable, Hashable {
     public var modified: Date
     /// Percorso del gruppo di appartenenza, solo per la visualizzazione (es. "Lavoro / Email").
     public var groupPath: String
+    /// Campi oltre ai cinque canonici, nell'ordine in cui li ha messi l'utente.
+    public var customFields: [VaultCustomField]
 
     public init(
         id: UUID = UUID(),
@@ -23,7 +45,8 @@ public struct VaultEntry: Identifiable, Equatable, Hashable {
         iconId: Int = 0,
         created: Date = Date(),
         modified: Date = Date(),
-        groupPath: String = ""
+        groupPath: String = "",
+        customFields: [VaultCustomField] = []
     ) {
         self.id = id
         self.title = title
@@ -35,6 +58,12 @@ public struct VaultEntry: Identifiable, Equatable, Hashable {
         self.created = created
         self.modified = modified
         self.groupPath = groupPath
+        self.customFields = customFields
+    }
+
+    /// Valore di un campo libero, se c'è.
+    public func custom(_ key: String) -> String? {
+        customFields.first { $0.key == key }?.value
     }
 }
 
