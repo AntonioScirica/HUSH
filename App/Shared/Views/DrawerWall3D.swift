@@ -242,7 +242,12 @@ struct DrawerWall3D: NSViewRepresentable {
         var maxFolderFocus: CGFloat = 0
 
         /// Punto di lettura (z della cartella corrente) e passi del nastro.
-        static let readZ: CGFloat = -0.35
+        /// Dove sta la cartella che stai leggendo. È parecchio più indietro
+        /// della "+": prima erano vicine e, scorrendo fino in fondo, l'ultima
+        /// finiva praticamente addosso al "+".
+        static let readZ: CGFloat = -0.75
+        /// La "+" sta fissa all'imboccatura, e non si muove mai.
+        static let plusZ: CGFloat = -0.05
         static let aheadSpacing: CGFloat = 0.16   // tra le cartelle ancora da sfogliare
         static let passedSpacing: CGFloat = 0.035  // impilate davanti, strette
         /// Quanto in avanti può arrivare la pila di quelle già sfogliate.
@@ -255,7 +260,7 @@ struct DrawerWall3D: NSViewRepresentable {
             // la "+" resta sempre attaccata al fronte del cassetto, non
             // partecipa mai allo scroll: si vede solo la sua linguetta,
             // senza il salto quando si torna indietro sfogliando
-            if index == 0 { return readZ + 0.3 }
+            if index == 0 { return plusZ }
             let d = CGFloat(index) - focus
             if d >= 0 {
                 return readZ - d * aheadSpacing
