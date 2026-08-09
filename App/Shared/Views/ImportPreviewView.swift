@@ -69,7 +69,9 @@ struct ImportPreviewView: View {
                 IndexLabel(text: "password di «\(p.name)»")
                 Rectangle().fill(Theme.line).frame(height: 1.2)
 
-                Text("questo cassetto è cifrato con un'altra password.\nscrivila: verrà riscritto con quella dello scrigno.")
+                Text(previews.filter { !$0.isReadable }.count > 1
+                     ? "questo cassetto è cifrato con un'altra password.\nse gli altri hanno la stessa, si aprono anche loro."
+                     : "questo cassetto è cifrato con un'altra password.\nscrivila: verrà riscritto con quella dello scrigno.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -108,6 +110,16 @@ struct ImportPreviewView: View {
         if let i = previews.firstIndex(where: { $0.id == p.id }) {
             previews[i] = aperto
             chosen.insert(aperto.id)
+        }
+
+        // Quasi sempre i file arrivano tutti dalla stessa installazione, e
+        // quindi hanno la stessa password: si prova su tutti gli altri invece
+        // di far riscrivere la stessa cosa cassetto per cassetto.
+        for (i, altro) in previews.enumerated() where !altro.isReadable {
+            if let sbloccato = VaultTransfer.unlock(altro, with: foreignPassword) {
+                previews[i] = sbloccato
+                chosen.insert(sbloccato.id)
+            }
         }
         unlocking = nil
     }
