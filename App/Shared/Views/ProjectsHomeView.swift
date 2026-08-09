@@ -721,7 +721,7 @@ struct ProjectsHomeView: View {
         .paperBackground()
         .preferredColorScheme(.light)
         .sheet(isPresented: $showOpenPasswordSheet) {
-            openPasswordSheet
+            openPasswordSheet.sheetPaper()
         }
         .sheet(isPresented: $showEntryFlow, onDismiss: { entryStep = .pickType }) {
             // misura FISSA per tutti i passi: cambiando taglia fra categoria
@@ -741,13 +741,14 @@ struct ProjectsHomeView: View {
             .preferredColorScheme(.light)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView { showSettings = false }
+            SettingsView { showSettings = false }.sheetPaper()
         }
         .sheet(isPresented: $showIconLibrary) {
             IconLibrarySheet(selected: newIcon, search: $iconSearch, library: iconLibrary) { picked in
                 newIcon = (newIcon == picked ? nil : picked)
                 showIconLibrary = false
             }
+            .sheetPaper()
         }
         .alert("Errore", isPresented: .constant(localError != nil), actions: {
             Button("OK") { localError = nil }
@@ -1572,18 +1573,26 @@ struct GenericEntryCard: View {
                 .frame(maxHeight: .infinity)
             }
 
+            // in modifica il tasto che conta è "salva": va a destra, in
+            // evidenza, dove prima stava "chiudi"
             HStack(spacing: 10) {
-                Button(editing ? "salva" : "modifica") {
-                    if editing {
+                if editing {
+                    Button("chiudi") { onClose() }
+                        .buttonStyle(OutlineButtonStyle())
+
+                    Button("salva") {
                         rows = rows.filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
                         onSave(rows)
+                        editing = false
                     }
-                    editing.toggle()
-                }
-                .buttonStyle(OutlineButtonStyle())
-
-                Button("chiudi") { onClose() }
                     .buttonStyle(InkButtonStyle(prominent: true))
+                } else {
+                    Button("modifica") { editing = true }
+                        .buttonStyle(OutlineButtonStyle())
+
+                    Button("chiudi") { onClose() }
+                        .buttonStyle(InkButtonStyle(prominent: true))
+                }
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
@@ -1595,6 +1604,20 @@ struct GenericEntryCard: View {
 }
 
 private extension View {
+    /// Fondo di carta steso su TUTTA la finestra della sheet.
+    ///
+    /// Mettere lo sfondo solo dietro al contenuto non basta: se la finestra
+    /// è più grande, o mentre si sta ancora dimensionando, nella parte
+    /// scoperta si vede il fondo di sistema — su tema scuro un rettangolo
+    /// nero, che sbuca per un istante alla presentazione.
+    func sheetPaper() -> some View {
+        ZStack {
+            Theme.paper.ignoresSafeArea()
+            self
+        }
+        .preferredColorScheme(.light)
+    }
+
     func themedRow() -> some View {
         padding(10)
             .background(Theme.paperRaised)
@@ -1687,18 +1710,28 @@ struct EntryCard: View {
             // campi restava piccola pur avendo tutta la cartella a disposizione.
             // La ScrollView da sola si prende tutto e spinge i bottoni in fondo.
 
+            // in modifica il tasto che conta è "salva": va a destra, in evidenza
             HStack(spacing: 10) {
-                Button(editing ? "salva" : "modifica") {
-                    if editing {
+                if editing {
+                    Button("chiudi") { onClose() }
+                        .buttonStyle(OutlineButtonStyle())
+
+                    Button("salva") {
                         onSave(user, password, url, notes,
                                extras.filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty })
+                        editing = false
                     }
-                    editing.toggle()
-                }
-                .buttonStyle(OutlineButtonStyle())
-
-                Button("copia password") { onClose() }
                     .buttonStyle(InkButtonStyle(prominent: true))
+                } else {
+                    Button("modifica") { editing = true }
+                        .buttonStyle(OutlineButtonStyle())
+
+                    Button("copia password") {
+                        copyToClipboard(password)
+                        onClose()
+                    }
+                    .buttonStyle(InkButtonStyle(prominent: true))
+                }
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
