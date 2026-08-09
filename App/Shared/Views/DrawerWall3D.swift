@@ -249,13 +249,15 @@ struct DrawerWall3D: NSViewRepresentable {
         static let passedSpacing: CGFloat = 0.07  // impilate davanti, strette
         static let passedLimit: CGFloat = 0.26    // clamp: restano dentro
 
-        /// Fin dove si può scorrere.
+        /// Quanti passi prima della fine si ferma lo scorrimento.
         ///
         /// Fermandosi sull'ultima cartella, quella finiva davanti a tutto, al
-        /// punto di lettura. Ci si ferma due passi prima: l'ultima resta
-        /// comunque in fondo al cassetto, visibile ma non in prima fila.
+        /// punto di lettura. Con questo margine l'ultima resta in fondo al
+        /// cassetto: si legge, ma non arriva mai in prima fila.
+        static let scrollMargin: CGFloat = 5
+
         static func maxFocus(labeled: Int) -> CGFloat {
-            max(0, CGFloat(labeled - 1) - 2)
+            max(0, CGFloat(labeled - 1) - scrollMargin)
         }
 
         static func conveyorZ(index: Int, focus: CGFloat) -> CGFloat {
