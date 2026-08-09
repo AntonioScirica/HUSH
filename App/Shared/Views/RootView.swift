@@ -12,6 +12,10 @@ public struct RootView: View {
     @State private var lockedByHand = false
     /// Richiude lo scrigno lasciato lì aperto.
     @StateObject private var idle = IdleWatcher()
+    /// Prova finita e nessuna licenza: si passa dal muro, non dai cassetti.
+    @State private var licensed = License.isLicensed
+    @State private var trialLeft = License.trialDaysLeft
+    @State private var openSettings = false
 
     public init() {
         Preferences.registerDefaults()
@@ -30,7 +34,12 @@ public struct RootView: View {
 
     public var body: some View {
         Group {
-            if !configured {
+            if !licensed && trialLeft <= 0 {
+                LicenseWall {
+                    licensed = true
+                    trialLeft = License.trialDaysLeft
+                }
+            } else if !configured {
                 OnboardingView {
                     configured = true
                     // l'onboarding lascia già la sessione aperta
@@ -56,12 +65,21 @@ public struct RootView: View {
                 ZStack {
                     ProjectsHomeView(
                         onLock: { lockUp() },
-                        chromeVisible: unlocked
+                        chromeVisible: unlocked,
+                        showSettingsSignal: $openSettings
                     )
                     .environmentObject(vm)
                     // a scrigno chiuso si guarda soltanto: niente click che
                     // arrivino ai cassetti attraverso il vano
                     .allowsHitTesting(unlocked)
+
+                    // striscia della prova sopra a tutto, porta compresa
+                    if !licensed && unlocked {
+                        VStack {
+                            TrialBanner { openSettings = true }
+                            Spacer()
+                        }
+                    }
 
                     if !unlocked {
                         VaultDoorView(closing: lockedByHand) {

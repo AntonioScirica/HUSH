@@ -82,6 +82,8 @@ struct ProjectsHomeView: View {
     /// A scrigno chiuso la parete si vede lo stesso, attraverso il vano della
     /// porta: i comandi però restano nascosti finché non si è entrati.
     var chromeVisible = true
+    /// Aperto da fuori (dalla striscia della prova).
+    var showSettingsSignal: Binding<Bool>? = nil
 
     @EnvironmentObject var vm: VaultViewModel
 
@@ -827,6 +829,9 @@ struct ProjectsHomeView: View {
             Button("annulla", role: .cancel) {}
             Button("elimina", role: .destructive) { deleteEditedProject() }
         }, message: { Text("Il file .kdbx viene cancellato dal disco. Non si può annullare.") })
+        .onChange(of: showSettingsSignal?.wrappedValue ?? false) { _, wants in
+            if wants { showSettings = true; showSettingsSignal?.wrappedValue = false }
+        }
         .onAppear {
             projects = VaultFileManager.shared.projects
             consumePendingImport()

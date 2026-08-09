@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import IOKit
 
 /// Licenza d'uso: dice se il prodotto è stato pagato. Niente a che vedere con
 /// la chiave di recupero, che invece apre i vault — questa non decifra niente.
@@ -23,9 +24,24 @@ enum License {
 
     private static let licenseKey = "scrigno.license"
     private static let firstRunKey = "scrigno.firstRun"
+    private static let deviceKey = "scrigno.license.device"
 
     /// Giorni di prova prima che la licenza diventi necessaria.
-    static let trialDays = 14
+    static let trialDays = 7
+
+    /// Identificativo di questa macchina: il numero di serie della scheda,
+    /// che non cambia reinstallando il sistema.
+    static var deviceID: String {
+        let entry = IOServiceGetMatchingService(kIOMainPortDefault,
+                                                IOServiceMatching("IOPlatformExpertDevice"))
+        defer { IOObjectRelease(entry) }
+        guard entry != 0,
+              let cf = IORegistryEntryCreateCFProperty(entry, kIOPlatformUUIDKey as CFString,
+                                                       kCFAllocatorDefault, 0),
+              let uuid = cf.takeRetainedValue() as? String
+        else { return "sconosciuto" }
+        return uuid
+    }
 
     struct Info: Codable, Equatable {
         var email: String
@@ -43,11 +59,24 @@ enum License {
 
     // MARK: - Stato
 
-    /// Licenza registrata e ancora valida.
+    /// Licenza registrata, valida e legata a QUESTA macchina.
+    ///
+    /// Il legame è locale: la licenza vale per un computer, e per usarla su un
+    /// altro va prima staccata da qui. Senza un server non si può impedire a
+    /// qualcuno di attivarla anche altrove — si può però rendere ovvia e
+    /// comoda la strada onesta, che è quella che quasi tutti prendono.
     static var active: Info? {
         guard let raw = UserDefaults.standard.string(forKey: licenseKey),
-              let info = verify(raw), !info.isExpired else { return nil }
+              let info = verify(raw), !info.isExpired,
+              UserDefaults.standard.string(forKey: deviceKey) == deviceID
+        else { return nil }
         return info
+    }
+
+    /// Stacca la licenza da questo computer, per poterla attivare su un altro.
+    static func detach() {
+        UserDefaults.standard.removeObject(forKey: licenseKey)
+        UserDefaults.standard.removeObject(forKey: deviceKey)
     }
 
     static var isLicensed: Bool { active != nil }
@@ -78,6 +107,7 @@ enum License {
         let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let info = verify(cleaned), !info.isExpired else { return nil }
         UserDefaults.standard.set(cleaned, forKey: licenseKey)
+        UserDefaults.standard.set(deviceID, forKey: deviceKey)
         return info
     }
 

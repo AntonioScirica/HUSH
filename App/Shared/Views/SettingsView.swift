@@ -23,6 +23,7 @@ struct SettingsView: View {
     @State private var newRecovery: String?
     @State private var confirmRegenerate = false
     @State private var licenseText = ""
+    @State private var confirmDetach = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -118,6 +119,17 @@ struct SettingsView: View {
                                 .font(Theme.mono(11, .semibold))
                         }
                         .foregroundStyle(Theme.ink)
+
+                        Text("vale per un computer. per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(Theme.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Button { confirmDetach = true } label: {
+                            Label("stacca da questo computer", systemImage: "rectangle.portrait.and.arrow.right")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
                     } else {
                         Text(License.trialDaysLeft > 0
                              ? "prova: mancano \(License.trialDaysLeft) giorni."
@@ -184,6 +196,34 @@ struct SettingsView: View {
                     .buttonStyle(OutlineButtonStyle())
 
                     Button {
+                        VaultTransfer.chooseExportFolder { folder in
+                            guard let folder else { return }
+                            do {
+                                note = "esportati \(try VaultTransfer.export(to: folder)) cassetti."
+                                error = nil
+                            } catch { self.error = "esportazione non riuscita: \(error.localizedDescription)" }
+                        }
+                    } label: {
+                        Label("esporta tutti i cassetti", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+
+                    Button {
+                        VaultTransfer.chooseImportFolder { folder in
+                            guard let folder else { return }
+                            do {
+                                note = "importati \(try VaultTransfer.importAll(from: folder)) cassetti. riapri lo scrigno per vederli."
+                                error = nil
+                            } catch { self.error = "importazione non riuscita: \(error.localizedDescription)" }
+                        }
+                    } label: {
+                        Label("importa cassetti da un altro Mac", systemImage: "square.and.arrow.down.on.square")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+
+                    Button {
                         NSWorkspace.shared.activateFileViewerSelecting(
                             [VaultFileManager.shared.projectsDirectory]
                         )
@@ -213,6 +253,12 @@ struct SettingsView: View {
         }
         .padding(30)
         .frame(width: 460, height: 560)
+        .alert("Staccare la licenza da questo computer?", isPresented: $confirmDetach) {
+            Button("annulla", role: .cancel) {}
+            Button("stacca", role: .destructive) { License.detach(); onClose() }
+        } message: {
+            Text("Scrigno tornerà bloccato qui e potrai attivare la licenza su un altro Mac.\n\nI cassetti restano su questo computer: se ti servono di là, esportali PRIMA di staccare.")
+        }
         .alert("Rigenerare la chiave di recupero?", isPresented: $confirmRegenerate) {
             Button("annulla", role: .cancel) {}
             Button("rigenera", role: .destructive) { regenerateRecovery() }
