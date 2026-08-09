@@ -24,8 +24,14 @@ struct SettingsView: View {
     @State private var confirmRegenerate = false
     @State private var licenseText = ""
     @State private var confirmDetach = false
-    @State private var importPreviews: [VaultTransfer.Preview] = []
-    @State private var showImportPreview = false
+    /// I dati viaggiano CON la presentazione, non in uno stato letto a parte:
+    /// assegnare l'elenco e alzare un flag nello stesso istante faceva
+    /// costruire la sheet con lo stato di prima, cioè vuota, la prima volta.
+    private struct ImportJob: Identifiable {
+        let id = UUID()
+        let previews: [VaultTransfer.Preview]
+    }
+    @State private var importJob: ImportJob?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -217,8 +223,7 @@ struct SettingsView: View {
                         VaultTransfer.chooseImport { urls in
                             guard !urls.isEmpty else { return }
                             // prima si guarda cosa c'è dentro, poi si conferma
-                            importPreviews = VaultTransfer.inspect(urls)
-                            showImportPreview = true
+                            importJob = ImportJob(previews: VaultTransfer.inspect(urls))
                         }
                     } label: {
                         Label("importa cassetti da un altro Mac", systemImage: "square.and.arrow.down.on.square")
@@ -256,9 +261,9 @@ struct SettingsView: View {
         }
         .padding(30)
         .frame(width: 460, height: 560)
-        .sheet(isPresented: $showImportPreview) {
-            ImportPreviewView(previews: importPreviews) { scelti in
-                showImportPreview = false
+        .sheet(item: $importJob) { job in
+            ImportPreviewView(previews: job.previews) { scelti in
+                importJob = nil
                 do {
                     let n = try VaultTransfer.importChosen(scelti)
                     note = "importati \(n) cassetti. riapri lo scrigno per vederli."
@@ -267,7 +272,7 @@ struct SettingsView: View {
                     self.error = "importazione non riuscita: \(error.localizedDescription)"
                 }
             } onCancel: {
-                showImportPreview = false
+                importJob = nil
             }
             .sheetPaperLocal()
         }
