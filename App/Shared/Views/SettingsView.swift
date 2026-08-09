@@ -51,7 +51,7 @@ struct SettingsView: View {
                             Text("30 giorni").tag(30)
                         }
                         .labelsHidden()
-                        .frame(width: 120)
+                        .frame(width: 130)
                         .onChange(of: typeAgain) { _, v in Preferences.typeAgainDays = v }
                     }
 
@@ -71,7 +71,7 @@ struct SettingsView: View {
                             Text("mai").tag(0)
                         }
                         .labelsHidden()
-                        .frame(width: 120)
+                        .frame(width: 130)
                         .onChange(of: autolock) { _, v in Preferences.autolockMinutes = v }
                     }
 
@@ -84,7 +84,7 @@ struct SettingsView: View {
                             Text("mai").tag(0)
                         }
                         .labelsHidden()
-                        .frame(width: 120)
+                        .frame(width: 130)
                         .onChange(of: clipboard) { _, v in Preferences.clipboardSeconds = v }
                     }
 
@@ -96,7 +96,7 @@ struct SettingsView: View {
                             ForEach([12, 16, 20, 24, 32], id: \.self) { Text("\($0)").tag($0) }
                         }
                         .labelsHidden()
-                        .frame(width: 120)
+                        .frame(width: 130)
                         .onChange(of: length) { _, v in Preferences.passwordLength = v }
                     }
 
@@ -179,7 +179,11 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
+            // colonna di larghezza fissa allineata a destra: menu a tendina e
+            // interruttori hanno ingombri diversi e, lasciati liberi, i loro
+            // bordi destri non cadevano sulla stessa linea
             control()
+                .frame(width: 130, alignment: .trailing)
         }
     }
 
