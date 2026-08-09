@@ -9,14 +9,22 @@ import Foundation
 /// idea di divisione, e chi arriva da lì ritrova la propria organizzazione
 /// invece di un unico mucchio da risistemare a mano.
 enum OnePasswordImport {
+    /// Errori distinti passo per passo: "non funziona" non dice dove, e
+    /// senza sapere dove si finisce a tirare a indovinare.
     enum Failure: Error, LocalizedError {
-        case notAnArchive
-        case noData
+        case cannotUnzip(Int32)
+        case missingExportData
+        case badJSON
+        case noVaults
+        case noData(vaults: Int, items: Int)
 
         var errorDescription: String? {
             switch self {
-            case .notAnArchive: return "Non riesco ad aprire questo .1pux."
-            case .noData:       return "L'archivio non contiene voci."
+            case .cannotUnzip(let code): return "Non riesco a scompattare il .1pux (unzip: \(code))."
+            case .missingExportData:     return "Nell'archivio manca export.data."
+            case .badJSON:               return "export.data non è leggibile."
+            case .noVaults:              return "L'archivio non contiene nessun vault."
+            case .noData(let v, let i):  return "Trovati \(v) vault e \(i) voci, ma nessuna importabile."
             }
         }
     }
@@ -36,20 +44,24 @@ enum OnePasswordImport {
         defer { try? FileManager.default.removeItem(at: unpacked) }
 
         let dataURL = unpacked.appendingPathComponent("export.data")
-        guard let raw = try? Data(contentsOf: dataURL),
-              let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any]
-        else { throw Failure.notAnArchive }
+        guard let raw = try? Data(contentsOf: dataURL) else { throw Failure.missingExportData }
+        guard let json = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] else {
+            throw Failure.badJSON
+        }
 
         let accounts = json["accounts"] as? [[String: Any]] ?? []
         var vaults: [Vault] = []
+        var vaultVisti = 0, itemVisti = 0
 
         for account in accounts {
             for rawVault in account["vaults"] as? [[String: Any]] ?? [] {
                 let attrs = rawVault["attrs"] as? [String: Any] ?? [:]
                 let name = (attrs["name"] as? String) ?? "senza nome"
                 var vault = Vault(name: name, entries: [], details: [])
+                vaultVisti += 1
 
                 for item in rawVault["items"] as? [[String: Any]] ?? [] {
+                    itemVisti += 1
                     // Nel cestino di 1Password c'è roba buttata via: portarsela
                     // dietro vorrebbe dire riempire i cassetti di scarti.
                     if (item["state"] as? String) == "archived" { continue }
@@ -62,7 +74,8 @@ enum OnePasswordImport {
             }
         }
 
-        guard !vaults.isEmpty else { throw Failure.noData }
+        guard vaultVisti > 0 else { throw Failure.noVaults }
+        guard !vaults.isEmpty else { throw Failure.noData(vaults: vaultVisti, items: itemVisti) }
         return vaults
     }
 
@@ -162,7 +175,7 @@ enum OnePasswordImport {
         try task.run()
         task.waitUntilExit()
 
-        guard task.terminationStatus == 0 else { throw Failure.notAnArchive }
+        guard task.terminationStatus == 0 else { throw Failure.cannotUnzip(task.terminationStatus) }
         return dest
     }
 }

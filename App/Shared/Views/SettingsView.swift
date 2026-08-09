@@ -217,8 +217,8 @@ struct SettingsView: View {
                             note = "leggo l'archivio…"; error = nil
                             Task {
                                 do {
-                                    let n = try await VaultTransfer.importOnePassword(archivio)
-                                    note = "importati \(n) cassetti da 1Password."
+                                    let esito = try await VaultTransfer.importOnePassword(archivio)
+                                    note = "importati \(esito.cassetti) cassetti, \(esito.voci) voci."
                                 } catch {
                                     self.error = "importazione non riuscita: \(error.localizedDescription)"
                                     note = nil

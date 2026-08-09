@@ -316,13 +316,13 @@ enum VaultTransfer {
     /// Il lavoro pesante (un Argon2id per cassetto) sta fuori dal thread
     /// principale, così la finestra non si pianta con archivi grossi.
     @MainActor
-    static func importOnePassword(_ archive: URL) async throws -> Int {
-        guard let key = MasterKey.session else { return 0 }
+    static func importOnePassword(_ archive: URL) async throws -> (cassetti: Int, voci: Int) {
+        guard let key = MasterKey.session else { throw OnePasswordImport.Failure.noVaults }
         let vaults = try await Task.detached(priority: .userInitiated) {
             try OnePasswordImport.read(archive)
         }.value
 
-        struct Pronto { let name: String; let bytes: [UInt8] }
+        struct Pronto { let name: String; let bytes: [UInt8]; let voci: Int }
         let pronti: [Pronto] = await Task.detached(priority: .userInitiated) {
             vaults.compactMap { vault in
                 let db = VaultDatabase.createNew(name: vault.name)
@@ -342,7 +342,7 @@ enum VaultTransfer {
                     ))
                 }
                 guard let bytes = try? Kdbx4.save(database: db, password: key) else { return nil }
-                return Pronto(name: vault.name, bytes: bytes)
+                return Pronto(name: vault.name, bytes: bytes, voci: db.allEntries.count)
             }
         }.value
 
@@ -353,7 +353,7 @@ enum VaultTransfer {
                                                    icon: "lock.shield",
                                                    noteColor: "#A8D8B9")
         }
-        return pronti.count
+        return (pronti.count, pronti.reduce(0) { $0 + $1.voci })
     }
 
     static func chooseOnePasswordArchive(completion: @escaping (URL?) -> Void) {
