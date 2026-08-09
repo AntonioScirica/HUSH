@@ -1,8 +1,12 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 import UniformTypeIdentifiers
 
-/// Impostazioni dello scrigno: chiave d'accesso, cosa scade da solo e come
+/// Impostazioni delHush: chiave d'accesso, cosa scade da solo e come
 /// nascono le password. Poche voci, tutte con una conseguenza concreta.
 struct SettingsView: View {
     let onClose: () -> Void
@@ -16,6 +20,7 @@ struct SettingsView: View {
     @State private var length = Preferences.passwordLength
     @State private var symbols = Preferences.passwordSymbols
     @State private var typeAgain = Preferences.typeAgainDays
+    @State private var vistaClassica = Preferences.vistaClassica
     @State private var showImporter = false
     @State private var error: String?
     @State private var note: String?
@@ -75,7 +80,7 @@ struct SettingsView: View {
                         // Dirlo prima, non quando succede: chi affida le
                         // proprie password a un programma ha diritto di
                         // sapere in partenza cosa gli resta in mano.
-                        Text("passati i 7 giorni Scrigno si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre esportarlo, e sono file .kdbx che si aprono con KeePass o qualunque programma compatibile, anche senza Scrigno.")
+                        Text("passati i 7 giorni Hush si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre portartelo via, e lo riapri anche senza Hush.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
@@ -103,7 +108,7 @@ struct SettingsView: View {
 
                     if MasterKey.biometryAvailable {
                         row("sblocco col dito",
-                            "apre lo scrigno col sensore invece della password.") {
+                            "apre Hush col sensore invece della password.") {
                             Toggle("", isOn: $biometry)
                                 .labelsHidden()
                                 .toggleStyle(.switch)
@@ -129,10 +134,23 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.inkSoft)
 
                     divider
+                    section("aspetto")
+
+                    row("vista a elenco",
+                        "la schermata classica con la barra laterale, al posto della parete di cassetti.") {
+                        Toggle("", isOn: $vistaClassica)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: vistaClassica) { _, on in
+                                Preferences.vistaClassica = on
+                            }
+                    }
+
+                    divider
                     section("da sé")
 
                     row("richiudi dopo",
-                        "lo scrigno si blocca da solo se lo lasci lì aperto.") {
+                        "Hush si blocca da solo se lo lasci lì aperto.") {
                         Picker("", selection: $autolock) {
                             Text("1 min").tag(1)
                             Text("5 min").tag(5)
@@ -207,6 +225,7 @@ struct SettingsView: View {
                     divider
                     section("dati")
 
+#if os(macOS)
                     // Un comando solo: a capire cosa gli hai dato (cassetti
                     // esportati, .kdbx, .csv, archivi .1pux) ci pensa lui.
                     Button {
@@ -235,8 +254,10 @@ struct SettingsView: View {
                     }
                     .buttonStyle(OutlineButtonStyle())
                     .disabled(leggendo)
+                    #endif
 
 
+                    #if os(macOS)
                     Button {
                         NSWorkspace.shared.activateFileViewerSelecting(
                             [VaultFileManager.shared.projectsDirectory]
@@ -246,6 +267,7 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
+                    #endif
 
                     if importando {
                         HStack(spacing: 8) {
@@ -268,8 +290,13 @@ struct SettingsView: View {
                 .buttonStyle(InkButtonStyle(prominent: true))
                 .padding(.top, 18)
         }
+        #if os(iOS)
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        #else
         .padding(30)
         .frame(width: 460, height: 560)
+        #endif
         .sheet(item: $importJob) { job in
             ImportPreviewView(previews: job.previews) { scelti in
                 importJob = nil
@@ -296,7 +323,7 @@ struct SettingsView: View {
             Button("annulla", role: .cancel) {}
             Button("stacca", role: .destructive) { License.detach(); onClose() }
         } message: {
-            Text("Scrigno tornerà bloccato qui e potrai attivare la licenza su un altro Mac.\n\nI cassetti restano su questo computer: se ti servono di là, esportali PRIMA di staccare.")
+            Text("Hush tornerà bloccato qui e potrai attivare la licenza su un altro Mac.\n\nI cassetti restano su questo computer: se ti servono di là, esportali PRIMA di staccare.")
         }
         .alert("Rigenerare la chiave di recupero?", isPresented: $confirmRegenerate) {
             Button("annulla", role: .cancel) {}
@@ -372,7 +399,7 @@ struct SettingsView: View {
             return
         }
         guard let key = MasterKey.session else {
-            error = "scrigno bloccato: riapri e riprova."
+            error = "bloccato: riapri e riprova."
             biometry = false
             return
         }
@@ -389,7 +416,7 @@ struct SettingsView: View {
     private func regenerateRecovery() {
         error = nil
         guard let key = MasterKey.session else {
-            error = "scrigno bloccato: riapri e riprova."
+            error = "bloccato: riapri e riprova."
             return
         }
         do {

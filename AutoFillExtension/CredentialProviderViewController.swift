@@ -43,10 +43,10 @@ final class CredentialProviderViewController: ASCredentialProviderViewController
         hosting.view.translatesAutoresizingMaskIntoConstraints = false
         self.view.addSubview(hosting.view)
         NSLayoutConstraint.activate([
-            hosting.view.topAnchor.constraint(equalTo: view.topAnchor),
-            hosting.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            hosting.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            hosting.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            hosting.view.topAnchor.constraint(equalTo: self.view.topAnchor),
+            hosting.view.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+            hosting.view.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            hosting.view.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
         ])
         hosting.didMove(toParent: self)
     }

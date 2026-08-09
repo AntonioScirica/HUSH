@@ -1,6 +1,6 @@
 import Foundation
 
-/// Le poche cose regolabili dello scrigno. Stanno nei UserDefaults perché
+/// Le poche cose regolabili delHush. Stanno nei UserDefaults perché
 /// non sono segreti: sono soglie e preferenze, non chiavi.
 enum Preferences {
     private static let d = UserDefaults.standard
@@ -11,6 +11,7 @@ enum Preferences {
         static let passwordLength = "scrigno.pref.passwordLength"
         static let passwordSymbols = "scrigno.pref.passwordSymbols"
         static let typeAgainDays = "scrigno.pref.typeAgainDays"
+        static let vistaClassica = "scrigno.pref.vistaClassica"
     }
 
     /// Registra i valori di partenza: senza, `integer(forKey:)` risponde 0 su
@@ -25,7 +26,7 @@ enum Preferences {
         ])
     }
 
-    /// Minuti d'inattività dopo cui lo scrigno si richiude. 0 = mai.
+    /// Minuti d'inattività dopo cui Hush si richiude. 0 = mai.
     static var autolockMinutes: Int {
         get { d.integer(forKey: Key.autolockMinutes) }
         set { d.set(newValue, forKey: Key.autolockMinutes) }
@@ -45,6 +46,13 @@ enum Preferences {
     static var passwordSymbols: Bool {
         get { d.bool(forKey: Key.passwordSymbols) }
         set { d.set(newValue, forKey: Key.passwordSymbols) }
+    }
+
+    /// La schermata di prima del rewrite: elenco con barra laterale al
+    /// posto della parete 3D. Chiave usata anche da @AppStorage in RootView.
+    static var vistaClassica: Bool {
+        get { d.bool(forKey: Key.vistaClassica) }
+        set { d.set(newValue, forKey: Key.vistaClassica) }
     }
 
     /// Ogni quanti giorni la master password va comunque digitata a mano.

@@ -128,7 +128,7 @@ enum SharedKeychain {
         guard SecTrustedApplicationCreateFromPath(nil, &trustedApp) == errSecSuccess,
               let trustedApp else { return nil }
         var access: SecAccess?
-        guard SecAccessCreate("Scrigno" as CFString, [trustedApp] as CFArray, &access) == errSecSuccess else {
+        guard SecAccessCreate("Hush" as CFString, [trustedApp] as CFArray, &access) == errSecSuccess else {
             return nil
         }
         return access

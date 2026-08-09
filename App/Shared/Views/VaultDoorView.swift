@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Porta del caveau in line-art: gli stessi tratti neri su carta della parete
 /// di cassetti, ma in 2D. È la schermata di sblocco — una password sola apre
-/// tutto lo scrigno, quindi qui c'è una porta sola.
+/// tutto Hush, quindi qui c'è una porta sola.
 struct VaultDoorView: View {
-    /// Vero quando si arriva qui richiudendo lo scrigno, non all'avvio: in
+    /// Vero quando si arriva qui richiudendo Hush, non all'avvio: in
     /// quel caso la porta rifà l'apertura al contrario invece di comparire
     /// già chiusa.
     var closing = false
@@ -141,7 +141,7 @@ struct VaultDoorView: View {
     @ViewBuilder private var passwordControls: some View {
         VStack(spacing: 18) {
             VStack(spacing: 6) {
-                Text("SCRIGNO")
+                Text("HUSH")
                     .font(Theme.display(32))
                     .kerning(-0.5)
                     .foregroundStyle(Theme.ink)
@@ -272,7 +272,7 @@ struct VaultDoorView: View {
         do {
             let master = try RecoveryKit.recover(with: recoveryKey)
             guard MasterKey.unlock(password: master) else {
-                recoveryError = "La chiave è valida ma la password recuperata non apre più lo scrigno."
+                recoveryError = "La chiave è valida ma la password recuperata non apre più Hush."
                 return
             }
             recoveryKey = ""

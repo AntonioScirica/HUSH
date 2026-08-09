@@ -1,6 +1,10 @@
 import Foundation
 import CryptoKit
+#if os(macOS)
 import IOKit
+#else
+import UIKit
+#endif
 
 /// Licenza d'uso: dice se il prodotto è stato pagato. Niente a che vedere con
 /// la chiave di recupero, che invece apre i vault — questa non decifra niente.
@@ -32,6 +36,8 @@ enum License {
     /// Identificativo di questa macchina: il numero di serie della scheda,
     /// che non cambia reinstallando il sistema.
     static var deviceID: String {
+        #if os(macOS)
+
         let entry = IOServiceGetMatchingService(kIOMainPortDefault,
                                                 IOServiceMatching("IOPlatformExpertDevice"))
         defer { IOObjectRelease(entry) }
@@ -41,6 +47,12 @@ enum License {
               let uuid = cf.takeRetainedValue() as? String
         else { return "sconosciuto" }
         return uuid
+    
+        #else
+        // identificatore stabile finché l'app resta installata: per legare
+        // la licenza basta e avanza, e non tocca niente di personale
+        return UIDevice.current.identifierForVendor?.uuidString ?? "sconosciuto"
+        #endif
     }
 
     struct Info: Codable, Equatable {

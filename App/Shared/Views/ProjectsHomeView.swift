@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import AppKit
 import VaultCore
@@ -592,7 +593,7 @@ struct ProjectsHomeView: View {
                 VStack {
                     Spacer()
                     HStack {
-                        cornerButton("lock", help: "Richiudi lo scrigno") { onLock() }
+                        cornerButton("lock", help: "Richiudi Hush") { onLock() }
                         Spacer()
                         cornerButton("gearshape", help: "Impostazioni") { showSettings = true }
                     }
@@ -818,7 +819,7 @@ struct ProjectsHomeView: View {
         }
         // Chiuse le impostazioni si rilegge l'elenco: da lì dentro si possono
         // importare cassetti nuovi, e senza questo la parete restava com'era
-        // finché non si riapriva lo scrigno.
+        // finché non si riapriva Hush.
         .sheet(isPresented: $showSettings, onDismiss: {
             projects = VaultFileManager.shared.projects
             Task { await library.preload(projects) }
@@ -840,7 +841,7 @@ struct ProjectsHomeView: View {
         .alert("Eliminare il progetto?", isPresented: $showDeleteConfirm, actions: {
             Button("annulla", role: .cancel) {}
             Button("elimina", role: .destructive) { deleteEditedProject() }
-        }, message: { Text("Il file .kdbx viene cancellato dal disco. Non si può annullare.") })
+        }, message: { Text("Il cassetto e tutto quello che contiene vengono cancellati. Non si può annullare.") })
         .onChange(of: showSettingsSignal?.wrappedValue ?? false) { _, wants in
             if wants { showSettings = true; showSettingsSignal?.wrappedValue = false }
         }
@@ -1613,7 +1614,7 @@ struct ProjectsHomeView: View {
         let name = createName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
         guard let key = MasterKey.session else {
-            localError = "Scrigno è bloccato: riapri con la master password."
+            localError = "Hush è bloccato: riapri con la master password."
             return
         }
         newName = name
@@ -2093,3 +2094,4 @@ struct IconLibrarySheet: View {
         .preferredColorScheme(.light)
     }
 }
+#endif

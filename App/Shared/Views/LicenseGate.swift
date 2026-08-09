@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// Promemoria della prova: una targhetta piccola nell'angolo in alto a
 /// sinistra, non una fascia a tutta larghezza.
@@ -53,7 +57,7 @@ struct LicenseWall: View {
                     Rectangle().fill(Theme.line).frame(height: 1.2)
                 }
 
-                Text("i sette giorni sono passati. per continuare a usare\nScrigno serve una licenza.")
+                Text("i sette giorni sono passati. per continuare a usare\nHush serve una licenza.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -88,11 +92,12 @@ struct LicenseWall: View {
                     Text("i tuoi cassetti restano tuoi")
                         .font(Theme.mono(11, .semibold))
                         .foregroundStyle(Theme.ink)
-                    Text("puoi esportarli anche adesso: sono file .kdbx cifrati con la tua master password, si aprono con qualunque programma compatibile con KeePass.")
+                    Text("puoi portarli via anche adesso: restano chiusi con la tua password, e li riapri dove vuoi.")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    #if os(macOS)
                     Button {
                         VaultTransfer.chooseExportFolder { folder in
                             guard let folder else { return }
@@ -100,7 +105,9 @@ struct LicenseWall: View {
                                 let esito = try await VaultTransfer.exportAsync(to: folder)
                                 note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
                                 error = nil
+                                #if os(macOS)
                                 NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
+                                #endif
                             } catch {
                                 self.error = "esportazione non riuscita: \(error.localizedDescription)"
                             } }
@@ -110,12 +117,18 @@ struct LicenseWall: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
+                    #endif
                 }
 
                 Spacer(minLength: 0)
             }
+            #if os(iOS)
+            .padding(28)
+            .frame(maxWidth: .infinity)
+            #else
             .padding(40)
             .frame(width: 520)
+            #endif
         }
         .preferredColorScheme(.light)
     }

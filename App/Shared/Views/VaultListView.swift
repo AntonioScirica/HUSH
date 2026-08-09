@@ -3,6 +3,8 @@ import VaultCore
 
 struct VaultListView: View {
     @EnvironmentObject var vm: VaultViewModel
+    /// Nella vista classica il lucchetto richiude tutta l'app, non solo lo store.
+    var onLock: (() -> Void)?
     @State private var selectedEntry: VaultEntry?
     @State private var showEditor = false
     @State private var editingEntry: VaultEntry?
@@ -46,6 +48,7 @@ struct VaultListView: View {
                             Button("Elimina", role: .destructive) {
                                 if selectedEntry?.id == entry.id { selectedEntry = nil }
                                 vm.store.deleteEntry(id: entry.id)
+                                saveVault()
                             }
                         }
                     }
@@ -106,6 +109,7 @@ struct VaultListView: View {
                     vm.store.addEntry(saved)
                 }
                 selectedEntry = saved
+                saveVault()
             }
         }
         .sheet(isPresented: $showGenerator) {
@@ -139,7 +143,7 @@ struct VaultListView: View {
             .help("Salva vault")
 
             Button {
-                vm.lock()
+                if let onLock { onLock() } else { vm.lock() }
             } label: {
                 Image(systemName: "lock")
             }
@@ -200,5 +204,285 @@ private struct EntryTabRow: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
+    }
+}
+
+
+/// La schermata di prima del rewrite, richiamabile dalle impostazioni.
+/// Due colonne: i progetti nella barra laterale, le voci del progetto
+/// scelto a destra. Una voce si apre sul posto, come una fisarmonica.
+struct ClassicHomeView: View {
+    @EnvironmentObject var vm: VaultViewModel
+    let onLock: () -> Void
+    /// False finché la porta non si è aperta: la vista sta già lì sotto,
+    /// ma i cassetti si caricano solo quando c'è la chiave di sessione.
+    var attiva: Bool = true
+
+    @State private var progetti = VaultFileManager.shared.projects
+    @State private var correnteID: String?
+    @State private var showSettings = false
+    /// La voce aperta nell'accordion (una alla volta).
+    @State private var apertaID: UUID?
+    @State private var editingEntry: VaultEntry?
+    @State private var showEditor = false
+    @State private var nuovoProgetto = false
+    @State private var nomeProgetto = ""
+
+    #if os(iOS)
+    /// Sul telefono la navigazione è a pila: tocchi il progetto e entri.
+    @State private var percorso: [String] = []
+    #endif
+
+    var body: some View {
+        base
+        .tint(Theme.ink)
+        .preferredColorScheme(.light)
+        .onAppear { if attiva { carica() } }
+        .onChange(of: attiva) { _, on in if on { carica() } }
+        .sheet(isPresented: $showEditor) {
+            EntryEditorView(entry: editingEntry) { saved in
+                if editingEntry != nil {
+                    vm.store.updateEntry(saved)
+                } else {
+                    vm.store.addEntry(saved)
+                }
+                apertaID = saved.id
+                salva()
+            }
+        }
+        .sheet(isPresented: $showSettings, onDismiss: {
+            progetti = VaultFileManager.shared.projects
+        }) {
+            SettingsView(onClose: { showSettings = false }, onImport: {})
+                .background(Theme.paper.ignoresSafeArea())
+                .preferredColorScheme(.light)
+        }
+    }
+
+    /// Due colonne sul Mac, pila sul telefono: stessa vista, navigazione
+    /// adatta allo schermo che c'è.
+    @ViewBuilder
+    private var base: some View {
+        #if os(iOS)
+        NavigationStack(path: $percorso) {
+            colonnaProgetti
+                .navigationDestination(for: String.self) { _ in
+                    listaVoci
+                }
+        }
+        #else
+        NavigationSplitView {
+            colonnaProgetti
+        } detail: {
+            listaVoci
+        }
+        #endif
+    }
+
+    // MARK: - Colonne
+
+    private var colonnaProgetti: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 2) {
+                ForEach(progetti) { p in
+                    let scelto = p.id == correnteID
+                    Button {
+                        apri(p)
+                        #if os(iOS)
+                        percorso = [p.id]
+                        #endif
+                    } label: {
+                        HStack(spacing: 9) {
+                            Image(systemName: p.icon ?? "archivebox")
+                                .font(.system(size: 12))
+                                .frame(width: 16)
+                            Text(p.name.lowercased())
+                                .font(Theme.mono(12, scelto ? .bold : .regular))
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .foregroundStyle(scelto ? Theme.paper : Theme.ink)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(scelto ? Theme.ink : .clear)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(8)
+        }
+        .background(Theme.paper)
+        .navigationTitle("progetti")
+        .navigationSplitViewColumnWidth(min: 170, ideal: 200)
+        .toolbar {
+            ToolbarItemGroup {
+                Button { nomeProgetto = ""; nuovoProgetto = true } label: {
+                    Image(systemName: "plus")
+                }
+                .help("Nuovo progetto")
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                }
+                .help("Impostazioni")
+                Button { onLock() } label: {
+                    Image(systemName: "lock")
+                }
+                .help("Blocca")
+            }
+        }
+        .alert("Nuovo progetto", isPresented: $nuovoProgetto) {
+            TextField("nome", text: $nomeProgetto)
+            Button("Crea") { creaProgetto() }
+            Button("Annulla", role: .cancel) {}
+        } message: {
+            Text("Un cassetto nuovo, chiuso con la tua master password.")
+        }
+    }
+
+    /// Crea un progetto vuoto e lo apre: il gemello di "crea progetto"
+    /// della parete 3D, per quando la parete non c'è (telefono, elenco).
+    private func creaProgetto() {
+        let nome = nomeProgetto.trimmingCharacters(in: .whitespaces)
+        guard !nome.isEmpty, let chiave = MasterKey.session else { return }
+        vm.createNew(name: nome, password: chiave)
+        Task { @MainActor in
+            guard let bytes = await vm.save() else { return }
+            let url = VaultFileManager.shared.freeProjectURL(named: nome)
+            try? Data(bytes).write(to: url, options: .atomic)
+            try? VaultFileManager.shared.addProject(
+                name: nome, url: url,
+                icon: VaultTransfer.icona(perNome: nome) ?? "folder",
+                noteColor: "#FADA5C"
+            )
+            progetti = VaultFileManager.shared.projects
+            if let creato = progetti.first(where: { $0.path == url.path }) {
+                apri(creato)
+            }
+        }
+    }
+
+    private var listaVoci: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                // intestazione: nome del progetto a sinistra, "+" a destra
+                HStack {
+                    Text((progetti.first { $0.id == correnteID }?.name ?? "").lowercased())
+                        .font(Theme.mono(13, .bold))
+                        .tracking(1.5)
+                        .foregroundStyle(Theme.ink)
+                    Spacer()
+                    Button {
+                        editingEntry = nil
+                        showEditor = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus")
+                            Text("nuova voce")
+                        }
+                    }
+                    .buttonStyle(InkButtonStyle(prominent: true))
+                    .fixedSize()
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 14)
+
+                ForEach(Array(vm.filteredEntries.enumerated()), id: \.element.id) { index, entry in
+                    let aperta = apertaID == entry.id
+                    EntryTabRow(
+                        entry: entry,
+                        number: index + 1,
+                        alignment: index.isMultiple(of: 2) ? .leading : .trailing,
+                        selected: aperta
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            apertaID = aperta ? nil : entry.id
+                        }
+                    }
+                    .contextMenu {
+                        Button("Modifica") {
+                            editingEntry = entry
+                            showEditor = true
+                        }
+                        Button("Elimina", role: .destructive) { elimina(entry) }
+                    }
+
+                    // le credenziali si aprono qui sotto, non di lato
+                    if aperta {
+                        EntryInlineDetail(
+                            entry: entry,
+                            onEdit: {
+                                editingEntry = entry
+                                showEditor = true
+                            },
+                            onDelete: { elimina(entry) }
+                        )
+                        .overlay(alignment: .bottom) {
+                            Rectangle().fill(Theme.line).frame(height: 1.1)
+                        }
+                        // niente .move: la scivolata dall'alto sembrava
+                        // la voce che arriva da fuori, non che si apre
+                        .transition(.opacity)
+                    }
+                }
+            }
+            .padding(.top, 14)
+            .padding(.horizontal, 10)
+        }
+        .background(Theme.paper)
+        .searchable(text: $vm.searchText, prompt: "cerca…")
+        .navigationTitle("")
+        .overlay {
+            if vm.filteredEntries.isEmpty {
+                VStack(spacing: 8) {
+                    Text(vm.searchText.isEmpty ? "cassetto vuoto" : "nessun risultato")
+                        .font(Theme.mono(13, .semibold))
+                    Text(vm.searchText.isEmpty ? "aggiungi la prima voce con +" : "prova un altro termine")
+                        .font(Theme.mono(11))
+                        .foregroundStyle(Theme.inkSoft)
+                }
+                .foregroundStyle(Theme.ink)
+            }
+        }
+    }
+
+    // MARK: - Dati
+
+    private func carica() {
+        progetti = VaultFileManager.shared.projects
+        let corrente = progetti.first { $0.path == VaultFileManager.shared.currentPath }
+            ?? progetti.first
+        if let corrente { apri(corrente) }
+    }
+
+    /// Apre un progetto nello store della vista classica. Prima si chiude la
+    /// libreria della parete 3D: due copie dello stesso vault in memoria si
+    /// sovrascriverebbero a vicenda.
+    private func apri(_ p: VaultFileManager.Project) {
+        guard let chiave = MasterKey.session else { return }
+        correnteID = p.id
+        apertaID = nil
+        vm.searchText = ""
+        Task { @MainActor in
+            VaultLibrary.shared.closeAll(progetti)
+            try? VaultFileManager.shared.selectProject(p)
+            if let bytes = try? VaultFileManager.shared.readVault() {
+                await vm.open(fileData: bytes, password: chiave)
+            }
+        }
+    }
+
+    private func elimina(_ entry: VaultEntry) {
+        if apertaID == entry.id { apertaID = nil }
+        vm.store.deleteEntry(id: entry.id)
+        salva()
+    }
+
+    /// Ogni modifica finisce su disco da sola, come nella parete 3D.
+    private func salva() {
+        Task {
+            guard let bytes = await vm.save() else { return }
+            try? VaultFileManager.shared.writeVault(bytes)
+        }
     }
 }

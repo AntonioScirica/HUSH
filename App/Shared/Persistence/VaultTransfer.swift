@@ -1,8 +1,10 @@
 import Foundation
+#if os(macOS)
 import AppKit
+#endif
 import VaultCore
 
-/// Trasloco dello scrigno da un computer all'altro.
+/// Trasloco delHush da un computer all'altro.
 ///
 /// Serve quando si stacca la licenza da un Mac per attaccarla a un altro: la
 /// licenza da sola non basta, dall'altra parte servono anche i cassetti.
@@ -32,7 +34,7 @@ enum VaultTransfer {
         var errorDescription: String? {
             switch self {
             case .exportingOntoItself:
-                return "Quella è la cartella dove Scrigno tiene i vault: scegline un'altra."
+                return "Quella è la cartella dove Hush tiene i vault: scegline un'altra."
             }
         }
     }
@@ -63,7 +65,7 @@ enum VaultTransfer {
 
         let giorno = DateFormatter()
         giorno.dateFormat = "yyyy-MM-dd"
-        let base = "Scrigno cassetti \(giorno.string(from: Date()))"
+        let base = "Hush cassetti \(giorno.string(from: Date()))"
         var folder = parent.appendingPathComponent(base)
         var n = 2
         while fm.fileExists(atPath: folder.path) {
@@ -115,6 +117,55 @@ enum VaultTransfer {
         "key", "lock.shield", "star", "flag"
     ]
 
+    /// Icona indovinata dal nome: un cassetto "banche" ha più senso con la
+    /// carta di credito che con la prima icona libera. Se il nome non dice
+    /// niente, nil, e si va con la rotazione di sempre.
+    static func icona(perNome nome: String) -> String? {
+        let n = nome.lowercased()
+        let regole: [(String, [String])] = [
+            ("creditcard",     ["banc", "bank", "finanz", "conto", "conti", "pagament", "soldi"]),
+            ("briefcase",      ["lavoro", "work", "ufficio", "business", "aziend"]),
+            ("person",         ["personale", "personal", "privat"]),
+            ("house",          ["casa", "home", "famigl", "family"]),
+            ("person.2",       ["social", "amici"]),
+            ("cross.case",     ["salute", "health", "medic", "diet"]),
+            ("graduationcap",  ["scuola", "school", "univers", "studio", "corsi"]),
+            ("gamecontroller", ["gioc", "game", "gaming"]),
+            ("airplane",       ["viagg", "travel", "vacanz"]),
+            ("car",            ["auto", "macchina", "moto"]),
+            ("music.note",     ["music"]),
+            ("camera",         ["foto", "photo"]),
+            ("cart",           ["shop", "spesa", "acquist", "negozi"]),
+            ("envelope",       ["mail", "posta"]),
+            ("server.rack",    ["server", "svilupp", "code", "cloud", "tech"]),
+            ("key",            ["password", "chiav", "accessi"]),
+            ("tv",             ["stream", "film", "serie", "video"]),
+            ("globe",          ["web", "sito", "internet"]),
+        ]
+        for (icona, parole) in regole where parole.contains(where: n.contains) {
+            return icona
+        }
+        return nil
+    }
+
+    /// Ripassa i cassetti già sulla parete: icona dal nome a chi ce l'ha,
+    /// rotazione di icone e colori diversi a tutti gli altri, che dalla
+    /// prima importazione erano rimasti tutti con lo stesso scudetto verde.
+    /// Una volta sola: da lì in poi decide l'utente.
+    static func assegnaIconeDalNome() {
+        let d = UserDefaults.standard
+        let flag = "hush.icone.dal.nome.2"
+        guard !d.bool(forKey: flag) else { return }
+        d.set(true, forKey: flag)
+        let fm = VaultFileManager.shared
+        for (i, p) in fm.projects.enumerated() {
+            let base = aspetto(perIndice: i)
+            let icona = icona(perNome: p.name) ?? base.icon
+            guard icona != p.icon || base.color != p.noteColor else { continue }
+            fm.updateProject(id: p.id, name: p.name, icon: icona, noteColor: base.color)
+        }
+    }
+
     static func aspetto(perIndice i: Int) -> (icon: String, color: String) {
         let icona = iconePerImport[i % iconePerImport.count]
         let colori = ["#FADA5C", "#F4A9A8", "#A8D8B9", "#9EC5E8", "#D9B8E8", "#F0C9A0"]
@@ -148,7 +199,7 @@ enum VaultTransfer {
         /// Perché non si è potuto leggere, se non si è potuto.
         var problem: String?
         /// Password con cui si è riusciti ad aprirlo, se diversa da quella
-        /// dello scrigno: all'importazione il file viene ricifrato con la
+        /// delHush: all'importazione il file viene ricifrato con la
         /// nostra, se no resterebbe un cassetto che non si apre.
         var foreignPassword: String?
 
@@ -179,16 +230,17 @@ enum VaultTransfer {
             // contatore unico su tutta l'importazione: due vault non devono
             // ritrovarsi con la stessa icona solo perché arrivano da file diversi
             var prossimo = 0
-            func aspettoSuccessivo() -> (icon: String, color: String) {
+            func aspettoSuccessivo(nome: String) -> (icon: String, color: String) {
                 defer { prossimo += 1 }
-                return aspetto(perIndice: prossimo)
+                let base = aspetto(perIndice: prossimo)
+                return (icona(perNome: nome) ?? base.icon, base.color)
             }
 
             for url in selection {
                 switch url.pathExtension.lowercased() {
                 case "csv", "txt":
                     if let entries = try? CSVImport.parse(contentsOf: url) {
-                        let look = aspettoSuccessivo()
+                        let look = aspettoSuccessivo(nome: url.deletingPathExtension().lastPathComponent)
                         previews.append(Preview(
                             origin: .csv(entries),
                             file: url,
@@ -206,7 +258,7 @@ enum VaultTransfer {
                 case "1pux":
                     if let vaults = try? OnePasswordImport.read(url) {
                         for v in vaults {
-                            let look = aspettoSuccessivo()
+                            let look = aspettoSuccessivo(nome: v.name)
                             previews.append(Preview(
                                 origin: .onePassword(v),
                                 file: url,
@@ -238,21 +290,22 @@ enum VaultTransfer {
             let original = manifest?.progetti.first {
                 URL(fileURLWithPath: $0.path).lastPathComponent == file.lastPathComponent
             }
+            let nome = original?.name ?? file.deletingPathExtension().lastPathComponent
             var preview = Preview(
                 file: file,
-                name: original?.name ?? file.deletingPathExtension().lastPathComponent,
-                icon: original?.icon,
+                name: nome,
+                icon: original?.icon ?? icona(perNome: nome),
                 noteColor: original?.noteColor
             )
-            // già dentro allo scrigno: reimportarlo creerebbe un doppione
+            // già dentro alHush: reimportarlo creerebbe un doppione
             if VaultFileManager.shared.projects.contains(where: {
                 URL(fileURLWithPath: $0.path).standardizedFileURL == file.standardizedFileURL
             }) {
-                preview.problem = "già nello scrigno"
+                preview.problem = "già nelHush"
                 return preview
             }
             guard let key else {
-                preview.problem = "scrigno bloccato"
+                preview.problem = "bloccato"
                 return preview
             }
             do {
@@ -380,7 +433,7 @@ enum VaultTransfer {
         let (_, manifest) = collect(previews.map { $0.file.deletingLastPathComponent() })
 
         // quelli che arrivano con una password loro vanno ricifrati con la
-        // nostra: dentro allo scrigno la chiave è una sola
+        // nostra: dentro alHush la chiave è una sola
         var daCopiare: [URL] = []
         var importati = 0
         for preview in previews {
@@ -496,6 +549,7 @@ enum VaultTransfer {
         return (pronti.count, pronti.reduce(0) { $0 + $1.voci })
     }
 
+    #if os(macOS)
     static func chooseOnePasswordArchive(completion: @escaping (URL?) -> Void) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
@@ -529,4 +583,5 @@ enum VaultTransfer {
         panel.message = "Cassetti esportati, file .kdbx, .csv o archivi .1pux di 1Password"
         panel.begin { completion($0 == .OK ? panel.urls : []) }
     }
+    #endif
 }

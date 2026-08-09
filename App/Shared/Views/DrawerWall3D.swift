@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 import SceneKit
 import AppKit
@@ -247,11 +248,13 @@ struct DrawerWall3D: NSViewRepresentable {
         static let plusZ: CGFloat = -0.05
         static let aheadSpacing: CGFloat = 0.16   // tra le cartelle ancora da sfogliare
         static let passedSpacing: CGFloat = 0.07  // impilate davanti, strette
-        static let passedLimit: CGFloat = 0.26    // clamp: restano dentro
+        /// Clamp della pila delle sfogliate: si ferma poco davanti al punto
+        /// di lettura, così non arriva mai addosso alla "+" all'imboccatura.
+        static let passedLimit: CGFloat = 0.10
 
-        /// Fin dove si può scorrere. Da rivedere: fermarsi prima non ha
-        /// dato l'effetto voluto, l'ultima cartella arriva comunque vicino
-        /// alla "+". Il problema sta nella disposizione, non nel limite.
+        /// Fin dove si può scorrere: l'ultima cartella con nome arriva al
+        /// punto di lettura. Dietro di lei il cassetto resta pieno grazie
+        /// alle cartelle anonime di riempimento (vedi rebuildFolders).
         static func maxFocus(labeled: Int) -> CGFloat {
             CGFloat(labeled - 1)
         }
@@ -1055,7 +1058,9 @@ struct DrawerWall3D: NSViewRepresentable {
             var ctx = DrawerFolders()
             ctx.width = iw - 0.08
             let labeled = entries.count + 1          // +1 per la "+"
-            let totalFolders = min(labeled + 24, 44)
+            // sempre 24 anonime oltre l'ultima con nome: sono il "finto
+            // infinito" che tiene il fondo pieno anche sfogliando fino in fondo
+            let totalFolders = labeled + 24
             for f in 0..<totalFolders {
                 let title: String? = f == 0 ? "+" : (f < labeled ? entries[f - 1] : nil)
                 let (folder, fillMat, textMat) = makeFolder(index: f, title: title,
@@ -1309,7 +1314,7 @@ struct DrawerWall3D: NSViewRepresentable {
             var ctx = DrawerFolders()
             if let folders {
                 let labeled = folders.count + 1   // +1 per la "+"
-                let totalFolders = min(labeled + 24, 44)
+                let totalFolders = labeled + 24   // 24 anonime di riempimento, sempre
                 ctx.width = iw - 0.08
                 for f in 0..<totalFolders {
                     let z = Self.conveyorZ(index: f, focus: 0)
@@ -1668,3 +1673,4 @@ extension Array {
         indices.contains(index) ? self[index] : nil
     }
 }
+#endif

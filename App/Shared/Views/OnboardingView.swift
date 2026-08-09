@@ -1,6 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 private extension View {
     func themedImportRow() -> some View {
@@ -11,7 +15,7 @@ private extension View {
     }
 }
 
-/// Primo avvio: si presenta lo scrigno, si sceglie la master password e —
+/// Primo avvio: si presenta Hush, si sceglie la master password e —
 /// se la macchina ce l'ha — si attiva il dito. Stessa carta, stesso
 /// inchiostro, stessi divider numerati del resto dell'app.
 struct OnboardingView: View {
@@ -57,8 +61,13 @@ struct OnboardingView: View {
 
                 footer
             }
+            #if os(iOS)
+            .padding(28)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            #else
             .padding(40)
             .frame(width: 520, height: 560)
+            #endif
         }
         .preferredColorScheme(.light)
     }
@@ -88,11 +97,11 @@ struct OnboardingView: View {
     private var intro: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .top, spacing: 0) {
-                Text("SCRIGNO")
+                Text("HUSH")
                     .font(Theme.display(48))
                     .kerning(-1)
                     .foregroundStyle(Theme.ink)
-                Text("kdbx")
+                Text("offline")
                     .font(Theme.mono(10, .bold))
                     .foregroundStyle(Theme.ink)
                     .padding(.horizontal, 7)
@@ -106,11 +115,11 @@ struct OnboardingView: View {
                 bullet("un caveau, non un servizio",
                        "i tuoi dati restano su questo computer. nessun account, nessun server.")
                 bullet("un cassetto per progetto",
-                       "ogni progetto è un file .kdbx a sé, cifrato con AES-256 e Argon2id.")
+                       "ogni progetto ha il suo cassetto, chiuso a chiave per conto suo.")
                 bullet("una password per tutto",
-                       "una sola chiave apre l'intero scrigno: quella che scegli adesso.")
+                       "una sola chiave apre tutto: quella che scegli adesso.")
                 bullet("7 giorni di prova",
-                       "poi serve una licenza. i cassetti restano tuoi: sono file .kdbx, si esportano e si aprono anche con KeePass.")
+                       "poi serve una licenza. quello che hai messo dentro resta tuo: puoi portartelo via quando vuoi.")
             }
         }
     }
@@ -218,9 +227,13 @@ struct OnboardingView: View {
 
             HStack(spacing: 10) {
                 Button {
+                    #if os(iOS)
+                    UIPasteboard.general.string = recoveryKey
+                    #else
                     let pb = NSPasteboard.general
                     pb.clearContents()
                     pb.setString(recoveryKey, forType: .string)
+                    #endif
                 } label: {
                     Label("copia", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
                 }
@@ -250,12 +263,17 @@ struct OnboardingView: View {
     }
 
     private func saveRecoveryToFile() {
+        #if os(iOS)
+        // su iPhone niente pannello di salvataggio: la chiave si copia negli
+        // appunti e la si incolla dove si vuole (Note, un messaggio a sé...)
+        UIPasteboard.general.string = recoveryKey
+        #else
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Scrigno chiave di recupero.txt"
+        panel.nameFieldStringValue = "Hush chiave di recupero.txt"
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
             let testo = """
-            SCRIGNO. CHIAVE DI RECUPERO
+            HUSH. CHIAVE DI RECUPERO
 
             \(recoveryKey)
 
@@ -265,6 +283,7 @@ struct OnboardingView: View {
             """
             try? testo.write(to: url, atomically: true, encoding: .utf8)
         }
+        #endif
     }
 
     private var biometryStep: some View {
@@ -272,7 +291,7 @@ struct OnboardingView: View {
             Image(systemName: "touchid")
                 .font(.system(size: 46, weight: .light))
                 .foregroundStyle(Theme.ink)
-            Text("puoi aprire lo scrigno col dito invece di riscrivere la\npassword ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
+            Text("puoi aprire Hush col dito invece di riscrivere la\npassword ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -285,14 +304,14 @@ struct OnboardingView: View {
     }
 
     /// Import da un altro gestore. Il CSV è il minimo comun denominatore:
-    /// 1Password, Bitwarden, LastPass, Chrome e Safari lo esportano tutti.
+    /// Gli altri gestori di password e i browser esportano tutti un elenco.
     private var importStep: some View {
         VStack(alignment: .leading, spacing: 18) {
             Image(systemName: "square.and.arrow.down")
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(Theme.ink)
 
-            Text("se usi già 1Password, Bitwarden, LastPass o le password\ndel browser, esporta un .csv da lì e caricalo qui: finisce\ntutto in un cassetto solo, che poi puoi riordinare.")
+            Text("se le password ce le hai già da un'altra parte, esporta\nil file da lì e caricalo qui: finisce tutto in un cassetto\nsolo, che poi puoi riordinare.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -307,7 +326,7 @@ struct OnboardingView: View {
                 .themedImportRow()
             } else {
                 Button { showFileImporter = true } label: {
-                    Label("scegli un file .csv", systemImage: "doc.badge.plus")
+                    Label("scegli il file", systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(OutlineButtonStyle())
@@ -353,7 +372,7 @@ struct OnboardingView: View {
 
     private var ready: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("lo scrigno è chiuso a chiave.")
+            Text("Hush è chiuso a chiave.")
                 .font(Theme.display(26))
                 .foregroundStyle(Theme.ink)
             Text("da qui in poi vedrai la parete dei cassetti: uno per\nprogetto. creane uno col + e mettici dentro la prima\npassword.")
@@ -364,6 +383,16 @@ struct OnboardingView: View {
     }
 
     // MARK: - Navigazione
+
+    /// Su Mac i bottoni del piede hanno larghezze fisse; sul telefono si
+    /// stringono sul contenuto, o la riga sborda dallo schermo.
+    #if os(iOS)
+    private static let larghezzaSecondaria: CGFloat? = nil
+    private static let larghezzaPrimaria: CGFloat? = nil
+    #else
+    private static let larghezzaSecondaria: CGFloat? = 130
+    private static let larghezzaPrimaria: CGFloat? = 170
+    #endif
 
     private var footer: some View {
         HStack(spacing: 10) {
@@ -381,17 +410,17 @@ struct OnboardingView: View {
             if step == .biometry {
                 Button("non ora") { step = .importing }
                     .buttonStyle(OutlineButtonStyle())
-                    .frame(width: 130)
+                    .frame(width: Self.larghezzaSecondaria)
             }
             if step == .importing && importedCount == 0 {
                 Button("salta") { step = .ready }
                     .buttonStyle(OutlineButtonStyle())
-                    .frame(width: 130)
+                    .frame(width: Self.larghezzaSecondaria)
             }
 
             Button(primaryLabel) { advance() }
                 .buttonStyle(InkButtonStyle(prominent: true))
-                .frame(width: 170)
+                .frame(width: Self.larghezzaPrimaria)
                 .disabled(!canAdvance)
                 .opacity(canAdvance ? 1 : 0.4)
         }

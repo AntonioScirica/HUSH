@@ -5,7 +5,7 @@ import Foundation
 /// Un `.1pux` è uno zip: dentro c'è `export.data`, un JSON con tutti gli
 /// account, i vault e le voci, e una cartella `files` con gli allegati.
 ///
-/// Ogni **vault** di 1Password diventa un **cassetto** di Scrigno: è la stessa
+/// Ogni **vault** di 1Password diventa un **cassetto** di Hush: è la stessa
 /// idea di divisione, e chi arriva da lì ritrova la propria organizzazione
 /// invece di un unico mucchio da risistemare a mano.
 enum OnePasswordImport {
@@ -163,6 +163,12 @@ enum OnePasswordImport {
     /// Un `.1pux` è uno zip con un'estensione sua: si scompatta con lo
     /// strumento di sistema, che c'è su ogni Mac.
     private static func unzip(_ archive: URL) throws -> URL {
+        #if os(iOS)
+        // su iPhone non si lanciano processi: l'archivio di 1Password si
+        // porta prima sul Mac. ponytail: da rifare con una libreria zip se
+        // l'import 1PUX servirà anche da telefono.
+        throw Failure.cannotUnzip(-1)
+        #else
         let dest = FileManager.default.temporaryDirectory
             .appendingPathComponent("scrigno-1pux-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
@@ -177,5 +183,6 @@ enum OnePasswordImport {
 
         guard task.terminationStatus == 0 else { throw Failure.cannotUnzip(task.terminationStatus) }
         return dest
+        #endif
     }
 }

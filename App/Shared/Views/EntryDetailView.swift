@@ -89,6 +89,73 @@ struct EntryDetailView: View {
     }
 }
 
+/// Le stesse credenziali, ma dentro la riga: è il pannello che si apre
+/// sotto la linguetta nell'accordion della vista a elenco.
+struct EntryInlineDetail: View {
+    @EnvironmentObject var vm: VaultViewModel
+    let entry: VaultEntry
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    @State private var revealPassword = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(spacing: 0) {
+                if !entry.username.isEmpty {
+                    FieldRow(label: "utente", value: entry.username) {
+                        vm.copyToClipboard(entry.username, label: "Utente")
+                    }
+                }
+                FieldRow(label: "password", value: revealPassword ? entry.password : String(repeating: "•", count: 12), monospacedValue: true) {
+                    vm.copyToClipboard(entry.password, label: "Password")
+                } trailing: {
+                    Button {
+                        revealPassword.toggle()
+                    } label: {
+                        Image(systemName: revealPassword ? "eye.slash" : "eye")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                if !entry.url.isEmpty {
+                    FieldRow(label: "url", value: entry.url) {
+                        vm.copyToClipboard(entry.url, label: "URL")
+                    }
+                }
+            }
+            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1.1))
+
+            if !entry.notes.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("NOTE")
+                        .font(Theme.mono(10, .semibold))
+                        .tracking(2)
+                        .foregroundStyle(Theme.inkSoft)
+                    Text(entry.notes)
+                        .font(Theme.mono(12))
+                        .foregroundStyle(Theme.ink)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1.1))
+                .padding(.top, 12)
+            }
+
+            HStack(spacing: 10) {
+                Button("modifica") { onEdit() }
+                    .buttonStyle(InkButtonStyle())
+                Button("elimina") { onDelete() }
+                    .buttonStyle(OutlineButtonStyle())
+                Spacer()
+            }
+            .padding(.top, 14)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .onDisappear { revealPassword = false }
+    }
+}
+
 /// Riga campo tipo modulo cartaceo: etichetta mono minuscola sopra, valore
 /// sotto, azioni a destra; righe separate da hairline.
 private struct FieldRow<Trailing: View>: View {

@@ -51,11 +51,11 @@ struct LockView: View {
                 .foregroundStyle(Theme.paper.opacity(0.6))
 
             HStack(alignment: .top, spacing: 0) {
-                Text("SCRIGNO")
+                Text("HUSH")
                     .font(Theme.display(56))
                     .kerning(-1)
                     .foregroundStyle(Theme.paper)
-                Text("kdbx")
+                Text("offline")
                     .font(Theme.mono(11, .bold))
                     .foregroundStyle(Theme.ink)
                     .padding(.horizontal, 8)
@@ -65,7 +65,7 @@ struct LockView: View {
                     .offset(x: -6, y: 2)
             }
 
-            Text("OFFLINE · AES-256 · ARGON2ID")
+            Text("TUTTO QUI DENTRO · NESSUN SERVER")
                 .font(Theme.mono(10))
                 .tracking(2)
                 .foregroundStyle(Theme.paper.opacity(0.45))

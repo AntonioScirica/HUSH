@@ -1,7 +1,21 @@
 import Foundation
+
+#if os(iOS)
+import UIKit
+
+/// Su iPhone il conto dell'inattività non serve com'è sul Mac: l'app si
+/// richiude quando finisce in background (vedi ScrignoiOSApp). Questo guscio
+/// tiene la stessa interfaccia così RootView non cambia.
+@MainActor
+final class IdleWatcher: ObservableObject {
+    var onIdle: () -> Void = {}
+    func start() {}
+    func stop() {}
+}
+#else
 import AppKit
 
-/// Richiude lo scrigno quando lo si lascia lì aperto.
+/// Richiude Hush quando lo si lascia lì aperto.
 ///
 /// Guarda tastiera e mouse dentro l'app: ogni evento rimanda la scadenza, e
 /// se passa il tempo scelto senza che succeda niente scatta `onIdle`. La
@@ -37,7 +51,7 @@ final class IdleWatcher: ObservableObject {
 
         // Schermo bloccato o Mac addormentato: si richiude subito, senza
         // aspettare il conto alla rovescia. Chi si alza dalla scrivania e
-        // blocca lo schermo si aspetta che lo scrigno sia già chiuso, non che
+        // blocca lo schermo si aspetta che Hush sia già chiuso, non che
         // lo diventi cinque minuti dopo.
         let center = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.willSleepNotification,
@@ -85,3 +99,4 @@ final class IdleWatcher: ObservableObject {
         onIdle()
     }
 }
+#endif

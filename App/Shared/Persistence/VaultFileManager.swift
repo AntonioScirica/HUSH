@@ -21,111 +21,9 @@ enum SharedGroup {
     static let id = "group.com.antonioscirica.scrigno"
 }
 
-#if os(iOS)
-import Foundation
-
-/// Su iOS, l'app vive in un sandbox: per continuare ad accedere a un file
-/// scelto dall'utente (tipicamente su iCloud Drive) tra un avvio e l'altro —
-/// e per farlo accedere anche all'estensione AutoFill, che è un processo
-/// separato — usiamo un security-scoped bookmark salvato nel contenitore
-/// dell'App Group condiviso.
-final class VaultFileManager {
-    static let shared = VaultFileManager()
-    private init() {}
-
-    private var bookmarkURL: URL? {
-        FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: SharedGroup.id)?
-            .appendingPathComponent("vault-bookmark.data")
-    }
-
-    struct Project: Codable, Identifiable, Equatable {
-        let name: String
-        let path: String
-        var icon: String?        // nome SF Symbol; nil = nessun post-it
-        var noteColor: String?   // colore del post-it (esadecimale)
-        var id: String { path }
-
-        init(name: String, path: String, icon: String? = nil, noteColor: String? = nil) {
-            self.name = name
-            self.path = path
-            self.icon = icon
-            self.noteColor = noteColor
-        }
-    }
-
-    // ponytail: home multi-progetto sviluppata per macOS; su iOS il bookmark
-    // security-scoped resta singolo, quindi selectProject non riapre ancora
-    // il file giusto — da estendere a un bookmark per progetto quando serve.
-    var projects: [Project] {
-        guard let data = UserDefaults.standard.data(forKey: "vaultProjects"),
-              let list = try? JSONDecoder().decode([Project].self, from: data) else { return [] }
-        return list
-    }
-
-    func addProject(name: String, url: URL) throws {
-        var list = projects
-        if !list.contains(where: { $0.path == url.path }) {
-            list.append(Project(name: name, path: url.path))
-            if let data = try? JSONEncoder().encode(list) {
-                UserDefaults.standard.set(data, forKey: "vaultProjects")
-            }
-        }
-        try rememberVaultLocation(url)
-    }
-
-    func selectProject(_ project: Project) throws {
-        try rememberVaultLocation(URL(fileURLWithPath: project.path))
-    }
-
-    var hasVault: Bool {
-        (try? resolveURL()) != nil
-    }
-
-    /// Da chiamare quando l'utente sceglie/crea il file del vault (es. tramite
-    /// un file importer/exporter di SwiftUI che restituisce un URL con accesso
-    /// security-scoped già attivo).
-    func rememberVaultLocation(_ url: URL) throws {
-        guard let bookmarkURL else { throw VaultFileError.appGroupUnavailable }
-        let bookmark = try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
-        try bookmark.write(to: bookmarkURL, options: .atomic)
-    }
-
-    private func resolveURL() throws -> URL {
-        guard let bookmarkURL, let data = try? Data(contentsOf: bookmarkURL) else {
-            throw VaultFileError.noFileChosen
-        }
-        var stale = false
-        let url = try URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
-        return url
-    }
-
-    func readVault() throws -> [UInt8] {
-        let url = try resolveURL()
-        guard url.startAccessingSecurityScopedResource() else { throw VaultFileError.accessDenied }
-        defer { url.stopAccessingSecurityScopedResource() }
-        return Array(try Data(contentsOf: url))
-    }
-
-    func writeVault(_ bytes: [UInt8]) throws {
-        let url = try resolveURL()
-        guard url.startAccessingSecurityScopedResource() else { throw VaultFileError.accessDenied }
-        defer { url.stopAccessingSecurityScopedResource() }
-        try Data(bytes).write(to: url, options: .atomic)
-    }
-
-    var vaultDisplayName: String {
-        (try? resolveURL().lastPathComponent) ?? "Vault"
-    }
-}
-#endif
-
-#if os(macOS)
-import Foundation
-
-/// Su macOS l'app non è in sandbox (nessuna entitlement configurata in
-/// project.yml), quindi l'accesso al file è diretto: basta ricordarsi il
-/// percorso scelto dall'utente tra un avvio e l'altro.
+/// L'accesso ai file è diretto: su macOS l'app non è in sandbox, su iOS i
+/// vault vivono nel contenitore dell'app (condiviso con l'estensione
+/// AutoFill), quindi in entrambi i casi basta ricordarsi il percorso.
 final class VaultFileManager {
     static let shared = VaultFileManager()
     private init() {}
@@ -195,10 +93,83 @@ final class VaultFileManager {
     /// Cartella dell'app per i vault creati da qui — niente dialog di
     /// sistema: si salva e basta, come gli altri passaggi già snelliti.
     var projectsDirectory: URL {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Scrigno", isDirectory: true)
+        let dir = cartellaScelta ?? Self.cartellaPredefinita
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
+    }
+
+    /// Dove finiscono i cassetti se non scegli tu.
+    static var cartellaPredefinita: URL {
+        #if os(macOS)
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Hush", isDirectory: true)
+        #else
+        // il contenitore del gruppo, così l'estensione AutoFill legge gli
+        // stessi file; se il gruppo non è configurato si ripiega sui Documenti
+        let base = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: SharedGroup.id)
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        return base.appendingPathComponent("Hush", isDirectory: true)
+        #endif
+    }
+
+    private let cartellaKey = "scrigno.cartellaCassetti"
+
+    /// La cartella scelta dall'utente, se ne ha scelta una.
+    ///
+    /// Serve a chi vuole tenere i cassetti in una cartella che si sincronizza
+    /// da sola: da lì li ritrova sull'altro computer senza che Hush parli con
+    /// nessuno. Se la cartella sparisce (disco staccato, servizio scollegato)
+    /// si torna a quella predefinita invece di piantarsi.
+    var cartellaScelta: URL? {
+        guard let path = UserDefaults.standard.string(forKey: cartellaKey) else { return nil }
+        var cartella = ObjCBool(false)
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &cartella), cartella.boolValue
+        else { return nil }
+        return URL(fileURLWithPath: path)
+    }
+
+    /// Sposta tutto quello che c'è (cassetti, allegati, chiave di recupero)
+    /// nella cartella nuova e aggiorna i percorsi che ogni progetto si porta
+    /// dietro. Chi chiama deve aver già salvato e chiuso i cassetti aperti.
+    func spostaCartella(in nuova: URL) throws {
+        let fm = FileManager.default
+        let vecchia = projectsDirectory
+        guard vecchia.standardizedFileURL != nuova.standardizedFileURL else { return }
+        try fm.createDirectory(at: nuova, withIntermediateDirectories: true)
+
+        for file in (try? fm.contentsOfDirectory(at: vecchia, includingPropertiesForKeys: nil)) ?? [] {
+            let destinazione = nuova.appendingPathComponent(file.lastPathComponent)
+            if fm.fileExists(atPath: destinazione.path) {
+                // già lì: non si sovrascrive niente, il file vecchio resta dov'è
+                continue
+            }
+            try fm.moveItem(at: file, to: destinazione)
+        }
+
+        UserDefaults.standard.set(nuova.path, forKey: cartellaKey)
+        riscriviPercorsi(da: vecchia, a: nuova)
+    }
+
+    /// I progetti salvano il percorso completo del loro file: spostata la
+    /// cartella, senza questo passaggio punterebbero nel vuoto.
+    private func riscriviPercorsi(da vecchia: URL, a nuova: URL) {
+        let d = UserDefaults.standard
+        func aggiorna(_ path: String) -> String {
+            let file = URL(fileURLWithPath: path)
+            guard file.deletingLastPathComponent().standardizedFileURL == vecchia.standardizedFileURL
+            else { return path }
+            return nuova.appendingPathComponent(file.lastPathComponent).path
+        }
+        let aggiornati = projects.map {
+            Project(name: $0.name, path: aggiorna($0.path), icon: $0.icon, noteColor: $0.noteColor)
+        }
+        if let data = try? JSONEncoder().encode(aggiornati) {
+            d.set(data, forKey: projectsKey)
+        }
+        if let corrente = d.string(forKey: defaultsKey) {
+            d.set(aggiorna(corrente), forKey: defaultsKey)
+        }
     }
 
     /// Cartella per gli allegati dei documenti — file leggeri copiati qui
@@ -238,6 +209,11 @@ final class VaultFileManager {
         try rememberVaultLocation(URL(fileURLWithPath: project.path))
     }
 
+    /// Percorso del vault "corrente" (l'ultimo selezionato).
+    var currentPath: String? {
+        UserDefaults.standard.string(forKey: defaultsKey)
+    }
+
     var hasVault: Bool {
         UserDefaults.standard.string(forKey: defaultsKey) != nil
     }
@@ -265,4 +241,3 @@ final class VaultFileManager {
         (try? resolveURL().lastPathComponent) ?? "Vault"
     }
 }
-#endif

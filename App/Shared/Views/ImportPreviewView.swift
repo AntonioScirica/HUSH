@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Cosa sta per entrare nello scrigno, prima che entri.
+/// Cosa sta per entrare nelHush, prima che entri.
 ///
 /// Importare alla cieca è rischioso in un modo poco ovvio: un vault che arriva
 /// da un altro computer può essere cifrato con un'altra master password, e da
@@ -72,7 +72,7 @@ struct ImportPreviewView: View {
 
                 Text(previews.filter { !$0.isReadable }.count > 1
                      ? "questo cassetto è cifrato con un'altra password.\nse gli altri hanno la stessa, si aprono anche loro."
-                     : "questo cassetto è cifrato con un'altra password.\nscrivila: verrà riscritto con quella dello scrigno.")
+                     : "questo cassetto è cifrato con un'altra password.\nscrivila: verrà riscritto con quella di Hush.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
@@ -171,7 +171,7 @@ struct ImportPreviewView: View {
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.danger)
                     // se la password ce l'hai, il cassetto non è perso: si
-                    // apre e si ricifra con quella dello scrigno
+                    // apre e si ricifra con quella delHush
                     if problem.hasPrefix("cifrato") {
                     Button("ho la password") {
                         unlocking = p

@@ -10,7 +10,7 @@ import CryptoKit
 ///
 /// Come funziona: si genera una chiave lunga e casuale, la si mostra **una
 /// volta sola**, e con quella si cifra la master password in un file a parte.
-/// Chi ha la chiave di recupero riapre lo scrigno; chi ha solo il file non ne
+/// Chi ha la chiave di recupero riapre Hush; chi ha solo il file non ne
 /// ricava niente.
 ///
 /// Ne discende una cosa da dire chiaro a chi la usa: **la chiave di recupero
@@ -23,7 +23,7 @@ enum RecoveryKit {
 
         var errorDescription: String? {
             switch self {
-            case .none:     return "Non c'è nessuna chiave di recupero per questo scrigno."
+            case .none:     return "Non c'è nessuna chiave di recupero."
             case .wrongKey: return "Questa chiave di recupero non è valida."
             }
         }

@@ -10,14 +10,21 @@ public struct RootView: View {
     /// Distingue "richiuso col lucchetto" da "appena avviato": nel primo caso
     /// la porta si richiude sotto gli occhi invece di comparire già chiusa.
     @State private var lockedByHand = false
-    /// Richiude lo scrigno lasciato lì aperto.
+    /// Richiude Hush lasciato lì aperto.
     @StateObject private var idle = IdleWatcher()
     /// Prova finita e nessuna licenza: si passa dal muro, non dai cassetti.
     @State private var licensed = License.isLicensed
     @State private var trialLeft = License.trialDaysLeft
     @State private var openSettings = false
+    /// Stessa chiave di Preferences.vistaClassica: @AppStorage la osserva
+    /// dal vivo, così lo switch nelle impostazioni cambia schermata subito.
+    @AppStorage("scrigno.pref.vistaClassica") private var vistaClassica = false
 
     public init() {
+        // Prima di qualunque lettura: l'app si chiamava Scrigno, e i suoi
+        // dati stanno ancora sotto quel nome.
+        Migration.run()
+        VaultTransfer.assegnaIconeDalNome()
         Preferences.registerDefaults()
     }
 
@@ -63,6 +70,21 @@ public struct RootView: View {
                 // diventava true (es. creando un progetto), dirottando
                 // "nuova password" & co. sul vecchio form.
                 ZStack {
+                    #if os(iOS)
+                    // su iPhone la casa è la vista a elenco: la parete 3D
+                    // con la camera e la rotellina è pensata per il Mac
+                    ClassicHomeView(onLock: { lockUp() }, attiva: unlocked)
+                        .environmentObject(vm)
+                        .allowsHitTesting(unlocked)
+                    #else
+                    if vistaClassica {
+                        // la schermata di prima del rewrite, a richiesta.
+                        // Sta sotto la porta fin dall'avvio, come la parete:
+                        // così all'apertura non c'è nessuno scambio di viste.
+                        ClassicHomeView(onLock: { lockUp() }, attiva: unlocked)
+                            .environmentObject(vm)
+                            .allowsHitTesting(unlocked)
+                    } else {
                     ProjectsHomeView(
                         onLock: { lockUp() },
                         chromeVisible: unlocked,
@@ -72,15 +94,26 @@ public struct RootView: View {
                     // a scrigno chiuso si guarda soltanto: niente click che
                     // arrivino ai cassetti attraverso il vano
                     .allowsHitTesting(unlocked)
+                    }
+                    #endif
 
-                    // promemoria della prova nell'angolo, fuori dai piedi
+                    // promemoria della prova nell'angolo, fuori dai piedi:
+                    // in alto sulla parete, in basso nella vista a elenco
+                    // (lì sopra c'è la barra laterale coi progetti)
                     if !licensed && unlocked {
                         VStack {
+                            #if os(iOS)
+                            Spacer()
+                            #else
+                            if vistaClassica { Spacer() }
+                            #endif
                             HStack {
                                 TrialBanner { openSettings = true }
                                 Spacer()
                             }
-                            Spacer()
+                            #if os(macOS)
+                            if !vistaClassica { Spacer() }
+                            #endif
                         }
                         .padding(20)
                     }
@@ -103,6 +136,11 @@ public struct RootView: View {
         // il cambio è invisibile di suo. Incrociarle in dissolvenza faceva
         // solo velare l'immagine a fine corsa.
         .animation(.easeInOut(duration: 0.35), value: configured)
+        .onChange(of: vistaClassica) { _, classica in
+            // si lascia la vista classica: il suo store va chiuso, così la
+            // parete rilegge da disco e non restano due copie in memoria
+            if !classica { vm.lock() }
+        }
         .overlay(alignment: .bottom) {
             if let toast = vm.toast {
                 Text(toast.lowercased())

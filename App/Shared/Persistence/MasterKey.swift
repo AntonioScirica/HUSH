@@ -4,7 +4,7 @@ import VaultCore
 import Security
 import LocalAuthentication
 
-/// Una sola password per tutto lo scrigno.
+/// Una sola password per tutto Hush.
 ///
 /// Ogni progetto è un `.kdbx` a sé, ma la chiave è sempre questa: così si
 /// entra una volta e si ha accesso a tutti i cassetti. La password vera non
@@ -53,7 +53,25 @@ enum MasterKey {
         guard matches(password) else { return false }
         session = password
         markTyped()
+        rinfrescaPortachiavi(password)
         return true
+    }
+
+    /// Il portachiavi lega l'elemento salvato alla firma dell'app che l'ha
+    /// scritto: cambiando bundle id (Scrigno -> Hush) macOS vede un'app nuova
+    /// e chiede la password del portachiavi "login" a ogni lettura. Qui, una
+    /// volta che l'utente è entrato digitando la master password, l'elemento
+    /// si riscrive sotto la firma attuale e il pannello smette di comparire.
+    private static func rinfrescaPortachiavi(_ password: String) {
+        guard UserDefaults.standard.bool(forKey: biometryKey) else { return }
+        guard UserDefaults.standard.string(forKey: firmaKey) != firmaAttuale else { return }
+        try? SharedKeychain.store(password: password)
+        UserDefaults.standard.set(firmaAttuale, forKey: firmaKey)
+    }
+
+    private static let firmaKey = "scrigno.master.keychainOwner"
+    private static var firmaAttuale: String {
+        Bundle.main.bundleIdentifier ?? "?"
     }
 
     /// La password combacia col verificatore salvato?
@@ -109,6 +127,7 @@ enum MasterKey {
     static func enableBiometry(password: String) throws {
         try SharedKeychain.store(password: password)
         UserDefaults.standard.set(true, forKey: biometryKey)
+        UserDefaults.standard.set(firmaAttuale, forKey: firmaKey)
     }
 
     static func disableBiometry() {
@@ -129,8 +148,8 @@ enum MasterKey {
         let context = LAContext()
         context.localizedCancelTitle = "Annulla"
         context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
-                               localizedReason: "sbloccare Scrigno") { ok, _ in
-            guard ok, let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else {
+                               localizedReason: "sbloccare Hush") { ok, _ in
+            guard ok, let password = try? SharedKeychain.retrieve(prompt: "Sblocca Hush") else {
                 DispatchQueue.main.async { completion(false) }
                 return
             }
@@ -141,13 +160,19 @@ enum MasterKey {
                 // altrimenti il promemoria non scatterebbe mai
                 let valida = matches(password)
                 DispatchQueue.main.async {
-                    if valida { session = password }
+                    if valida {
+                        session = password
+                        // anche sbloccando col dito l'elemento va risalvato
+                        // sotto la firma nuova, o il pannello del portachiavi
+                        // ricompare a ogni avvio
+                        rinfrescaPortachiavi(password)
+                    }
                     completion(valida)
                 }
             }
         }
         #else
-        guard let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else {
+        guard let password = try? SharedKeychain.retrieve(prompt: "Sblocca Hush") else {
             completion(false)
             return
         }

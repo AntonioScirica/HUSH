@@ -41,8 +41,8 @@ targets:
         product: VaultCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.scrigno
-        PRODUCT_NAME: Scrigno
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush
+        PRODUCT_NAME: Hush
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
@@ -53,7 +53,7 @@ targets:
         CODE_SIGN_IDENTITY: "Developer ID Application"
         DEVELOPMENT_TEAM: 69SHH7M6DY
         # Runtime irrobustito: senza, qualunque processo dell'utente può
-        # attaccare un debugger a Scrigno e leggersi la master password
+        # attaccare un debugger a Hush e leggersi la master password
         # direttamente dalla memoria. Serve anche per la notarizzazione.
         ENABLE_HARDENED_RUNTIME: YES
         # marca temporale sulla firma: la richiede la notarizzazione
@@ -71,7 +71,7 @@ targets:
     info:
       path: App/macOS/Info.plist
       properties:
-        CFBundleDisplayName: Scrigno
+        CFBundleDisplayName: Hush
         LSApplicationCategoryType: public.app-category.utilities
         LSMinimumSystemVersion: "14.0"
         NSHumanReadableCopyright: "© Antonio Scirica"
@@ -91,15 +91,15 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.scrigno
-        PRODUCT_NAME: Scrigno
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush.ios
+        PRODUCT_NAME: Hush
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
     info:
       path: App/iOS/Info.plist
       properties:
-        CFBundleDisplayName: Scrigno
+        CFBundleDisplayName: Hush
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
@@ -112,7 +112,7 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSFaceIDUsageDescription: "Scrigno usa Face ID per sbloccare rapidamente il tuo vault."
+        NSFaceIDUsageDescription: "Hush usa Face ID per sbloccare rapidamente il tuo vault."
     entitlements:
       path: App/iOS/Scrigno-iOS.entitlements
       properties:
@@ -133,18 +133,18 @@ targets:
         product: VaultCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.scrigno.autofill
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush.ios.autofill
         PRODUCT_NAME: ScrignoAutoFill
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: NO
     info:
       path: AutoFillExtension/Info.plist
       properties:
-        CFBundleDisplayName: Scrigno
+        CFBundleDisplayName: Hush
         NSExtension:
           NSExtensionPointIdentifier: com.apple.authentication-services-credential-provider-ui
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).CredentialProviderViewController
-        NSFaceIDUsageDescription: "Scrigno usa Face ID per sbloccare rapidamente il tuo vault."
+        NSFaceIDUsageDescription: "Hush usa Face ID per sbloccare rapidamente il tuo vault."
     entitlements:
       path: AutoFillExtension/ScrignoAutoFill.entitlements
       properties:

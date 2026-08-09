@@ -163,7 +163,7 @@ final class VaultLibrary: ObservableObject {
         }
     }
 
-    /// Salvataggio bloccante, per quando si chiude lo scrigno: lì la chiave
+    /// Salvataggio bloccante, per quando si chiude Hush: lì la chiave
     /// sta per sparire dalla memoria e non si può rimandare.
     private func flushNow(_ project: VaultFileManager.Project) {
         guard dirty.contains(project.path),

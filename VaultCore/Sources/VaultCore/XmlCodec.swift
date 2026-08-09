@@ -58,13 +58,7 @@ enum XmlCodec {
     // MARK: - Parsing
 
     static func parse(xmlData: Data, protectStream: ChaCha20ProtectStream) throws -> VaultDatabase {
-        let doc: XMLDocument
-        do {
-            doc = try XMLDocument(data: xmlData, options: [])
-        } catch {
-            throw Kdbx4Error.xmlError("XML non leggibile: \(error.localizedDescription)")
-        }
-        guard let root = doc.rootElement() else { throw Kdbx4Error.xmlError("elemento radice mancante") }
+        let root = try XmlEl.parse(xmlData)
 
         // Un'unica passata sull'intero documento per decrittare, nell'ordine
         // corretto, tutti i valori Protected="True" — inclusi quelli dentro
@@ -75,16 +69,16 @@ enum XmlCodec {
 
         var databaseName = "Vault"
         var recycleBinUUID: UUID?
-        if let meta = root.elements(forName: "Meta").first {
-            databaseName = meta.elements(forName: "DatabaseName").first?.stringValue ?? "Vault"
-            if let rb = meta.elements(forName: "RecycleBinUUID").first?.stringValue {
+        if let meta = root.first("Meta") {
+            databaseName = meta.first("DatabaseName").map(\.text) ?? "Vault"
+            if let rb = meta.first("RecycleBinUUID")?.text {
                 let u = parseUUID(rb)
                 if u.uuidString != "00000000-0000-0000-0000-000000000000" { recycleBinUUID = u }
             }
         }
 
-        guard let rootContainer = root.elements(forName: "Root").first,
-              let rootGroupEl = rootContainer.elements(forName: "Group").first
+        guard let rootContainer = root.first("Root"),
+              let rootGroupEl = rootContainer.first("Group")
         else {
             throw Kdbx4Error.xmlError("gruppo radice mancante")
         }
@@ -94,59 +88,56 @@ enum XmlCodec {
     }
 
     private static func collectProtectedValues(
-        _ node: XMLNode, stream: ChaCha20ProtectStream, into map: inout [ObjectIdentifier: String]
+        _ node: XmlEl, stream: ChaCha20ProtectStream, into map: inout [ObjectIdentifier: String]
     ) {
-        if let element = node as? XMLElement,
-           element.name == "Value",
-           element.attribute(forName: "Protected")?.stringValue == "True" {
-            let b64 = element.stringValue ?? ""
-            if let ciphertext = Data(base64Encoded: b64) {
+        if node.name == "Value", node.attributes["Protected"] == "True" {
+            if let ciphertext = Data(base64Encoded: node.text) {
                 let plain = stream.apply(to: Array(ciphertext))
-                map[ObjectIdentifier(element)] = String(bytes: plain, encoding: .utf8) ?? ""
+                map[ObjectIdentifier(node)] = String(bytes: plain, encoding: .utf8) ?? ""
             }
         }
-        for child in node.children ?? [] {
+        for child in node.children {
             collectProtectedValues(child, stream: stream, into: &map)
         }
     }
 
     private static func parseGroup(
-        _ el: XMLElement, protectedValues: [ObjectIdentifier: String], recycleBinUUID: UUID?
+        _ el: XmlEl, protectedValues: [ObjectIdentifier: String], recycleBinUUID: UUID?
     ) -> VaultGroup {
-        let uuid = parseUUID(el.elements(forName: "UUID").first?.stringValue)
-        let name = el.elements(forName: "Name").first?.stringValue ?? "Gruppo"
+        let uuid = parseUUID(el.first("UUID")?.text)
+        let name = el.first("Name").map(\.text) ?? "Gruppo"
         let group = VaultGroup(id: uuid, name: name)
         if let rb = recycleBinUUID, rb == uuid { group.isRecycleBin = true }
 
-        for entryEl in el.elements(forName: "Entry") {
+        for entryEl in el.elements("Entry") {
             group.entries.append(parseEntry(entryEl, protectedValues: protectedValues))
         }
-        for subEl in el.elements(forName: "Group") {
+        for subEl in el.elements("Group") {
             group.subgroups.append(parseGroup(subEl, protectedValues: protectedValues, recycleBinUUID: recycleBinUUID))
         }
         return group
     }
 
-    private static func parseEntry(_ el: XMLElement, protectedValues: [ObjectIdentifier: String]) -> VaultEntry {
-        let uuid = parseUUID(el.elements(forName: "UUID").first?.stringValue)
-        let iconId = Int(el.elements(forName: "IconID").first?.stringValue ?? "0") ?? 0
+    private static func parseEntry(_ el: XmlEl, protectedValues: [ObjectIdentifier: String]) -> VaultEntry {
+        let uuid = parseUUID(el.first("UUID")?.text)
+        let iconId = Int(el.first("IconID")?.text ?? "0") ?? 0
 
         var created = Date()
         var modified = Date()
-        if let times = el.elements(forName: "Times").first {
-            created = parseKdbxDate(times.elements(forName: "CreationTime").first?.stringValue)
-            modified = parseKdbxDate(times.elements(forName: "LastModificationTime").first?.stringValue)
+        if let times = el.first("Times") {
+            created = parseKdbxDate(times.first("CreationTime")?.text)
+            modified = parseKdbxDate(times.first("LastModificationTime")?.text)
         }
 
         func field(_ key: String) -> String {
-            for stringEl in el.elements(forName: "String") {
-                guard stringEl.elements(forName: "Key").first?.stringValue == key,
-                      let valueEl = stringEl.elements(forName: "Value").first
+            for stringEl in el.elements("String") {
+                guard stringEl.first("Key")?.text == key,
+                      let valueEl = stringEl.first("Value")
                 else { continue }
-                if valueEl.attribute(forName: "Protected")?.stringValue == "True" {
+                if valueEl.attributes["Protected"] == "True" {
                     return protectedValues[ObjectIdentifier(valueEl)] ?? ""
                 }
-                return valueEl.stringValue ?? ""
+                return valueEl.text
             }
             return ""
         }
@@ -156,15 +147,15 @@ enum XmlCodec {
         // i dati messi da un altro programma, oltre ai nostri.
         let standard: Set<String> = ["Title", "UserName", "Password", "URL", "Notes"]
         var extras: [VaultCustomField] = []
-        for stringEl in el.elements(forName: "String") {
-            guard let key = stringEl.elements(forName: "Key").first?.stringValue,
+        for stringEl in el.elements("String") {
+            guard let key = stringEl.first("Key")?.text,
                   !standard.contains(key),
-                  let valueEl = stringEl.elements(forName: "Value").first
+                  let valueEl = stringEl.first("Value")
             else { continue }
-            let isProtected = valueEl.attribute(forName: "Protected")?.stringValue == "True"
+            let isProtected = valueEl.attributes["Protected"] == "True"
             let value = isProtected
                 ? (protectedValues[ObjectIdentifier(valueEl)] ?? "")
-                : (valueEl.stringValue ?? "")
+                : valueEl.text
             extras.append(VaultCustomField(key: key, value: value, isProtected: isProtected))
         }
 
@@ -179,36 +170,23 @@ enum XmlCodec {
     // MARK: - Serializzazione
 
     static func serialize(database: VaultDatabase, protectStream: ChaCha20ProtectStream) throws -> Data {
-        let root = XMLElement(name: "KeePassFile")
+        let root = XmlEl(name: "KeePassFile")
 
-        let meta = XMLElement(name: "Meta")
-        meta.addChild(XMLElement(name: "Generator", stringValue: "Scrigno"))
-        meta.addChild(XMLElement(name: "DatabaseName", stringValue: database.name))
+        let meta = XmlEl(name: "Meta")
+        meta.addChild(XmlEl(name: "Generator", text: "Hush"))
+        meta.addChild(XmlEl(name: "DatabaseName", text: database.name))
         let recycleBin = findRecycleBin(database.root)
-        meta.addChild(XMLElement(
+        meta.addChild(XmlEl(
             name: "RecycleBinUUID",
-            stringValue: uuidToBase64(recycleBin?.id ?? UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))
+            text: uuidToBase64(recycleBin?.id ?? UUID(uuid: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)))
         ))
         root.addChild(meta)
 
-        let rootContainer = XMLElement(name: "Root")
+        let rootContainer = XmlEl(name: "Root")
         rootContainer.addChild(buildGroupElement(database.root, stream: protectStream))
         root.addChild(rootContainer)
 
-        let doc = XMLDocument(rootElement: root)
-        doc.version = "1.0"
-        doc.characterEncoding = "utf-8"
-        var data = doc.xmlData(options: [.nodeCompactEmptyElement])
-
-        // XMLDocument non permette di impostare "standalone=yes"; sostituiamo
-        // qualunque dichiarazione XML generata con quella attesa da KeePass,
-        // indipendentemente da come Foundation l'abbia formattata.
-        if let text = String(data: data, encoding: .utf8), let range = text.range(of: "?>") {
-            let rest = text[range.upperBound...]
-            let fixed = "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" + rest
-            data = Data(fixed.utf8)
-        }
-        return data
+        return root.documentData()
     }
 
     private static func findRecycleBin(_ group: VaultGroup) -> VaultGroup? {
@@ -219,16 +197,16 @@ enum XmlCodec {
         return nil
     }
 
-    private static func buildGroupElement(_ group: VaultGroup, stream: ChaCha20ProtectStream) -> XMLElement {
-        let el = XMLElement(name: "Group")
-        el.addChild(XMLElement(name: "UUID", stringValue: uuidToBase64(group.id)))
-        el.addChild(XMLElement(name: "Name", stringValue: group.name))
-        el.addChild(XMLElement(name: "IconID", stringValue: group.isRecycleBin ? "43" : "48"))
-        let times = XMLElement(name: "Times")
-        times.addChild(XMLElement(name: "CreationTime", stringValue: formatKdbxDate(Date())))
-        times.addChild(XMLElement(name: "LastModificationTime", stringValue: formatKdbxDate(Date())))
+    private static func buildGroupElement(_ group: VaultGroup, stream: ChaCha20ProtectStream) -> XmlEl {
+        let el = XmlEl(name: "Group")
+        el.addChild(XmlEl(name: "UUID", text: uuidToBase64(group.id)))
+        el.addChild(XmlEl(name: "Name", text: group.name))
+        el.addChild(XmlEl(name: "IconID", text: group.isRecycleBin ? "43" : "48"))
+        let times = XmlEl(name: "Times")
+        times.addChild(XmlEl(name: "CreationTime", text: formatKdbxDate(Date())))
+        times.addChild(XmlEl(name: "LastModificationTime", text: formatKdbxDate(Date())))
         el.addChild(times)
-        el.addChild(XMLElement(name: "IsExpanded", stringValue: "True"))
+        el.addChild(XmlEl(name: "IsExpanded", text: "True"))
 
         for entry in group.entries {
             el.addChild(buildEntryElement(entry, stream: stream))
@@ -239,26 +217,25 @@ enum XmlCodec {
         return el
     }
 
-    private static func buildEntryElement(_ entry: VaultEntry, stream: ChaCha20ProtectStream) -> XMLElement {
-        let el = XMLElement(name: "Entry")
-        el.addChild(XMLElement(name: "UUID", stringValue: uuidToBase64(entry.id)))
-        el.addChild(XMLElement(name: "IconID", stringValue: String(entry.iconId)))
-        let times = XMLElement(name: "Times")
-        times.addChild(XMLElement(name: "CreationTime", stringValue: formatKdbxDate(entry.created)))
-        times.addChild(XMLElement(name: "LastModificationTime", stringValue: formatKdbxDate(entry.modified)))
+    private static func buildEntryElement(_ entry: VaultEntry, stream: ChaCha20ProtectStream) -> XmlEl {
+        let el = XmlEl(name: "Entry")
+        el.addChild(XmlEl(name: "UUID", text: uuidToBase64(entry.id)))
+        el.addChild(XmlEl(name: "IconID", text: String(entry.iconId)))
+        let times = XmlEl(name: "Times")
+        times.addChild(XmlEl(name: "CreationTime", text: formatKdbxDate(entry.created)))
+        times.addChild(XmlEl(name: "LastModificationTime", text: formatKdbxDate(entry.modified)))
         el.addChild(times)
 
-        func stringField(_ key: String, _ value: String, protected: Bool = false) -> XMLElement {
-            let s = XMLElement(name: "String")
-            s.addChild(XMLElement(name: "Key", stringValue: key))
-            let v = XMLElement(name: "Value")
+        func stringField(_ key: String, _ value: String, protected: Bool = false) -> XmlEl {
+            let s = XmlEl(name: "String")
+            s.addChild(XmlEl(name: "Key", text: key))
+            let v = XmlEl(name: "Value")
             if protected {
                 let ciphertext = stream.apply(to: Array(value.utf8))
-                v.stringValue = Data(ciphertext).base64EncodedString()
-                let attr = XMLNode.attribute(withName: "Protected", stringValue: "True") as! XMLNode
-                v.addAttribute(attr)
+                v.text = Data(ciphertext).base64EncodedString()
+                v.attributes["Protected"] = "True"
             } else {
-                v.stringValue = value
+                v.text = value
             }
             s.addChild(v)
             return s
