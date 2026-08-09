@@ -73,7 +73,7 @@ struct SettingsView: View {
                         // Dirlo prima, non quando succede: chi affida le
                         // proprie password a un programma ha diritto di
                         // sapere in partenza cosa gli resta in mano.
-                        Text("passati i 7 giorni Scrigno si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo — dalla schermata di blocco puoi sempre esportarlo, e sono file .kdbx che si aprono con KeePass o qualunque programma compatibile, anche senza Scrigno.")
+                        Text("passati i 7 giorni Scrigno si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre esportarlo, e sono file .kdbx che si aprono con KeePass o qualunque programma compatibile, anche senza Scrigno.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
@@ -214,12 +214,12 @@ struct SettingsView: View {
                     Button {
                         VaultTransfer.chooseExportFolder { folder in
                             guard let folder else { return }
-                            do {
-                                let esito = try VaultTransfer.export(to: folder)
+                            Task { do {
+                                let esito = try await VaultTransfer.exportAsync(to: folder)
                                 note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
                                 error = nil
                                 NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
-                            } catch { self.error = "esportazione non riuscita: \(error.localizedDescription)" }
+                            } catch { self.error = "esportazione non riuscita: \(error.localizedDescription)" } }
                         }
                     } label: {
                         Label("esporta tutti i cassetti", systemImage: "square.and.arrow.up")
@@ -303,7 +303,7 @@ struct SettingsView: View {
             Button("rigenera", role: .destructive) { regenerateRecovery() }
         } message: {
             Text(RecoveryKit.exists
-                 ? "La chiave che hai stampato smetterà di funzionare all'istante. Quella nuova va annotata subito: se chiudi questa finestra senza copiarla, resti senza via di recupero.\n\nFallo se la vecchia è finita in mani sbagliate — è l'unico modo di revocarla."
+                 ? "La chiave che hai stampato smetterà di funzionare all'istante. Quella nuova va annotata subito: se chiudi questa finestra senza copiarla, resti senza via di recupero.\n\nFallo se la vecchia è finita in mani sbagliate: è l'unico modo di revocarla."
                  : "La chiave va annotata subito: se chiudi questa finestra senza copiarla, resti senza via di recupero.")
         }
         .fileImporter(isPresented: $showImporter,

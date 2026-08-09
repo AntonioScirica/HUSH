@@ -251,11 +251,11 @@ struct OnboardingView: View {
 
     private func saveRecoveryToFile() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Scrigno — chiave di recupero.txt"
+        panel.nameFieldStringValue = "Scrigno chiave di recupero.txt"
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
             let testo = """
-            SCRIGNO — CHIAVE DI RECUPERO
+            SCRIGNO. CHIAVE DI RECUPERO
 
             \(recoveryKey)
 

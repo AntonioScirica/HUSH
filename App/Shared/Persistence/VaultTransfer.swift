@@ -44,19 +44,26 @@ enum VaultTransfer {
     /// vuol dire indicare una cartella invece di ripescare venti file.
     @discardableResult
     static func export(to parent: URL) throws -> (count: Int, folder: URL) {
-        let projects = VaultFileManager.shared.projects
+        try exportSync(to: parent,
+                       projects: VaultFileManager.shared.projects,
+                       vaultDir: VaultFileManager.shared.projectsDirectory)
+    }
+
+    private static func exportSync(to parent: URL,
+                                   projects: [VaultFileManager.Project],
+                                   vaultDir: URL) throws -> (count: Int, folder: URL) {
         let fm = FileManager.default
 
         // Esportare dentro alla cartella dei vault vorrebbe dire copiare ogni
         // file su sé stesso: sotto c'è una rimozione del file di destinazione,
         // che qui cancellerebbe l'originale. Meglio fermarsi prima.
-        guard parent.standardizedFileURL != VaultFileManager.shared.projectsDirectory.standardizedFileURL else {
+        guard parent.standardizedFileURL != vaultDir.standardizedFileURL else {
             throw Failure.exportingOntoItself
         }
 
         let giorno = DateFormatter()
         giorno.dateFormat = "yyyy-MM-dd"
-        let base = "Scrigno — cassetti \(giorno.string(from: Date()))"
+        let base = "Scrigno cassetti \(giorno.string(from: Date()))"
         var folder = parent.appendingPathComponent(base)
         var n = 2
         while fm.fileExists(atPath: folder.path) {
@@ -78,6 +85,17 @@ enum VaultTransfer {
         let data = try JSONEncoder().encode(manifest)
         try data.write(to: folder.appendingPathComponent(manifestName), options: .atomic)
         return (projects.count, folder)
+    }
+
+    /// Esportazione fuori dal thread principale: copiare venti file mentre la
+    /// finestra aspetta si sente, soprattutto su disco esterno o chiavetta.
+    @MainActor
+    static func exportAsync(to parent: URL) async throws -> (count: Int, folder: URL) {
+        let projects = VaultFileManager.shared.projects
+        let vaultDir = VaultFileManager.shared.projectsDirectory
+        return try await Task.detached(priority: .userInitiated) {
+            try exportSync(to: parent, projects: projects, vaultDir: vaultDir)
+        }.value
     }
 
     // MARK: - Anteprima

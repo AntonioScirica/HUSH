@@ -113,12 +113,23 @@ struct DrawerWall3D: NSViewRepresentable {
         coordinator.parent = self
 
         // Contenuto cambiato (progetti/voci) → ricostruisci la scena
+        // Le voci NON stanno nella firma: cambiandone una si ricostruiva
+        // l'intera parete, centodiciassette celle di geometria, e si vedeva.
+        // Le cartelle di un cassetto si rifanno da sole, più sotto.
         let signature = labels.map { $0 ?? "·" }.joined(separator: "|")
-            + "§" + entriesByCell.map { $0.joined(separator: ",") }.joined(separator: "|")
             + "§" + icons.map { $0 ?? "·" }.joined(separator: "|")
             + "§" + noteColors.map { $0 ?? "·" }.joined(separator: "|")
         if coordinator.signature != signature {
             coordinator.buildScene(in: view)
+        }
+
+        // Cartelle cambiate in una cella (voce aggiunta, vault appena
+        // caricato): si rifanno solo quelle, non tutta la parete.
+        for (i, voci) in entriesByCell.enumerated() where labels[i] != nil {
+            let firma = voci.joined(separator: ",")
+            if coordinator.folderSignatures[i] != firma {
+                coordinator.rebuildFolders(cell: i, entries: voci)
+            }
         }
 
         // Stato open richiesto dall'esterno (es. bottone "chiudi", search)
@@ -969,13 +980,58 @@ struct DrawerWall3D: NSViewRepresentable {
             }
         }
 
+        /// Firma delle cartelle già disegnate, cella per cella.
+        var folderSignatures: [Int: String] = [:]
+
+        /// Rifà le cartelle di un solo cassetto, lasciando stare il resto
+        /// della parete. Ricostruire tutto per una voce in più costava
+        /// centodiciassette celle di geometria e si vedeva come uno scatto.
+        func rebuildFolders(cell idx: Int, entries: [String]) {
+            folderSignatures[idx] = entries.joined(separator: ",")
+            guard let drawer = cellDrawerNodes[idx] else { return }
+
+            // via le vecchie
+            (cellFolders[idx]?.pivots ?? []).forEach { $0.removeFromParentNode() }
+
+            let w = DrawerWall3D.cellW - 0.14
+            let iw = w - 0.1
+            var ctx = DrawerFolders()
+            ctx.width = iw - 0.08
+            let labeled = entries.count + 1          // +1 per la "+"
+            let totalFolders = min(labeled + 24, 44)
+            for f in 0..<totalFolders {
+                let title: String? = f == 0 ? "+" : (f < labeled ? entries[f - 1] : nil)
+                let (folder, fillMat, textMat) = makeFolder(index: f, title: title,
+                                                            width: iw - 0.08,
+                                                            z: Self.conveyorZ(index: f, focus: 0))
+                drawer.addChildNode(folder)
+                ctx.pivots.append(folder)
+                ctx.baseY = folder.position.y
+                if let fillMat { ctx.fillMats[f] = [fillMat] }
+                if let textMat { ctx.textMats[f] = [textMat] }
+            }
+            ctx.maxFocus = CGFloat(labeled - 1)
+            cellFolders[idx] = ctx
+
+            // se è il cassetto aperto, le cartelle in uso sono queste
+            if openCellIdx == idx {
+                folderPivots = ctx.pivots
+                folderFillMats = ctx.fillMats
+                folderTextMats = ctx.textMats
+                folderBaseY = ctx.baseY
+                folderWidth = ctx.width
+                maxFolderFocus = ctx.maxFocus
+                folderBodyHByIdx = [:]
+                applyFolderScroll()
+            }
+        }
+
         // MARK: - Costruzione scena
 
         func buildScene(in view: SCNView) {
             guard let parent else { return }
             self.view = view
             signature = parent.labels.map { $0 ?? "·" }.joined(separator: "|")
-                + "§" + parent.entriesByCell.map { $0.joined(separator: ",") }.joined(separator: "|")
                 + "§" + parent.icons.map { $0 ?? "·" }.joined(separator: "|")
                 + "§" + parent.noteColors.map { $0 ?? "·" }.joined(separator: "|")
             // il cassetto aperto va richiuso con la sua animazione, non con lo
@@ -1021,6 +1077,7 @@ struct DrawerWall3D: NSViewRepresentable {
                 if hasProject {
                     cellDrawerNodes[i] = drawer
                     cellFolders[i] = folders
+                    folderSignatures[i] = (i < parent.entriesByCell.count ? parent.entriesByCell[i] : []).joined(separator: ",")
                 }
                 // il cassetto che era aperto riparte da fuori: lo richiudiamo
                 // subito dopo con un'animazione, così il movimento è continuo

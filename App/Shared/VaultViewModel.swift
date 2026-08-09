@@ -109,7 +109,7 @@ final class VaultViewModel: ObservableObject {
         pb.clearContents()
         pb.setString(text, forType: .string)
         #endif
-        showToast("\(label) copiato — si cancella tra 30s")
+        showToast("\(label) copiato: si cancella tra 30s")
 
         clipboardClearTask?.cancel()
         let expected = text

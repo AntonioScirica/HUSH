@@ -96,14 +96,14 @@ struct LicenseWall: View {
                     Button {
                         VaultTransfer.chooseExportFolder { folder in
                             guard let folder else { return }
-                            do {
-                                let esito = try VaultTransfer.export(to: folder)
+                            Task { do {
+                                let esito = try await VaultTransfer.exportAsync(to: folder)
                                 note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
                                 error = nil
                                 NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
                             } catch {
                                 self.error = "esportazione non riuscita: \(error.localizedDescription)"
-                            }
+                            } }
                         }
                     } label: {
                         Label("esporta tutti i cassetti", systemImage: "square.and.arrow.up")
