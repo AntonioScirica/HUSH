@@ -86,7 +86,12 @@ enum MasterKey {
     }
 
     /// Scaduto l'intervallo il dito non basta più: si riscrive la password.
-    static var mustTypePassword: Bool { sinceTyped >= typeAgainAfter }
+    /// Con l'intervallo su "mai" non scatta: è una scelta di chi usa l'app,
+    /// non una regola che possiamo imporre noi.
+    static var mustTypePassword: Bool {
+        guard Preferences.typeAgainDays > 0 else { return false }
+        return sinceTyped >= typeAgainAfter
+    }
 
     static func lock() { session = nil }
 

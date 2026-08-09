@@ -49,6 +49,7 @@ struct SettingsView: View {
                             Text("7 giorni").tag(7)
                             Text("14 giorni").tag(14)
                             Text("30 giorni").tag(30)
+                            Text("mai").tag(0)
                         }
                         .labelsHidden()
                         .onChange(of: typeAgain) { _, v in Preferences.typeAgainDays = v }
@@ -187,6 +188,9 @@ struct SettingsView: View {
     private var reminderText: String {
         guard MasterKey.biometryEnabled else {
             return "la password si digita a ogni apertura."
+        }
+        guard typeAgain > 0 else {
+            return "non verrà più richiesta: se la dimentichi non c'è modo di recuperarla."
         }
         let left = max(0, typeAgain - Int(MasterKey.sinceTyped / 86_400))
         return left == 0

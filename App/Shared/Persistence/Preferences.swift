@@ -48,8 +48,9 @@ enum Preferences {
     }
 
     /// Ogni quanti giorni la master password va comunque digitata a mano.
+    /// 0 = mai: si entra sempre col dito, a proprio rischio.
     static var typeAgainDays: Int {
-        get { max(1, d.integer(forKey: Key.typeAgainDays)) }
+        get { max(0, d.integer(forKey: Key.typeAgainDays)) }
         set { d.set(newValue, forKey: Key.typeAgainDays) }
     }
 }
