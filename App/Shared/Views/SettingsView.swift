@@ -201,8 +201,10 @@ struct SettingsView: View {
                         VaultTransfer.chooseExportFolder { folder in
                             guard let folder else { return }
                             do {
-                                note = "esportati \(try VaultTransfer.export(to: folder)) cassetti."
+                                let esito = try VaultTransfer.export(to: folder)
+                                note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
                                 error = nil
+                                NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
                             } catch { self.error = "esportazione non riuscita: \(error.localizedDescription)" }
                         }
                     } label: {

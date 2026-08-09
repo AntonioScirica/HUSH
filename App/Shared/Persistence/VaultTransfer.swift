@@ -37,18 +37,33 @@ enum VaultTransfer {
         }
     }
 
-    /// Copia tutti i vault e l'indice nella cartella scelta.
+    /// Crea una cartella sua dentro a quella scelta e ci mette dentro tutto.
+    ///
+    /// Una cartella propria e non i file sparsi: così l'esportazione si
+    /// riconosce a colpo d'occhio, si sposta in un pezzo solo, e reimportarla
+    /// vuol dire indicare una cartella invece di ripescare venti file.
     @discardableResult
-    static func export(to folder: URL) throws -> Int {
+    static func export(to parent: URL) throws -> (count: Int, folder: URL) {
         let projects = VaultFileManager.shared.projects
         let fm = FileManager.default
 
         // Esportare dentro alla cartella dei vault vorrebbe dire copiare ogni
         // file su sé stesso: sotto c'è una rimozione del file di destinazione,
         // che qui cancellerebbe l'originale. Meglio fermarsi prima.
-        guard folder.standardizedFileURL != VaultFileManager.shared.projectsDirectory.standardizedFileURL else {
+        guard parent.standardizedFileURL != VaultFileManager.shared.projectsDirectory.standardizedFileURL else {
             throw Failure.exportingOntoItself
         }
+
+        let giorno = DateFormatter()
+        giorno.dateFormat = "yyyy-MM-dd"
+        let base = "Scrigno — cassetti \(giorno.string(from: Date()))"
+        var folder = parent.appendingPathComponent(base)
+        var n = 2
+        while fm.fileExists(atPath: folder.path) {
+            folder = parent.appendingPathComponent("\(base) (\(n))")
+            n += 1
+        }
+        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
 
         for project in projects {
             let source = URL(fileURLWithPath: project.path)
@@ -62,7 +77,7 @@ enum VaultTransfer {
         let manifest = Manifest(progetti: projects, esportato: Date().timeIntervalSince1970)
         let data = try JSONEncoder().encode(manifest)
         try data.write(to: folder.appendingPathComponent(manifestName), options: .atomic)
-        return projects.count
+        return (projects.count, folder)
     }
 
     // MARK: - Anteprima
@@ -240,7 +255,7 @@ enum VaultTransfer {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.prompt = "Esporta qui"
-        panel.message = "Scegli dove mettere i cassetti"
+        panel.message = "Scegli dove creare la cartella coi cassetti"
         panel.begin { completion($0 == .OK ? panel.url : nil) }
     }
 

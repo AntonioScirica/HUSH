@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 /// Striscia sempre in vista durante la prova: quanti giorni restano e come si
 /// attiva. Sparisce solo a licenza attivata.
@@ -95,9 +96,10 @@ struct LicenseWall: View {
                         VaultTransfer.chooseExportFolder { folder in
                             guard let folder else { return }
                             do {
-                                let n = try VaultTransfer.export(to: folder)
-                                note = "esportati \(n) cassetti."
+                                let esito = try VaultTransfer.export(to: folder)
+                                note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
                                 error = nil
+                                NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
                             } catch {
                                 self.error = "esportazione non riuscita: \(error.localizedDescription)"
                             }
