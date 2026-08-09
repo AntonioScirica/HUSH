@@ -388,14 +388,14 @@ struct ProjectsHomeView: View {
         let assignments = projectAtCell
         return (0..<(cols * rows)).map { i in
             guard let p = assignments[i] else { return [] }
-            // Il cassetto aperto si apre comunque, subito: è l'unico di cui
-            // si vedono le cartelle, e aspettare il precaricamento voleva
-            // dire trovarlo vuoto se il vault era appena stato importato.
-            if i == openCell { return library.entries(of: p).map(\.title) }
-            // Gli altri solo se già in memoria: decifrarli tutti qui
-            // significherebbe pagare Argon2id per disegnare cartelle che, a
-            // cassetto chiuso, non si vedono.
-            guard library.isLoaded(p) else { return [] }
+            // Mai decifrare qui dentro: questo codice gira mentre SwiftUI
+            // disegna, e Argon2id costa mezzo secondo — la finestra si
+            // pianterebbe. Se il vault del cassetto aperto non è ancora in
+            // memoria se ne chiede il caricamento, che arriva per conto suo.
+            guard library.isLoaded(p) else {
+                if i == openCell { library.requestLoad(p) }
+                return []
+            }
             return library.entries(of: p).map(\.title)
         }
     }

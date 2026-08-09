@@ -109,6 +109,8 @@ struct OnboardingView: View {
                        "ogni progetto è un file .kdbx a sé, cifrato con AES-256 e Argon2id.")
                 bullet("una password per tutto",
                        "una sola chiave apre l'intero scrigno: quella che scegli adesso.")
+                bullet("7 giorni di prova",
+                       "poi serve una licenza. i cassetti restano tuoi: sono file .kdbx, si esportano e si aprono anche con KeePass.")
             }
         }
     }

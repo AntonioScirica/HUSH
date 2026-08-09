@@ -17,6 +17,7 @@ struct ImportPreviewView: View {
     @State private var unlocking: VaultTransfer.Preview?
     @State private var foreignPassword = ""
     @State private var unlockError: String?
+    @State private var provando = false
 
     private var selectable: [VaultTransfer.Preview] { previews.filter(\.isReadable) }
     private var selected: [VaultTransfer.Preview] { previews.filter { chosen.contains($0.id) } }
@@ -89,10 +90,10 @@ struct ImportPreviewView: View {
                 HStack(spacing: 10) {
                     Button("annulla") { unlocking = nil }
                         .buttonStyle(OutlineButtonStyle())
-                    Button("apri") { tentaSblocco(p) }
+                    Button(provando ? "apro…" : "apri") { tentaSblocco(p) }
                         .buttonStyle(InkButtonStyle(prominent: true))
-                        .disabled(foreignPassword.isEmpty)
-                        .opacity(foreignPassword.isEmpty ? 0.4 : 1)
+                        .disabled(foreignPassword.isEmpty || provando)
+                        .opacity(foreignPassword.isEmpty || provando ? 0.4 : 1)
                 }
             }
             .padding(30)
@@ -102,26 +103,32 @@ struct ImportPreviewView: View {
         }
     }
 
+    /// Fuori dal thread principale: ogni tentativo è un Argon2id, e provarlo
+    /// su più cassetti mentre la finestra aspetta la congelerebbe.
     private func tentaSblocco(_ p: VaultTransfer.Preview) {
-        guard let aperto = VaultTransfer.unlock(p, with: foreignPassword) else {
-            unlockError = "password sbagliata."
-            return
-        }
-        if let i = previews.firstIndex(where: { $0.id == p.id }) {
-            previews[i] = aperto
-            chosen.insert(aperto.id)
-        }
+        let pw = foreignPassword
+        let daProvare = previews
+        provando = true
+        Task {
+            let sbloccati: [VaultTransfer.Preview] = await Task.detached(priority: .userInitiated) {
+                // stessa password su tutti: i file di un'importazione vengono
+                // quasi sempre dalla stessa installazione
+                daProvare.compactMap { VaultTransfer.unlock($0, with: pw) }
+            }.value
 
-        // Quasi sempre i file arrivano tutti dalla stessa installazione, e
-        // quindi hanno la stessa password: si prova su tutti gli altri invece
-        // di far riscrivere la stessa cosa cassetto per cassetto.
-        for (i, altro) in previews.enumerated() where !altro.isReadable {
-            if let sbloccato = VaultTransfer.unlock(altro, with: foreignPassword) {
-                previews[i] = sbloccato
-                chosen.insert(sbloccato.id)
+            provando = false
+            guard sbloccati.contains(where: { $0.id == p.id }) else {
+                unlockError = "password sbagliata."
+                return
             }
+            for aperto in sbloccati {
+                if let i = previews.firstIndex(where: { $0.id == aperto.id }) {
+                    previews[i] = aperto
+                    chosen.insert(aperto.id)
+                }
+            }
+            unlocking = nil
         }
-        unlocking = nil
     }
 
     private func riga(_ p: VaultTransfer.Preview) -> some View {

@@ -75,6 +75,22 @@ final class VaultLibrary: ObservableObject {
         }
     }
 
+    /// Chiede il caricamento di un vault SENZA aspettarlo.
+    ///
+    /// Argon2id costa mezzo secondo: farlo mentre SwiftUI sta disegnando
+    /// significa inchiodare la finestra. Qui si avvia e basta; quando il vault
+    /// è pronto la vista si ridisegna da sé.
+    func requestLoad(_ project: VaultFileManager.Project) {
+        guard open[project.path] == nil, !loading.contains(project.path) else { return }
+        loading.insert(project.path)
+        Task { [weak self] in
+            await self?.preload([project])
+            self?.loading.remove(project.path)
+        }
+    }
+
+    private var loading: Set<String> = []
+
     // MARK: - Scrittura
 
     func add(_ entry: VaultEntry, to project: VaultFileManager.Project) {
@@ -111,14 +127,49 @@ final class VaultLibrary: ObservableObject {
     }
 
     /// Scrive subito un progetto, se ha modifiche in sospeso.
+    ///
+    /// Anche il salvataggio passa da Argon2id: sul thread principale sarebbe
+    /// mezzo secondo di finestra bloccata a ogni scrittura, cioè in pratica
+    /// dopo ogni modifica. La cifratura va fuori, la scrittura su disco pure.
     func flush(_ project: VaultFileManager.Project) {
         guard dirty.contains(project.path),
               let db = open[project.path],
               let key = MasterKey.session else { return }
+        dirty.remove(project.path)
+        let path = project.path
+        let nome = project.name
+
+        Task { [weak self] in
+            let esito: String? = await Task.detached(priority: .utility) { () -> String? in
+                do {
+                    // Scrittura in due tempi: prima un file di lavoro accanto,
+                    // poi lo scambio. Se la corrente va via a metà, il vault
+                    // buono è ancora lì — sovrascrivendo in posto si resterebbe
+                    // con un file monco.
+                    let bytes = try Kdbx4.save(database: db, password: key)
+                    let url = URL(fileURLWithPath: path)
+                    let temp = url.appendingPathExtension("tmp")
+                    try Data(bytes).write(to: temp, options: .atomic)
+                    _ = try FileManager.default.replaceItemAt(url, withItemAt: temp)
+                    return nil
+                } catch {
+                    return error.localizedDescription
+                }
+            }.value
+            if let esito {
+                self?.dirty.insert(path)   // ritenta al prossimo giro
+                self?.failure = "Non riesco a salvare «\(nome)»: \(esito)"
+            }
+        }
+    }
+
+    /// Salvataggio bloccante, per quando si chiude lo scrigno: lì la chiave
+    /// sta per sparire dalla memoria e non si può rimandare.
+    private func flushNow(_ project: VaultFileManager.Project) {
+        guard dirty.contains(project.path),
+              let db = open[project.path],
+              let key = MasterKey.session else { return }
         do {
-            // Scrittura in due tempi: prima un file di lavoro accanto, poi lo
-            // scambio. Se la corrente va via a metà, il vault buono è ancora
-            // lì — sovrascrivendo in posto si resterebbe con un file monco.
             let bytes = try Kdbx4.save(database: db, password: key)
             let url = URL(fileURLWithPath: project.path)
             let temp = url.appendingPathExtension("tmp")
@@ -136,7 +187,7 @@ final class VaultLibrary: ObservableObject {
         saveTasks.values.forEach { $0.cancel() }
         saveTasks = [:]
         for project in projects where dirty.contains(project.path) {
-            flush(project)
+            flushNow(project)
         }
     }
 

@@ -70,6 +70,14 @@ struct SettingsView: View {
                             .font(Theme.mono(10))
                             .foregroundStyle(License.trialDaysLeft > 0 ? Theme.inkSoft : Theme.danger)
 
+                        // Dirlo prima, non quando succede: chi affida le
+                        // proprie password a un programma ha diritto di
+                        // sapere in partenza cosa gli resta in mano.
+                        Text("passati i 7 giorni Scrigno si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo — dalla schermata di blocco puoi sempre esportarlo, e sono file .kdbx che si aprono con KeePass o qualunque programma compatibile, anche senza Scrigno.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(Theme.inkSoft)
+                            .fixedSize(horizontal: false, vertical: true)
+
                         TextField("incolla qui la licenza", text: $licenseText, axis: .vertical)
                             .textFieldStyle(PaperFieldStyle())
                             .lineLimit(2...4)
@@ -223,7 +231,11 @@ struct SettingsView: View {
                         VaultTransfer.chooseImport { urls in
                             guard !urls.isEmpty else { return }
                             // prima si guarda cosa c'è dentro, poi si conferma
-                            importJob = ImportJob(previews: VaultTransfer.inspect(urls))
+                            let chiave = MasterKey.session
+                            Task {
+                                let previews = await VaultTransfer.inspect(urls, key: chiave)
+                                importJob = ImportJob(previews: previews)
+                            }
                         }
                     } label: {
                         Label("importa cassetti da un altro Mac", systemImage: "square.and.arrow.down.on.square")
@@ -264,12 +276,16 @@ struct SettingsView: View {
         .sheet(item: $importJob) { job in
             ImportPreviewView(previews: job.previews) { scelti in
                 importJob = nil
-                do {
-                    let n = try VaultTransfer.importChosen(scelti)
-                    note = "importati \(n) cassetti."
-                    error = nil
-                } catch {
-                    self.error = "importazione non riuscita: \(error.localizedDescription)"
+                // la ricifratura di ogni cassetto è un Argon2id: fuori dal
+                // thread principale, se no la finestra si pianta
+                Task {
+                    do {
+                        let n = try await VaultTransfer.importChosenAsync(scelti)
+                        note = "importati \(n) cassetti."
+                        error = nil
+                    } catch {
+                        self.error = "importazione non riuscita: \(error.localizedDescription)"
+                    }
                 }
             } onCancel: {
                 importJob = nil

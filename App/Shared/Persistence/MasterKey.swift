@@ -130,19 +130,20 @@ enum MasterKey {
         context.localizedCancelTitle = "Annulla"
         context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
                                localizedReason: "sbloccare Scrigno") { ok, _ in
-            DispatchQueue.main.async {
-                guard ok, let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else {
-                    completion(false)
-                    return
-                }
+            guard ok, let password = try? SharedKeychain.retrieve(prompt: "Sblocca Scrigno") else {
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+            // il confronto passa da Argon2id: fuori dal thread principale, o
+            // la finestra resta bloccata mezzo secondo a ogni sblocco
+            DispatchQueue.global(qos: .userInitiated).async {
                 // sbloccato col dito: la password NON conta come digitata,
                 // altrimenti il promemoria non scatterebbe mai
-                guard matches(password) else {
-                    completion(false)
-                    return
+                let valida = matches(password)
+                DispatchQueue.main.async {
+                    if valida { session = password }
+                    completion(valida)
                 }
-                session = password
-                completion(true)
             }
         }
         #else

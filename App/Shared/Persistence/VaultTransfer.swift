@@ -107,7 +107,15 @@ enum VaultTransfer {
     /// da un altro computer può essere cifrato con un'ALTRA master password.
     /// Importato alla cieca diventerebbe un cassetto che non si apre, e uno se
     /// ne accorgerebbe solo dopo. Meglio dirlo prima.
-    static func inspect(_ selection: [URL]) -> [Preview] {
+    /// Versione fuori dal thread principale: aprire venti vault con Argon2id
+    /// mentre la finestra aspetta vuol dire dieci secondi di app congelata.
+    static func inspect(_ selection: [URL], key: String?) async -> [Preview] {
+        await Task.detached(priority: .userInitiated) {
+            inspectSync(selection, key: key)
+        }.value
+    }
+
+    static func inspectSync(_ selection: [URL], key: String?) -> [Preview] {
         let (files, manifest) = collect(selection)
         return files.map { file in
             let original = manifest?.progetti.first {
@@ -126,7 +134,7 @@ enum VaultTransfer {
                 preview.problem = "già nello scrigno"
                 return preview
             }
-            guard let key = MasterKey.session else {
+            guard let key else {
                 preview.problem = "scrigno bloccato"
                 return preview
             }
@@ -169,6 +177,43 @@ enum VaultTransfer {
         aperto.problem = nil
         aperto.foreignPassword = password
         return aperto
+    }
+
+    /// Come `importChosen`, ma la parte pesante (ricifrare ogni vault con la
+    /// master password) sta fuori dal thread principale.
+    @MainActor
+    static func importChosenAsync(_ previews: [Preview]) async throws -> Int {
+        let key = MasterKey.session
+        let cartellaVault = VaultFileManager.shared.projectsDirectory
+
+        // fuori: apertura e ricifratura, cioè i due Argon2id per cassetto
+        struct Pronto { let name: String; let icon: String?; let noteColor: String?; let bytes: [UInt8]?; let source: URL }
+        let pronti: [Pronto] = await Task.detached(priority: .userInitiated) {
+            previews.map { p in
+                guard let foreign = p.foreignPassword, let key,
+                      let data = try? Data(contentsOf: p.file),
+                      let db = try? Kdbx4.open(data: Array(data), password: foreign),
+                      let riscritto = try? Kdbx4.save(database: db, password: key)
+                else { return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor, bytes: nil, source: p.file) }
+                return Pronto(name: p.name, icon: p.icon, noteColor: p.noteColor, bytes: riscritto, source: p.file)
+            }
+        }.value
+        _ = cartellaVault
+
+        // dentro: solo scritture e registrazione, che costano niente
+        var importati = 0
+        for p in pronti {
+            let dest = VaultFileManager.shared.freeProjectURL(named: p.name)
+            if let bytes = p.bytes {
+                try Data(bytes).write(to: dest, options: .atomic)
+            } else {
+                try FileManager.default.copyItem(at: p.source, to: dest)
+            }
+            try VaultFileManager.shared.addProject(name: p.name, url: dest,
+                                                   icon: p.icon, noteColor: p.noteColor)
+            importati += 1
+        }
+        return importati
     }
 
     /// Importa solo quelli confermati nell'anteprima.
