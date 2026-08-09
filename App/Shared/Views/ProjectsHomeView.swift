@@ -13,6 +13,12 @@ private func copyToClipboard(_ text: String) {
     guard !text.isEmpty else { return }
     let pb = NSPasteboard.general
     pb.clearContents()
+    // "concealed": la convenzione con cui i gestori di appunti e la
+    // Universal Clipboard capiscono di non dover conservare né sincronizzare
+    // il valore. Senza, la password finiva nella cronologia degli appunti e
+    // sugli altri dispositivi, dove restava anche dopo che l'app l'aveva
+    // cancellata da qui.
+    pb.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
     pb.setString(text, forType: .string)
 
     let seconds = Preferences.clipboardSeconds
@@ -343,6 +349,10 @@ struct ProjectsHomeView: View {
                 id: entry.id, kind: kind.rawValue, title: entry.title, fields: fields
             )
         }
+        // i campi di servizio (allegato e sua chiave) non compaiono nella
+        // scheda: vanno riattaccati a mano, o modificando una voce si
+        // perderebbe il documento allegato
+        updated.customFields += EntryMapping.hiddenFields(of: entry)
         updated.created = entry.created
         updated.modified = Date()
         library.update(updated, in: project)
@@ -1432,12 +1442,14 @@ struct ProjectsHomeView: View {
             var fields = [("note", newEntryNotes)].filter { !$0.1.isEmpty }
             if let src = pendingDocumentURL {
                 do {
-                    // il file viene copiato negli allegati dell'app: nel vault
-                    // finisce il percorso, così resta raggiungibile anche se
-                    // l'originale viene spostato
-                    let saved = try VaultFileManager.shared.storeAttachment(from: src)
+                    // il file viene cifrato e messo negli allegati dell'app:
+                    // nel vault finiscono percorso e chiave, così il documento
+                    // è protetto quanto le password e resta raggiungibile
+                    // anche se l'originale viene spostato
+                    let saved = try AttachmentVault.store(src)
                     fields.insert(("file", src.lastPathComponent), at: 0)
                     fields.append(("scrigno.allegato", saved.path))
+                    fields.append(("scrigno.allegato.chiave", saved.key))
                 } catch {
                     localError = "Impossibile allegare il file: \(error.localizedDescription)"
                 }

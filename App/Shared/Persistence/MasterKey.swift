@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import VaultCore
 import Security
 import LocalAuthentication
 
@@ -49,11 +50,25 @@ enum MasterKey {
     /// Ritorna `false` se la password non combacia (senza aprire nulla).
     @discardableResult
     static func unlock(password: String) -> Bool {
-        guard let salt = UserDefaults.standard.data(forKey: saltKey),
-              let stored = UserDefaults.standard.data(forKey: verifierKey),
-              verifier(password, salt: salt) == stored else { return false }
+        guard matches(password) else { return false }
         session = password
         markTyped()
+        return true
+    }
+
+    /// La password combacia col verificatore salvato?
+    ///
+    /// Accetta anche il vecchio verificatore a SHA-256 e, se è quello, lo
+    /// rifà subito con Argon2id: chi aveva già configurato l'app entra come
+    /// sempre e si ritrova aggiornato senza accorgersene.
+    private static func matches(_ password: String) -> Bool {
+        guard let salt = UserDefaults.standard.data(forKey: saltKey),
+              let stored = UserDefaults.standard.data(forKey: verifierKey) else { return false }
+
+        if verifier(password, salt: salt) == stored { return true }
+
+        guard legacyVerifier(password, salt: salt) == stored else { return false }
+        UserDefaults.standard.set(verifier(password, salt: salt), forKey: verifierKey)
         return true
     }
 
@@ -117,9 +132,7 @@ enum MasterKey {
                 }
                 // sbloccato col dito: la password NON conta come digitata,
                 // altrimenti il promemoria non scatterebbe mai
-                guard let salt = UserDefaults.standard.data(forKey: saltKey),
-                      let stored = UserDefaults.standard.data(forKey: verifierKey),
-                      verifier(password, salt: salt) == stored else {
+                guard matches(password) else {
                     completion(false)
                     return
                 }
@@ -132,9 +145,7 @@ enum MasterKey {
             completion(false)
             return
         }
-        guard let salt = UserDefaults.standard.data(forKey: saltKey),
-              let stored = UserDefaults.standard.data(forKey: verifierKey),
-              verifier(password, salt: salt) == stored else {
+        guard matches(password) else {
             completion(false)
             return
         }
@@ -151,7 +162,32 @@ enum MasterKey {
         return Data(bytes)
     }
 
+    /// Il verificatore si deriva con **Argon2id**, gli stessi parametri dei
+    /// file .kdbx.
+    ///
+    /// Prima era una catena di SHA-256 ripetuta 150.000 volte: robetta per una
+    /// scheda grafica, che ne calcola miliardi al secondo. E siccome il
+    /// verificatore sta nelle preferenze, in chiaro, chi copiava quel file
+    /// poteva indovinare offline la master password molto più in fretta di
+    /// quanto avrebbe fatto attaccando un vault — per poi aprirli tutti.
+    /// Era l'anello debole di tutta la catena.
+    ///
+    /// Argon2id costa memoria oltre che tempo (64 MiB a tentativo), e toglie
+    /// alle schede grafiche il loro vantaggio: adesso indovinare la password
+    /// dal verificatore non è più facile che attaccare i vault.
     private static func verifier(_ password: String, salt: Data) -> Data {
+        if let key = try? Argon2.derive(password: password, salt: Array(salt)) {
+            return Data(key)
+        }
+        // Ripiego difensivo: se Argon2 non risponde è meglio un verificatore
+        // debole che un'app che non si apre più. Non custodisce nulla: i
+        // vault restano cifrati con Argon2id comunque.
+        return legacyVerifier(password, salt: salt)
+    }
+
+    /// Il verificatore com'era prima: serve solo a riconoscere le
+    /// installazioni vecchie e convertirle al primo ingresso.
+    private static func legacyVerifier(_ password: String, salt: Data) -> Data {
         var digest = Data(SHA256.hash(data: salt + Data(password.utf8)))
         for _ in 1..<iterations {
             digest = Data(SHA256.hash(data: digest + salt))

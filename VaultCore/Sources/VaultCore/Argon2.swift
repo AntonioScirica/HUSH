@@ -13,7 +13,18 @@ enum Argon2Kind {
 
 /// Ponte verso l'implementazione di riferimento C di Argon2 (vendorizzata da
 /// phc-winner-argon2, la stessa usata da libsodium/KeePass/kdbxweb).
-enum Argon2 {
+public enum Argon2 {
+    /// Deriva una chiave da una password con Argon2id, i parametri già usati
+    /// per i file .kdbx: 64 MiB di memoria, 3 passate. È lento di proposito —
+    /// è ciò che rende inutile provare le password a tappeto.
+    public static func derive(password: String, salt: [UInt8], length: Int = 32) throws -> [UInt8] {
+        try hash(
+            password: Array(password.utf8), salt: salt,
+            iterations: 3, memoryKiB: 64 * 1024, parallelism: 4,
+            outputLength: length, kind: .argon2id, version: 0x13
+        )
+    }
+
     static func hash(
         password: [UInt8],
         salt: [UInt8],
