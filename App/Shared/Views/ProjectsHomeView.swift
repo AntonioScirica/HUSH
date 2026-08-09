@@ -951,15 +951,30 @@ struct ProjectsHomeView: View {
                     // a mano e stonava col resto.
                     VStack(alignment: .leading, spacing: 6) {
                         fieldLabel("progetto")
-                        Picker("", selection: Binding(
-                            get: { newEntryProjectID ?? projects.first?.id ?? "" },
-                            set: { newEntryProjectID = $0 }
-                        )) {
+                        Menu {
                             ForEach(projects) { p in
-                                Text(p.name.lowercased()).tag(p.id)
+                                Button(p.name.lowercased()) { newEntryProjectID = p.id }
                             }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text((currentNewEntryProject?.name ?? "progetto").lowercased())
+                                    .font(Theme.mono(13))
+                                    .foregroundStyle(Theme.ink)
+                                Spacer(minLength: 0)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(Theme.inkSoft)
+                            }
+                            // stessa carta e stesso bordo di PaperFieldStyle:
+                            // è un campo del modulo, deve pesare come gli altri
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Theme.paperRaised)
+                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                            .contentShape(Rectangle())
                         }
-                        .labelsHidden()
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
                         .disabled(projects.count <= 1)
                     }
 
