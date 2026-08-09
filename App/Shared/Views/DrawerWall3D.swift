@@ -244,7 +244,12 @@ struct DrawerWall3D: NSViewRepresentable {
         /// Punto di lettura (z della cartella corrente) e passi del nastro.
         static let readZ: CGFloat = -0.35
         static let aheadSpacing: CGFloat = 0.16   // tra le cartelle ancora da sfogliare
-        static let passedSpacing: CGFloat = 0.07  // impilate davanti, strette
+        static let passedSpacing: CGFloat = 0.035  // impilate davanti, strette
+        /// Quanto in avanti può arrivare la pila di quelle già sfogliate.
+        /// La "+" sta all'imboccatura, a `readZ + 0.3`: qui ci si ferma a
+        /// meno di un terzo di quella distanza, così la pila resta indietro,
+        /// a metà cassetto, e davanti a lei c'è ancora vuoto.
+        static let passedLimit: CGFloat = 0.09
 
         static func conveyorZ(index: Int, focus: CGFloat) -> CGFloat {
             // la "+" resta sempre attaccata al fronte del cassetto, non
@@ -255,11 +260,10 @@ struct DrawerWall3D: NSViewRepresentable {
             if d >= 0 {
                 return readZ - d * aheadSpacing
             } else {
-                // Quelle già sfogliate si impilano davanti, ma si fermano
-                // ben prima dell'imboccatura: arrivando a filo della "+" il
-                // cassetto sembrava traboccare e non si capiva più dove
-                // finisse la pila.
-                return readZ + min(0.12, -d * passedSpacing)
+                // Quelle già sfogliate si impilano davanti, ma si fermano a
+                // metà cassetto: arrivando a filo della "+" sembrava
+                // traboccare e non si capiva più dove finisse la pila.
+                return readZ + min(passedLimit, -d * passedSpacing)
             }
         }
 
