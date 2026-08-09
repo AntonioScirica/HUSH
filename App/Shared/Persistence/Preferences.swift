@@ -19,7 +19,7 @@ enum Preferences {
         d.register(defaults: [
             Key.autolockMinutes: 5,
             Key.clipboardSeconds: 30,
-            Key.passwordLength: 16,
+            Key.passwordLength: 24,
             Key.passwordSymbols: true,
             Key.typeAgainDays: 7,
         ])

@@ -1124,6 +1124,11 @@ struct ProjectsHomeView: View {
         HStack(spacing: 8) {
             TextField("scadenza (MM/AA)", text: $newCardExpiry)
                 .textFieldStyle(PaperFieldStyle())
+                // la barra la mette lui dopo il mese: si scrivono solo i numeri
+                .onChange(of: newCardExpiry) { _, v in
+                    let formatted = Self.formatExpiry(v)
+                    if formatted != v { newCardExpiry = formatted }
+                }
             TextField("cvv", text: $newCardCVV)
                 .textFieldStyle(PaperFieldStyle())
                 .frame(width: 90)
@@ -1233,6 +1238,17 @@ struct ProjectsHomeView: View {
 
     private var canCreateNewEntry: Bool {
         !newEntryName.trimmingCharacters(in: .whitespaces).isEmpty && newEntryHasContent
+    }
+
+    /// "1225" → "12/25". Tiene solo le cifre e taglia a quattro, così
+    /// incollare una data già formattata non raddoppia la barra.
+    ///
+    /// A due cifre la barra NON c'è: altrimenti cancellando all'indietro
+    /// ricomparirebbe subito e il campo sembrerebbe bloccato.
+    static func formatExpiry(_ raw: String) -> String {
+        let digits = String(raw.filter(\.isNumber).prefix(4))
+        guard digits.count > 2 else { return digits }
+        return "\(digits.prefix(2))/\(digits.dropFirst(2))"
     }
 
     private static func randomPassword() -> String {
