@@ -1,32 +1,33 @@
 import SwiftUI
 import AppKit
 
-/// Striscia sempre in vista durante la prova: quanti giorni restano e come si
-/// attiva. Sparisce solo a licenza attivata.
+/// Promemoria della prova: una targhetta piccola nell'angolo in alto a
+/// sinistra, non una fascia a tutta larghezza.
+///
+/// La fascia copriva i comandi del cassetto aperto, che stanno in cima: un
+/// avviso che nasconde i pulsanti è peggio del problema che risolve.
 struct TrialBanner: View {
     let onOpenSettings: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "clock")
-                .font(.system(size: 11, weight: .semibold))
-            Text(License.trialDaysLeft == 1
-                 ? "ultimo giorno di prova"
-                 : "prova: restano \(License.trialDaysLeft) giorni")
-                .font(Theme.mono(11, .semibold))
-            Spacer(minLength: 0)
-            Button("attiva la licenza") { onOpenSettings() }
-                .buttonStyle(.plain)
-                .font(Theme.mono(11, .semibold))
-                .underline()
+        Button(action: onOpenSettings) {
+            HStack(spacing: 7) {
+                Image(systemName: "clock")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(License.trialDaysLeft == 1
+                     ? "ultimo giorno"
+                     : "prova · \(License.trialDaysLeft) giorni")
+                    .font(Theme.mono(10, .semibold))
+            }
+            .foregroundStyle(Theme.ink)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Theme.yellow)
+            .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+            .contentShape(Rectangle())
         }
-        .foregroundStyle(Theme.ink)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 9)
-        .background(Theme.yellow)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.ink).frame(height: 1.2)
-        }
+        .buttonStyle(.plain)
+        .help("Attiva la licenza")
     }
 }
 

@@ -73,12 +73,16 @@ public struct RootView: View {
                     // arrivino ai cassetti attraverso il vano
                     .allowsHitTesting(unlocked)
 
-                    // striscia della prova sopra a tutto, porta compresa
+                    // promemoria della prova nell'angolo, fuori dai piedi
                     if !licensed && unlocked {
                         VStack {
-                            TrialBanner { openSettings = true }
+                            HStack {
+                                TrialBanner { openSettings = true }
+                                Spacer()
+                            }
                             Spacer()
                         }
+                        .padding(20)
                     }
 
                     if !unlocked {
