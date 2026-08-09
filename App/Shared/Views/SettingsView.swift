@@ -266,7 +266,7 @@ struct SettingsView: View {
                 importJob = nil
                 do {
                     let n = try VaultTransfer.importChosen(scelti)
-                    note = "importati \(n) cassetti. riapri lo scrigno per vederli."
+                    note = "importati \(n) cassetti."
                     error = nil
                 } catch {
                     self.error = "importazione non riuscita: \(error.localizedDescription)"

@@ -810,7 +810,13 @@ struct ProjectsHomeView: View {
             .frame(width: 420, height: 560)
             .preferredColorScheme(.light)
         }
-        .sheet(isPresented: $showSettings) {
+        // Chiuse le impostazioni si rilegge l'elenco: da lì dentro si possono
+        // importare cassetti nuovi, e senza questo la parete restava com'era
+        // finché non si riapriva lo scrigno.
+        .sheet(isPresented: $showSettings, onDismiss: {
+            projects = VaultFileManager.shared.projects
+            Task { await library.preload(projects) }
+        }) {
             SettingsView(onClose: { showSettings = false },
                          onImport: { consumePendingImport() })
                 .sheetPaper()
