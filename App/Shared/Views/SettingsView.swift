@@ -22,6 +22,7 @@ struct SettingsView: View {
     /// Chiave appena generata: mostrata finché la finestra resta aperta.
     @State private var newRecovery: String?
     @State private var confirmRegenerate = false
+    @State private var licenseText = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -105,6 +106,41 @@ struct SettingsView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .onChange(of: symbols) { _, v in Preferences.passwordSymbols = v }
+                    }
+
+                    divider
+                    section("licenza")
+
+                    if let info = License.active {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.seal")
+                            Text("attiva · \(info.email)")
+                                .font(Theme.mono(11, .semibold))
+                        }
+                        .foregroundStyle(Theme.ink)
+                    } else {
+                        Text(License.trialDaysLeft > 0
+                             ? "prova: mancano \(License.trialDaysLeft) giorni."
+                             : "la prova è finita: inserisci la licenza per continuare.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(License.trialDaysLeft > 0 ? Theme.inkSoft : Theme.danger)
+
+                        TextField("incolla qui la licenza", text: $licenseText, axis: .vertical)
+                            .textFieldStyle(PaperFieldStyle())
+                            .lineLimit(2...4)
+
+                        Button {
+                            if License.register(licenseText) != nil {
+                                licenseText = ""; note = "licenza attivata."; error = nil
+                            } else {
+                                error = "questa licenza non è valida."
+                            }
+                        } label: {
+                            Label("attiva", systemImage: "checkmark.seal")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                        .disabled(licenseText.isEmpty)
                     }
 
                     divider

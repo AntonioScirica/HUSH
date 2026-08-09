@@ -16,3 +16,7 @@ xcuserdata/
 .build/
 .swiftpm/
 Packages/
+
+# Chiavi di firma delle licenze: mai nel repository
+*CHIAVE-PRIVATA*
+scrigno-licenze/
