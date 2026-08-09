@@ -236,12 +236,16 @@ struct OnboardingView: View {
                 .buttonStyle(OutlineButtonStyle())
             }
 
-            // il file esportato contiene le password in chiaro: dirlo qui,
-            // dove l'utente ce l'ha ancora in mano
-            Text("il file esportato contiene le password in chiaro:\ncancellalo appena finito.")
-                .font(Theme.mono(10))
-                .foregroundStyle(Theme.danger)
-                .fixedSize(horizontal: false, vertical: true)
+            // Promemoria, non errore: in rosso sembrava che qualcosa fosse
+            // andato storto ancora prima di toccare qualsiasi cosa.
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 11))
+                Text("il file esportato contiene le password in chiaro: cancellalo appena finito.")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(Theme.mono(10))
+            .foregroundStyle(Theme.inkSoft)
 
             if let error {
                 Text(error)
