@@ -965,15 +965,19 @@ struct ProjectsHomeView: View {
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(Theme.inkSoft)
                             }
-                            // stessa carta e stesso bordo di PaperFieldStyle:
-                            // è un campo del modulo, deve pesare come gli altri
+                            // identico alla ricerca e agli altri campi: carta
+                            // chiara e contorno d'inchiostro, nessun grigio
                             .padding(10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Theme.paperRaised)
                             .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
                             .contentShape(Rectangle())
                         }
-                        .menuStyle(.borderlessButton)
+                        // .button + .plain: con .borderlessButton macOS
+                        // disegna comunque il suo sfondo grigio dietro
+                        // all'etichetta, e il campo stonava con gli altri
+                        .menuStyle(.button)
+                        .buttonStyle(.plain)
                         .menuIndicator(.hidden)
                         .disabled(projects.count <= 1)
                     }
