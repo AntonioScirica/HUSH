@@ -685,10 +685,11 @@ struct DrawerWall3D: NSViewRepresentable {
         }
 
         /// Quanto è lontana la camera dalla parete rispetto alla distanza di
-        /// riposo: sotto 1 ci si avvicina, sopra 1 si indietreggia e si
-        /// arriva ai cassetti più lontani. Si regola con la rotella.
+        /// riposo. Si regola con la rotella, e si può solo indietreggiare:
+        /// la posa di partenza è già la più ravvicinata, avvicinarsi ancora
+        /// taglierebbe i cassetti ai bordi invece di mostrarne di più.
         var zoomFactor: CGFloat = 1
-        static let minZoom: CGFloat = 0.7
+        static let minZoom: CGFloat = 1
         static let maxZoom: CGFloat = 1.9
 
         func zoomed(_ deltaY: CGFloat) {
