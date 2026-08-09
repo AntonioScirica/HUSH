@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var note: String?
     /// Chiave appena generata: mostrata finché la finestra resta aperta.
     @State private var newRecovery: String?
+    @State private var confirmRegenerate = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -130,7 +131,7 @@ struct SettingsView: View {
                             .foregroundStyle(Theme.danger)
                     }
 
-                    Button { regenerateRecovery() } label: {
+                    Button { confirmRegenerate = true } label: {
                         Label(RecoveryKit.exists ? "rigenera la chiave" : "genera la chiave",
                               systemImage: "key.horizontal")
                             .frame(maxWidth: .infinity)
@@ -176,6 +177,14 @@ struct SettingsView: View {
         }
         .padding(30)
         .frame(width: 460, height: 560)
+        .alert("Rigenerare la chiave di recupero?", isPresented: $confirmRegenerate) {
+            Button("annulla", role: .cancel) {}
+            Button("rigenera", role: .destructive) { regenerateRecovery() }
+        } message: {
+            Text(RecoveryKit.exists
+                 ? "La chiave che hai stampato smetterà di funzionare all'istante. Quella nuova va annotata subito: se chiudi questa finestra senza copiarla, resti senza via di recupero.\n\nFallo se la vecchia è finita in mani sbagliate — è l'unico modo di revocarla."
+                 : "La chiave va annotata subito: se chiudi questa finestra senza copiarla, resti senza via di recupero.")
+        }
         .fileImporter(isPresented: $showImporter,
                       allowedContentTypes: [.commaSeparatedText, .text, .plainText]) { result in
             handleCSV(result)
