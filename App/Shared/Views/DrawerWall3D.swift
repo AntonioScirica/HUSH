@@ -242,19 +242,21 @@ struct DrawerWall3D: NSViewRepresentable {
         var maxFolderFocus: CGFloat = 0
 
         /// Punto di lettura (z della cartella corrente) e passi del nastro.
-        /// Dove sta la cartella che stai leggendo. È parecchio più indietro
-        /// della "+": prima erano vicine e, scorrendo fino in fondo, l'ultima
-        /// finiva praticamente addosso al "+".
-        static let readZ: CGFloat = -0.75
+        static let readZ: CGFloat = -0.35
         /// La "+" sta fissa all'imboccatura, e non si muove mai.
         static let plusZ: CGFloat = -0.05
         static let aheadSpacing: CGFloat = 0.16   // tra le cartelle ancora da sfogliare
-        static let passedSpacing: CGFloat = 0.035  // impilate davanti, strette
-        /// Quanto in avanti può arrivare la pila di quelle già sfogliate.
-        /// La "+" sta all'imboccatura, a `readZ + 0.3`: qui ci si ferma a
-        /// meno di un terzo di quella distanza, così la pila resta indietro,
-        /// a metà cassetto, e davanti a lei c'è ancora vuoto.
-        static let passedLimit: CGFloat = 0.09
+        static let passedSpacing: CGFloat = 0.07  // impilate davanti, strette
+        static let passedLimit: CGFloat = 0.26    // clamp: restano dentro
+
+        /// Fin dove si può scorrere.
+        ///
+        /// Fermandosi sull'ultima cartella, quella finiva davanti a tutto, al
+        /// punto di lettura. Ci si ferma due passi prima: l'ultima resta
+        /// comunque in fondo al cassetto, visibile ma non in prima fila.
+        static func maxFocus(labeled: Int) -> CGFloat {
+            max(0, CGFloat(labeled - 1) - 2)
+        }
 
         static func conveyorZ(index: Int, focus: CGFloat) -> CGFloat {
             // la "+" resta sempre attaccata al fronte del cassetto, non
@@ -265,9 +267,6 @@ struct DrawerWall3D: NSViewRepresentable {
             if d >= 0 {
                 return readZ - d * aheadSpacing
             } else {
-                // Quelle già sfogliate si impilano davanti, ma si fermano a
-                // metà cassetto: arrivando a filo della "+" sembrava
-                // traboccare e non si capiva più dove finisse la pila.
                 return readZ + min(passedLimit, -d * passedSpacing)
             }
         }
@@ -734,15 +733,6 @@ struct DrawerWall3D: NSViewRepresentable {
             for (i, pivot) in folderPivots.enumerated() {
                 pivot.position.z = Self.conveyorZ(index: i, focus: folderFocus)
 
-                // Quelle già passate svaniscono nel giro di poche cartelle.
-                // Impilarle tutte davanti voleva dire, in un cassetto pieno,
-                // decine di sagome alla stessa profondità coi titoli
-                // sovrastampati: sembravano una cosa sola incollata alla "+".
-                if i > 0 {
-                    let d = CGFloat(i) - folderFocus
-                    pivot.opacity = d < 0 ? max(0, 1 + d / 2.5) : 1
-                }
-
                 if i == 0 {
                     // sempre alzata quanto basta per leggere il "+", ferma
                     pivot.position.y = folderBaseY + 0.30
@@ -1079,7 +1069,7 @@ struct DrawerWall3D: NSViewRepresentable {
                 if let fillMat { ctx.fillMats[f] = [fillMat] }
                 if let textMat { ctx.textMats[f] = [textMat] }
             }
-            ctx.maxFocus = CGFloat(labeled - 1)
+            ctx.maxFocus = Self.maxFocus(labeled: labeled)
             cellFolders[idx] = ctx
 
             // se è il cassetto aperto, le cartelle in uso sono queste
@@ -1340,7 +1330,7 @@ struct DrawerWall3D: NSViewRepresentable {
                     if let fillMat { ctx.fillMats[f] = [fillMat] }
                     if let textMat { ctx.textMats[f] = [textMat] }
                 }
-                ctx.maxFocus = CGFloat(labeled - 1)
+                ctx.maxFocus = Self.maxFocus(labeled: labeled)
             }
 
             return (root, ctx)
