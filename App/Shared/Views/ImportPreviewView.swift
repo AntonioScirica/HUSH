@@ -148,6 +148,7 @@ struct ImportPreviewView: View {
                         .foregroundStyle(Theme.danger)
                     // se la password ce l'hai, il cassetto non è perso: si
                     // apre e si ricifra con quella dello scrigno
+                    if problem.hasPrefix("cifrato") {
                     Button("ho la password") {
                         unlocking = p
                         foreignPassword = ""
@@ -157,6 +158,7 @@ struct ImportPreviewView: View {
                     .font(Theme.mono(10, .semibold))
                     .foregroundStyle(Theme.ink)
                     .underline()
+                    }
                 } else {
                     Text(p.entries.isEmpty ? "vuoto" : "\(p.entries.count) voci")
                         .font(Theme.mono(10))

@@ -26,16 +26,35 @@ enum VaultTransfer {
 
     // MARK: - Esportazione
 
+    enum Failure: Error, LocalizedError {
+        case exportingOntoItself
+
+        var errorDescription: String? {
+            switch self {
+            case .exportingOntoItself:
+                return "Quella è la cartella dove Scrigno tiene i vault: scegline un'altra."
+            }
+        }
+    }
+
     /// Copia tutti i vault e l'indice nella cartella scelta.
     @discardableResult
     static func export(to folder: URL) throws -> Int {
         let projects = VaultFileManager.shared.projects
         let fm = FileManager.default
 
+        // Esportare dentro alla cartella dei vault vorrebbe dire copiare ogni
+        // file su sé stesso: sotto c'è una rimozione del file di destinazione,
+        // che qui cancellerebbe l'originale. Meglio fermarsi prima.
+        guard folder.standardizedFileURL != VaultFileManager.shared.projectsDirectory.standardizedFileURL else {
+            throw Failure.exportingOntoItself
+        }
+
         for project in projects {
             let source = URL(fileURLWithPath: project.path)
             guard fm.fileExists(atPath: source.path) else { continue }
             let dest = folder.appendingPathComponent(source.lastPathComponent)
+            guard dest.standardizedFileURL != source.standardizedFileURL else { continue }
             if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
             try fm.copyItem(at: source, to: dest)
         }
@@ -85,6 +104,13 @@ enum VaultTransfer {
                 icon: original?.icon,
                 noteColor: original?.noteColor
             )
+            // già dentro allo scrigno: reimportarlo creerebbe un doppione
+            if VaultFileManager.shared.projects.contains(where: {
+                URL(fileURLWithPath: $0.path).standardizedFileURL == file.standardizedFileURL
+            }) {
+                preview.problem = "già nello scrigno"
+                return preview
+            }
             guard let key = MasterKey.session else {
                 preview.problem = "scrigno bloccato"
                 return preview
