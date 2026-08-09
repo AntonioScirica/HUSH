@@ -251,7 +251,14 @@ struct DrawerWall3D: NSViewRepresentable {
         var scrollUnderflow: CGFloat = 0
 
         func scrolled(_ deltaY: CGFloat) {
-            guard openCellIdx != nil, !isAnimatingDrawer, !folderPivots.isEmpty, selectedFolderIdx == nil else { return }
+            // a cassetti chiusi la rotella non sfoglia niente: allontana o
+            // avvicina la camera, per arrivare ai cassetti più lontani
+            if openCellIdx == nil {
+                guard creationCellIdx == nil, !isAnimatingDrawer else { return }
+                zoomed(deltaY)
+                return
+            }
+            guard !isAnimatingDrawer, !folderPivots.isEmpty, selectedFolderIdx == nil else { return }
             let proposed = folderFocus - deltaY * 0.006
             if proposed < 0 {
                 // già alla prima: continuare a scrollare indietro chiude il cassetto
@@ -673,8 +680,26 @@ struct DrawerWall3D: NSViewRepresentable {
             let aspect = view.bounds.width / view.bounds.height
             let tanV = tan(CGFloat(40) * .pi / 360)   // fov verticale 40°
             let tanH = tanV * aspect
-            let dist = min((wallH / 2) / tanV, (wallW / 2) / tanH) * 0.92
+            let dist = min((wallH / 2) / tanV, (wallW / 2) / tanH) * 0.92 * zoomFactor
             closedCameraPos = SCNVector3(0, 0.4, dist)
+        }
+
+        /// Quanto è lontana la camera dalla parete rispetto alla distanza di
+        /// riposo: sotto 1 ci si avvicina, sopra 1 si indietreggia e si
+        /// arriva ai cassetti più lontani. Si regola con la rotella.
+        var zoomFactor: CGFloat = 1
+        static let minZoom: CGFloat = 0.7
+        static let maxZoom: CGFloat = 1.9
+
+        func zoomed(_ deltaY: CGFloat) {
+            let proposed = zoomFactor - deltaY * 0.004
+            let clamped = min(Self.maxZoom, max(Self.minZoom, proposed))
+            guard abs(clamped - zoomFactor) > 0.0001 else { return }
+            zoomFactor = clamped
+            updateClosedPose()
+            // curva breve: la rotella manda molti eventi di fila, con una
+            // lunga ognuno ripartirebbe da fermo e sembrerebbe a scatti
+            applyCameraPose(animated: true, duration: 0.12)
         }
 
         func mouseMoved(_ offset: CGPoint, at point: CGPoint) {
