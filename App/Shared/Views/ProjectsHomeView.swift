@@ -1132,6 +1132,12 @@ struct ProjectsHomeView: View {
             TextField("cvv", text: $newCardCVV)
                 .textFieldStyle(PaperFieldStyle())
                 .frame(width: 90)
+                // solo cifre, al massimo quattro: tre sulla gran parte dei
+                // circuiti, quattro su American Express
+                .onChange(of: newCardCVV) { _, v in
+                    let digits = String(v.filter(\.isNumber).prefix(4))
+                    if digits != v { newCardCVV = digits }
+                }
         }
         TextField("pin", text: $newCardPIN)
             .textFieldStyle(PaperFieldStyle())
