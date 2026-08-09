@@ -24,7 +24,13 @@
 	<string>public.app-category.utilities</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_hush-sync._tcp</string>
+	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>© Antonio Scirica</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Hush cerca il tuo iPhone sulla stessa rete WiFi per mandargli i cassetti, senza passare da nessun server.</string>
 </dict>
 </plist>

@@ -20,8 +20,14 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_hush-sync._tcp</string>
+	</array>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Hush usa Face ID per sbloccare rapidamente il tuo vault.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Hush cerca il tuo Mac sulla stessa rete WiFi per ricevere i cassetti, senza passare da nessun server.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

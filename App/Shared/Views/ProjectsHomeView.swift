@@ -1158,20 +1158,31 @@ struct ProjectsHomeView: View {
             .textFieldStyle(PaperFieldStyle())
 
         HStack(spacing: 8) {
-            Group {
-                if revealNewEntryPassword {
-                    TextField("password", text: $newEntryPassword)
-                } else {
-                    SecureField("password", text: $newEntryPassword)
+            HStack(spacing: 8) {
+                Group {
+                    if revealNewEntryPassword {
+                        TextField("password", text: $newEntryPassword)
+                    } else {
+                        SecureField("password", text: $newEntryPassword)
+                    }
                 }
-            }
-            .textFieldStyle(PaperFieldStyle())
+                .textFieldStyle(.plain)
+                .font(Theme.mono(13))
+                // SecureField e TextField hanno metriche interne
+                // leggermente diverse: senza altezza fissa il campo
+                // "respira" un pelo passando dall'una all'altra
+                .frame(height: 18)
 
-            Button { revealNewEntryPassword.toggle() } label: {
-                Image(systemName: revealNewEntryPassword ? "eye.slash" : "eye")
-                    .foregroundStyle(Theme.inkSoft)
+                Button { revealNewEntryPassword.toggle() } label: {
+                    Image(systemName: revealNewEntryPassword ? "eye.slash" : "eye")
+                        .foregroundStyle(Theme.inkSoft)
+                        .frame(width: 16, height: 16)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .padding(10)
+            .background(Theme.paperRaised)
+            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
             Button { newEntryPassword = Self.randomPassword() } label: {
                 Image(systemName: "die.face.5")
@@ -2033,6 +2044,7 @@ struct EntryCard: View {
                     Image(systemName: revealPassword ? "eye.slash" : "eye")
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.inkSoft)
+                        .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
                 CopyButton(text: password)

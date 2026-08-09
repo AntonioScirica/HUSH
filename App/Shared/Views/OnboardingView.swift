@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import VaultCore
 #if os(macOS)
 import AppKit
 #else
@@ -23,9 +24,11 @@ struct OnboardingView: View {
 
     private enum Step: Int, CaseIterable {
         #if os(iOS)
-        // sul telefono il collegamento col Mac ha una pagina tutta sua:
-        // chi scarica l'app di solito ha già i cassetti di là
-        case intro, password, recovery, biometry, mac, importing, ready
+        // sul telefono il collegamento col Mac viene subito dopo il
+        // benvenuto: chi scarica l'app di solito ha già i cassetti di là,
+        // e la password che imposta tra un attimo dovrà essere la stessa
+        // usata sul Mac — non ha senso chiederla prima di dirlo.
+        case intro, mac, password, recovery, biometry, importing, ready
         #else
         case intro, password, recovery, biometry, importing, ready
         #endif
@@ -44,6 +47,11 @@ struct OnboardingView: View {
     /// Importazione dei cassetti esportati dal Mac (cartella o singoli file).
     @State private var showMacImporter = false
     @State private var cassettiDalMac = 0
+    /// Percorso di un cassetto arrivato dal Mac: serve a verificare che la
+    /// password appena scelta sia davvero quella, prima di configurarla.
+    @State private var cassettoDalMacDaVerificare: String?
+    @State private var verificandoPassword = false
+    @StateObject private var sync = LocalSync()
     #endif
     /// Chiave di recupero: si vede solo qui, una volta.
     @State private var recoveryKey = ""
@@ -113,20 +121,10 @@ struct OnboardingView: View {
 
     private var intro: some View {
         VStack(alignment: .leading, spacing: 22) {
-            HStack(alignment: .top, spacing: 0) {
-                Text("HUSH")
-                    .font(Theme.display(48))
-                    .kerning(-1)
-                    .foregroundStyle(Theme.ink)
-                Text("offline")
-                    .font(Theme.mono(10, .bold))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Theme.yellow, in: Capsule())
-                    .rotationEffect(.degrees(-8))
-                    .offset(x: -4, y: 4)
-            }
+            Text("HUSH")
+                .font(Theme.display(48))
+                .kerning(-1)
+                .foregroundStyle(Theme.ink)
 
             VStack(alignment: .leading, spacing: 14) {
                 bullet("un caveau, non un servizio",
@@ -150,6 +148,7 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.ink)
                 Text(body)
                     .font(Theme.mono(11))
+                    .lineSpacing(3)
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -158,10 +157,24 @@ struct OnboardingView: View {
 
     private var passwordStep: some View {
         VStack(alignment: .leading, spacing: 16) {
+            #if os(iOS)
+            if cassettiDalMac > 0 {
+                Text("qui deve essere la stessa password del Mac, altrimenti i cassetti che hai appena importato restano chiusi.")
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("scegline una lunga e che ricordi. non si può recuperare:\nnon esiste nessuno a cui chiederla.")
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            #else
             Text("scegline una lunga e che ricordi. non si può recuperare:\nnon esiste nessuno a cui chiederla.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
+            #endif
 
             HStack(spacing: 8) {
                 Group {
@@ -171,7 +184,12 @@ struct OnboardingView: View {
                         SecureField("master password", text: $password)
                     }
                 }
-                .textFieldStyle(PaperFieldStyle())
+                .textFieldStyle(.plain)
+                .font(Theme.mono(13))
+                // altezza fissa: SecureField e TextField hanno metriche
+                // interne leggermente diverse, senza questo il campo
+                // "respira" un pelo quando si passa dall'uno all'altro
+                .frame(height: 18)
                 .focused($passwordFocused)
 
                 Button { reveal.toggle() } label: {
@@ -181,6 +199,9 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.plain)
             }
+            .padding(10)
+            .background(Theme.paperRaised)
+            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
             SecureField("ripetila", text: $confirm)
                 .textFieldStyle(PaperFieldStyle())
@@ -339,10 +360,18 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("se usi già Hush sul computer, i tuoi cassetti possono arrivare qui pari pari, con nomi, icone e post-it.")
+                Text("l'app del telefono è il compagno di quella sul Mac: per continuare servono i tuoi cassetti. arrivano pari pari, con nomi, icone e post-it — sulla stessa rete WiFi, senza passare da nessun server.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
+
+                syncBox
+
+                Text("oppure, a mano")
+                    .font(Theme.mono(10, .semibold))
+                    .tracking(1.5)
+                    .foregroundStyle(Theme.inkSoft)
+                    .padding(.top, 4)
 
                 VStack(alignment: .leading, spacing: 12) {
                     riga(numero: "1", testo: "sul Mac apri le impostazioni e tocca «esporta i cassetti»")
@@ -357,7 +386,7 @@ struct OnboardingView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "key")
                         .font(.system(size: 11))
-                    Text("qui serve la stessa master password del Mac, o i cassetti non si apriranno.")
+                    Text("in tutti e due i casi serve la stessa master password del Mac, o i cassetti non si apriranno.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .font(Theme.mono(10))
@@ -370,6 +399,79 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.danger)
             }
         }
+        .onAppear {
+            sync.alCompletamento = { cartella in
+                if let importati = try? VaultTransfer.importAll(from: [cartella]), importati > 0 {
+                    cassettiDalMac += importati
+                    cassettoDalMacDaVerificare = VaultFileManager.shared.projects.last?.path
+                }
+            }
+            if step == .mac { sync.avviaRicerca() }
+        }
+        .onDisappear { sync.ferma() }
+    }
+
+    /// Cerca il Mac sulla stessa rete e mostra lo stato del collegamento:
+    /// elenco dei Mac trovati, poi il trasferimento in corso.
+    @ViewBuilder
+    private var syncBox: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch sync.stato {
+            case .fermo, .inAttesa:
+                Button("cerca il Mac sulla rete") { sync.avviaRicerca() }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+
+            case .inCerca:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(sync.trovati.isEmpty ? "cerco un Mac con Hush aperto sulla stessa rete…" : "trovati:")
+                        .font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.inkSoft)
+                ForEach(sync.trovati, id: \.self) { peer in
+                    Button(peer.displayName) { sync.collegati(a: peer) }
+                        .buttonStyle(OutlineButtonStyle())
+                        .frame(maxWidth: .infinity)
+                }
+
+            case .collegato(let nome):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("collegato a \(nome), aspetto i cassetti…")
+                        .font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .trasferendo(let fatti, let totale):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("arrivano i cassetti… \(fatti)/\(totale)")
+                        .font(Theme.mono(11, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .fatto(let n):
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                    Text("\(n) cassetti arrivati dal Mac")
+                        .font(Theme.mono(12, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .errore(let messaggio):
+                Text(messaggio)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.danger)
+                Button("riprova") { sync.avviaRicerca() }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.paperRaised)
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1.1))
     }
 
     private func riga(numero: String, testo: String) -> some View {
@@ -480,7 +582,9 @@ struct OnboardingView: View {
         }
         if !perCassetti.isEmpty {
             do {
-                cassettiDalMac += try VaultTransfer.importAll(from: perCassetti)
+                let importati = try VaultTransfer.importAll(from: perCassetti)
+                cassettiDalMac += importati
+                if importati > 0 { cassettoDalMacDaVerificare = VaultFileManager.shared.projects.last?.path }
             } catch {
                 self.error = "importazione non riuscita: \(error.localizedDescription)"
             }
@@ -499,6 +603,8 @@ struct OnboardingView: View {
             cassettiDalMac = try VaultTransfer.importAll(from: urls)
             if cassettiDalMac == 0 {
                 error = "lì dentro non ci sono cassetti."
+            } else {
+                cassettoDalMacDaVerificare = VaultFileManager.shared.projects.last?.path
             }
         } catch {
             self.error = "importazione non riuscita: \(error.localizedDescription)"
@@ -561,29 +667,39 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             trattini
                 .frame(maxWidth: .infinity, alignment: .center)
-            HStack(spacing: 10) {
-                if step == .biometry {
-                    Button("non ora") { step = .mac }
-                        .buttonStyle(OutlineButtonStyle())
-                        .frame(maxWidth: .infinity)
-                }
-                if step == .mac && cassettiDalMac == 0 {
-                    Button("non ora") { step = .importing }
-                        .buttonStyle(OutlineButtonStyle())
-                        .frame(maxWidth: .infinity)
-                }
-                if step == .importing && importedCount == 0 {
-                    Button("salta") { step = .ready }
-                        .buttonStyle(OutlineButtonStyle())
-                        .frame(maxWidth: .infinity)
-                }
+            if step == .mac {
+                // passaggio obbligato: da qui non si esce senza i cassetti
+                // del Mac. L'app del telefono senza quelli è un guscio vuoto
+                // con una password diversa da quella vera, e sarebbe solo
+                // un pasticcio da spiegare dopo.
                 Button(primaryLabel) { advance() }
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .frame(maxWidth: .infinity)
                     .disabled(!canAdvance)
                     .opacity(canAdvance ? 1 : 0.4)
+            } else {
+                HStack(spacing: 10) {
+                    if step == .biometry {
+                        Button("non ora") { step = dopoBiometria }
+                            .buttonStyle(OutlineButtonStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    if step == .importing && importedCount == 0 {
+                        Button("salta") { step = .ready }
+                            .buttonStyle(OutlineButtonStyle())
+                            .frame(maxWidth: .infinity)
+                    }
+                    Button(primaryLabel) { advance() }
+                        .buttonStyle(InkButtonStyle(prominent: true))
+                        .frame(maxWidth: .infinity)
+                        .disabled(!canAdvance)
+                        .opacity(canAdvance ? 1 : 0.4)
+                }
             }
         }
+        // niente animazione implicita quando "non ora" compare/sparisce:
+        // altrimenti il bottone sopra sembra scivolare al suo posto
+        .transaction { $0.animation = nil }
         #else
         HStack(spacing: 10) {
             trattini
@@ -613,17 +729,17 @@ struct OnboardingView: View {
     private var primaryLabel: String {
         switch step {
         case .intro:     return "comincia"
-        case .password:  return "imposta"
+        case .password:
+            #if os(iOS)
+            if verificandoPassword { return "verifico…" }
+            #endif
+            return "imposta"
         case .recovery:  return "l'ho messa al sicuro"
         case .biometry:  return "attiva"
         #if os(iOS)
         case .mac:       return cassettiDalMac > 0 ? "avanti" : "scegli la cartella"
         #endif
-        case .importing:
-            #if os(iOS)
-            if cassettiDalMac > 0 { return "avanti" }
-            #endif
-            return importedCount > 0 ? "avanti" : "scegli file"
+        case .importing: return importedCount > 0 ? "avanti" : "scegli file"
         case .ready:     return "entra"
         }
     }
@@ -631,6 +747,9 @@ struct OnboardingView: View {
     private var canAdvance: Bool {
         switch step {
         case .password:
+            #if os(iOS)
+            guard !verificandoPassword else { return false }
+            #endif
             return password.count >= 8 && password == confirm
         default:
             return true
@@ -641,7 +760,18 @@ struct OnboardingView: View {
         error = nil
         switch step {
         case .intro:
+            #if os(iOS)
+            step = .mac
+            #else
             step = .password
+            #endif
+
+        #if os(iOS)
+        case .mac:
+            // fatta l'importazione dal Mac si salta la pagina più avanti che
+            // chiede lo stesso csv/elenco: serve solo a chi parte da zero
+            if cassettiDalMac > 0 { step = .password } else { showMacImporter = true }
+        #endif
 
         case .password:
             guard password.count >= 8 else {
@@ -652,42 +782,26 @@ struct OnboardingView: View {
                 error = "le due password non combaciano."
                 return
             }
-            MasterKey.configure(password: password)
-            // la chiave di scorta nasce subito: dopo, senza la master
-            // password in mano, non si potrebbe più cifrarci dentro niente
-            recoveryKey = (try? RecoveryKit.create(masterPassword: password)) ?? ""
-            step = .recovery
+            #if os(iOS)
+            if let percorso = cassettoDalMacDaVerificare {
+                verificaPasswordDelMac(percorso)
+                return
+            }
+            #endif
+            configuraMasterPassword()
 
         case .recovery:
-            #if os(iOS)
-            step = MasterKey.biometryAvailable ? .biometry : .mac
-            #else
-            step = MasterKey.biometryAvailable ? .biometry : .importing
-            #endif
+            step = MasterKey.biometryAvailable ? .biometry : dopoBiometria
 
         case .biometry:
             do {
                 try MasterKey.enableBiometry(password: password)
-                #if os(iOS)
-                step = .mac
-                #else
-                step = .importing
-                #endif
+                step = dopoBiometria
             } catch {
                 self.error = "non è stato possibile attivarlo: \(error.localizedDescription)"
             }
 
-        #if os(iOS)
-        case .mac:
-            // fatta l'importazione dal Mac si salta la pagina dopo: serve
-            // solo a chi parte da zero o da un altro gestore
-            if cassettiDalMac > 0 { step = .ready } else { showMacImporter = true }
-        #endif
-
         case .importing:
-            #if os(iOS)
-            if cassettiDalMac > 0 || importedCount > 0 { step = .ready; return }
-            #endif
             if importedCount > 0 { step = .ready } else { showFileImporter = true }
 
         case .ready:
@@ -695,4 +809,50 @@ struct OnboardingView: View {
             onDone()
         }
     }
+
+    /// Dopo password/scorta/biometria: se sul Mac c'erano già cassetti,
+    /// quelli sono arrivati subito dopo il benvenuto e non serve chiedere
+    /// di nuovo un elenco da importare.
+    private var dopoBiometria: Step {
+        #if os(iOS)
+        cassettiDalMac > 0 ? .ready : .importing
+        #else
+        .importing
+        #endif
+    }
+
+    private func configuraMasterPassword() {
+        MasterKey.configure(password: password)
+        // la chiave di scorta nasce subito: dopo, senza la master
+        // password in mano, non si potrebbe più cifrarci dentro niente
+        recoveryKey = (try? RecoveryKit.create(masterPassword: password)) ?? ""
+        step = .recovery
+    }
+
+    #if os(iOS)
+    /// Prima di adottare la password come master password di Hush, la si
+    /// prova su un cassetto arrivato dal Mac: se non lo apre, quei cassetti
+    /// resterebbero chiusi per sempre, ed è meglio dirlo subito che dopo.
+    private func verificaPasswordDelMac(_ percorso: String) {
+        verificandoPassword = true
+        let pwd = password
+        Task.detached(priority: .userInitiated) {
+            let corrisponde: Bool
+            if let bytes = try? Data(contentsOf: URL(fileURLWithPath: percorso)),
+               (try? Kdbx4.open(data: Array(bytes), password: pwd)) != nil {
+                corrisponde = true
+            } else {
+                corrisponde = false
+            }
+            await MainActor.run {
+                verificandoPassword = false
+                if corrisponde {
+                    configuraMasterPassword()
+                } else {
+                    error = "non è la password del Mac: i cassetti che hai importato non si aprirebbero. riscrivila uguale a quella di là."
+                }
+            }
+        }
+    }
+    #endif
 }

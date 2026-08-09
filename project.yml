@@ -76,6 +76,10 @@ targets:
         LSMinimumSystemVersion: "14.0"
         NSHumanReadableCopyright: "© Antonio Scirica"
         CFBundlePackageType: APPL
+        # per mandare i cassetti all'iPhone sulla stessa rete, senza server
+        NSLocalNetworkUsageDescription: "Hush cerca il tuo iPhone sulla stessa rete WiFi per mandargli i cassetti, senza passare da nessun server."
+        NSBonjourServices:
+          - _hush-sync._tcp
 
   Scrigno-iOS:
     type: application
@@ -96,6 +100,9 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
+        # firma automatica sul tuo account: serve per installare sul telefono vero
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 69SHH7M6DY
     info:
       path: App/iOS/Info.plist
       properties:
@@ -113,6 +120,10 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         NSFaceIDUsageDescription: "Hush usa Face ID per sbloccare rapidamente il tuo vault."
+        # per cercare il Mac sulla stessa rete e ricevere i cassetti, senza server
+        NSLocalNetworkUsageDescription: "Hush cerca il tuo Mac sulla stessa rete WiFi per ricevere i cassetti, senza passare da nessun server."
+        NSBonjourServices:
+          - _hush-sync._tcp
     entitlements:
       path: App/iOS/Scrigno-iOS.entitlements
       properties:
@@ -137,6 +148,8 @@ targets:
         PRODUCT_NAME: ScrignoAutoFill
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 69SHH7M6DY
     info:
       path: AutoFillExtension/Info.plist
       properties:

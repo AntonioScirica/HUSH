@@ -40,6 +40,11 @@ struct SettingsView: View {
     @State private var leggendo = false
     @State private var importando = false
 
+    #if os(macOS)
+    /// Stessa istanza di RootView: qui se ne mostra solo lo stato.
+    @ObservedObject private var sync = LocalSync.shared
+    #endif
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
@@ -267,6 +272,14 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
+
+                    divider
+                    section("manda al telefono")
+                    Text("via WiFi, senza passare da nessun server: mentre Hush è aperto qui, resta in ascolto da solo. apri Hush sul telefono e cerca il Mac.")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                    macSyncBox
                     #endif
 
                     if importando {
@@ -337,6 +350,8 @@ struct SettingsView: View {
                       allowedContentTypes: [.commaSeparatedText, .text, .plainText]) { result in
             handleCSV(result)
         }
+        // l'ascolto e l'avviso da accettare li gestisce RootView, che c'è
+        // sempre: qui in Impostazioni si vede solo lo stato condiviso
     }
 
     // MARK: - Pezzi
@@ -344,6 +359,66 @@ struct SettingsView: View {
     private var divider: some View {
         Rectangle().fill(Theme.line.opacity(0.4)).frame(height: 1)
     }
+
+    #if os(macOS)
+    @ViewBuilder
+    private var macSyncBox: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch sync.stato {
+            case .fermo, .inCerca:
+                // RootView lo rimette in ascolto da sé un attimo dopo:
+                // capita solo per un istante, ad esempio appena sbloccato
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("mi metto in ascolto…")
+                        .font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.inkSoft)
+
+            case .inAttesa:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("in ascolto: apri Hush sul telefono e cerca il Mac")
+                        .font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.inkSoft)
+
+            case .collegato(let nome):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("collegato a \(nome), mando i cassetti…")
+                        .font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .trasferendo(let fatti, let totale):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("invio in corso… \(fatti)/\(totale)")
+                        .font(Theme.mono(11, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .fatto(let n):
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                    Text("\(n) cassetti mandati al telefono")
+                        .font(Theme.mono(12, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .errore(let messaggio):
+                Text(messaggio)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.danger)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.paperRaised)
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+    }
+    #endif
 
     private func section(_ title: String) -> some View {
         Text(title)

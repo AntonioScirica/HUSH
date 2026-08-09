@@ -47,6 +47,7 @@ struct EntryDetailView: View {
                             revealPassword.toggle()
                         } label: {
                             Image(systemName: revealPassword ? "eye.slash" : "eye")
+                                .frame(width: 16, height: 16)
                         }
                         .buttonStyle(.borderless)
                     }
@@ -114,6 +115,7 @@ struct EntryInlineDetail: View {
                         revealPassword.toggle()
                     } label: {
                         Image(systemName: revealPassword ? "eye.slash" : "eye")
+                                .frame(width: 16, height: 16)
                     }
                     .buttonStyle(.borderless)
                 }

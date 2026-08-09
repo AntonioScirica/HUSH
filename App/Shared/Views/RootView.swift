@@ -19,6 +19,11 @@ public struct RootView: View {
     /// Stessa chiave di Preferences.vistaClassica: @AppStorage la osserva
     /// dal vivo, così lo switch nelle impostazioni cambia schermata subito.
     @AppStorage("scrigno.pref.vistaClassica") private var vistaClassica = false
+    #if os(macOS)
+    /// Sempre in ascolto mentre Hush è sbloccato: il telefono che cerca
+    /// trova il Mac senza che tu debba premere niente prima.
+    @ObservedObject private var sync = LocalSync.shared
+    #endif
 
     public init() {
         // Prima di qualunque lettura: l'app si chiamava Scrigno, e i suoi
@@ -141,6 +146,37 @@ public struct RootView: View {
             // parete rilegge da disco e non restano due copie in memoria
             if !classica { vm.lock() }
         }
+        #if os(macOS)
+        .onChange(of: unlocked) { _, on in
+            if on {
+                // il telefono che si collega non sa già cosa mandargli:
+                // lo prepariamo al volo solo quando serve davvero
+                sync.quandoConnesso = { peer in
+                    Task {
+                        guard let (_, folder) = try? await VaultTransfer.exportAsync(
+                            to: FileManager.default.temporaryDirectory
+                        ) else { return }
+                        let files = (try? FileManager.default.contentsOfDirectory(
+                            at: folder, includingPropertiesForKeys: nil
+                        )) ?? []
+                        sync.pronto(files: files, per: peer)
+                    }
+                }
+                sync.avviaAscolto()
+            } else {
+                sync.ferma()
+            }
+        }
+        .alert(sync.richiestaDaAccettare ?? "", isPresented: Binding(
+            get: { sync.richiestaDaAccettare != nil },
+            set: { if !$0 { sync.rifiutaRichiesta() } }
+        )) {
+            Button("rifiuta", role: .cancel) { sync.rifiutaRichiesta() }
+            Button("accetta") { sync.accettaRichiesta() }
+        } message: {
+            Text("vuole ricevere i tuoi cassetti via WiFi. accetta solo se sei tu.")
+        }
+        #endif
         .overlay(alignment: .bottom) {
             if let toast = vm.toast {
                 Text(toast.lowercased())
