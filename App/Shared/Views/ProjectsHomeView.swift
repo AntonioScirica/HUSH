@@ -164,6 +164,8 @@ struct ProjectsHomeView: View {
     /// a modulo cambia solo `entryStep`, non chiude/riapre un secondo sheet
     /// — quello causava un frame con la categoria vecchia prima di aggiornarsi.
     @State private var showEntryFlow = false
+    /// Tendina del progetto aperta dentro il modulo.
+    @State private var showEntryProjectList = false
     private enum EntryFlowStep { case pickType, form }
     @State private var entryStep: EntryFlowStep = .pickType
     @State private var newEntryKind: EntryKind = .login
@@ -949,11 +951,17 @@ struct ProjectsHomeView: View {
                     // senza uscire. Menu a tendina di sistema, come quelli
                     // delle impostazioni: prima era un finto menu disegnato
                     // a mano e stonava col resto.
+                    // Tendina fatta in casa, non un Menu di sistema: quello si
+                    // porta dietro il proprio sfondo e la propria lista, che
+                    // non c'entrano niente con la carta del resto. Qui il
+                    // campo è identico agli altri e l'elenco è lo stesso
+                    // riquadro dei suggerimenti della ricerca.
                     VStack(alignment: .leading, spacing: 6) {
                         fieldLabel("progetto")
-                        Menu {
-                            ForEach(projects) { p in
-                                Button(p.name.lowercased()) { newEntryProjectID = p.id }
+
+                        Button {
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                showEntryProjectList.toggle()
                             }
                         } label: {
                             HStack(spacing: 8) {
@@ -964,22 +972,53 @@ struct ProjectsHomeView: View {
                                 Image(systemName: "chevron.down")
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(Theme.inkSoft)
+                                    .rotationEffect(.degrees(showEntryProjectList ? 180 : 0))
                             }
-                            // identico alla ricerca e agli altri campi: carta
-                            // chiara e contorno d'inchiostro, nessun grigio
                             .padding(10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Theme.paperRaised)
                             .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
                             .contentShape(Rectangle())
                         }
-                        // .button + .plain: con .borderlessButton macOS
-                        // disegna comunque il suo sfondo grigio dietro
-                        // all'etichetta, e il campo stonava con gli altri
-                        .menuStyle(.button)
                         .buttonStyle(.plain)
-                        .menuIndicator(.hidden)
                         .disabled(projects.count <= 1)
+
+                        if showEntryProjectList {
+                            VStack(spacing: 0) {
+                                ForEach(Array(projects.enumerated()), id: \.element.id) { i, p in
+                                    Button {
+                                        newEntryProjectID = p.id
+                                        withAnimation(.easeOut(duration: 0.15)) {
+                                            showEntryProjectList = false
+                                        }
+                                    } label: {
+                                        HStack(spacing: 10) {
+                                            Image(systemName: p.icon ?? "folder")
+                                                .font(.system(size: 12))
+                                                .frame(width: 16)
+                                            Text(p.name.lowercased())
+                                                .font(Theme.mono(12, .semibold))
+                                            Spacer(minLength: 0)
+                                            if p.id == currentNewEntryProject?.id {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 10, weight: .semibold))
+                                            }
+                                        }
+                                        .foregroundStyle(Theme.ink)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 9)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if i != projects.count - 1 {
+                                        Rectangle().fill(Theme.line).frame(height: 1)
+                                    }
+                                }
+                            }
+                            .background(Theme.paper)
+                            .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
+                        }
                     }
 
                     // Il titolo è il nome della CARTELLA, non un campo come
@@ -1279,6 +1318,7 @@ struct ProjectsHomeView: View {
 
     private func resetNewEntryForm(closeSheet: Bool = true) {
         if closeSheet { showEntryFlow = false }
+        showEntryProjectList = false
         newEntryName = ""; newEntryUser = ""; newEntryPassword = ""
         newEntryURLs = [IdentifiedString()]; newEntryFields = []; newEntryNotes = ""
         newSecureNotes = [CustomField()]
