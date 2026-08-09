@@ -52,6 +52,20 @@ targets:
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Developer ID Application"
         DEVELOPMENT_TEAM: 69SHH7M6DY
+        # Runtime irrobustito: senza, qualunque processo dell'utente può
+        # attaccare un debugger a Scrigno e leggersi la master password
+        # direttamente dalla memoria. Serve anche per la notarizzazione.
+        ENABLE_HARDENED_RUNTIME: YES
+        # marca temporale sulla firma: la richiede la notarizzazione
+        OTHER_CODE_SIGN_FLAGS: "--timestamp"
+      configs:
+        Release:
+          # Xcode aggiunge da sé com.apple.security.get-task-allow, che
+          # rimette in piedi proprio ciò che il runtime irrobustito toglie:
+          # con quella entitlement un debugger si attacca lo stesso e legge
+          # la master password in memoria. In Debug serve per lo sviluppo,
+          # nella build che si distribuisce no.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     # Nessuna entitlement -> niente App Sandbox: l'app Mac legge/scrive
     # liberamente il file .kdbx dove lo metti tu (es. iCloud Drive).
     info:
