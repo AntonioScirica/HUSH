@@ -637,8 +637,12 @@ struct DrawerWall3D: NSViewRepresentable {
             guard let view, idx < folderPivots.count, view.bounds.height > 0 else { return }
             let node = folderPivots[idx]
 
-            // centro del CORPO, non dell'origine del nodo (che sta alla base)
-            let bodyCenterLocal = SCNVector3(0, folderBodyH / 2, 0)
+            // Centro dell'INTERA cartella, linguetta compresa: centrare il
+            // solo corpo lascia la linguetta a sbordare in alto, e l'insieme
+            // sembra spostato verso l'alto anche se il corpo è a posto.
+            // L'origine del nodo sta alla base, la sagoma arriva a corpo +
+            // linguetta.
+            let bodyCenterLocal = SCNVector3(0, (folderBodyH + DrawerWall3D.folderTabH) / 2, 0)
             let worldCenter = node.convertPosition(bodyCenterLocal, to: nil)
             let projected = view.projectPoint(worldCenter)
 
