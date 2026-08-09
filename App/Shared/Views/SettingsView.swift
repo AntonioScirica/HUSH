@@ -23,7 +23,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
-                IndexLabel(number: 1, text: "impostazioni")
+                IndexLabel(text: "impostazioni")
                 Rectangle().fill(Theme.line).frame(height: 1.2)
             }
             .padding(.bottom, 18)

@@ -56,16 +56,22 @@ struct TabShape: Shape {
     }
 }
 
-/// Etichetta stile divider: "001   logo design"
+/// Etichetta stile divider: "001   logo design".
+///
+/// Il numero è facoltativo: va messo solo dove conta qualcosa davvero (la
+/// posizione di una voce nel cassetto). Sulle schermate che non contano
+/// niente restava fisso a "001" e faceva solo rumore.
 struct IndexLabel: View {
-    let number: Int
+    var number: Int?
     let text: String
     var inverted = false
 
     var body: some View {
         HStack(spacing: 14) {
-            Text(String(format: "%03d", number))
-                .fixedSize()
+            if let number {
+                Text(String(format: "%03d", number))
+                    .fixedSize()
+            }
             Text(text.lowercased())
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)

@@ -274,6 +274,15 @@ struct ProjectsHomeView: View {
         openCell.flatMap { projectAtCell[$0] }
     }
 
+    /// Etichetta di sezione dentro i moduli: maiuscoletto spaziato, grigio.
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.mono(10, .semibold))
+            .tracking(1.2)
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.inkSoft)
+    }
+
     /// Bottoncino d'angolo, stesso tratto della barra centrale.
     private func cornerButton(_ icon: String, help: String,
                               action: @escaping () -> Void) -> some View {
@@ -880,11 +889,11 @@ struct ProjectsHomeView: View {
     private static let entryTypeOrder: [EntryKind] = [.login, .secureNote, .card, .identity, .password, .document]
 
     private var entryTypePicker: some View {
+        // stessa testata del modulo che segue: prima aveva 40 pt di margine
+        // in più in cima e i due passi partivano ad altezze diverse
         VStack(alignment: .leading, spacing: 16) {
-            Text("cosa vuoi creare?")
-                .font(Theme.mono(13))
-                .foregroundStyle(Theme.ink)
-                .padding(.top, 40)
+            IndexLabel(text: "cosa vuoi creare")
+                .padding(.bottom, 6)
 
             ScrollView {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
@@ -936,49 +945,35 @@ struct ProjectsHomeView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    // progetto: scelto prima di entrare qui, ma cambiabile senza uscire
-                    Menu {
-                        ForEach(projects) { p in
-                            Button(p.name.lowercased()) { newEntryProjectID = p.id }
+                    // progetto: scelto prima di entrare qui, ma cambiabile
+                    // senza uscire. Menu a tendina di sistema, come quelli
+                    // delle impostazioni: prima era un finto menu disegnato
+                    // a mano e stonava col resto.
+                    VStack(alignment: .leading, spacing: 6) {
+                        fieldLabel("progetto")
+                        Picker("", selection: Binding(
+                            get: { newEntryProjectID ?? projects.first?.id ?? "" },
+                            set: { newEntryProjectID = $0 }
+                        )) {
+                            ForEach(projects) { p in
+                                Text(p.name.lowercased()).tag(p.id)
+                            }
                         }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: currentNewEntryProject?.icon ?? "folder")
-                                .font(.system(size: 12))
-                            Text((currentNewEntryProject?.name ?? "progetto").lowercased())
-                                .font(Theme.mono(12, .semibold))
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 9))
-                                .foregroundStyle(Theme.inkSoft)
-                        }
-                        .foregroundStyle(Theme.ink)
-                        .padding(10)
-                        .background(Theme.paperRaised)
-                        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                        .labelsHidden()
+                        .disabled(projects.count <= 1)
                     }
-                    .menuStyle(.borderlessButton)
-                    .disabled(projects.count <= 1)
 
                     // Il titolo è il nome della CARTELLA, non un campo come
                     // gli altri: sta in cima, staccato, con la sua etichetta.
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("nome della cartella")
-                            .font(Theme.mono(10, .semibold))
-                            .tracking(1.2)
-                            .textCase(.uppercase)
-                            .foregroundStyle(Theme.inkSoft)
+                        fieldLabel("nome della cartella")
                         AutoFocusField(placeholder: "titolo", text: $newEntryName)
                     }
 
                     Rectangle().fill(Theme.line.opacity(0.4)).frame(height: 1)
                         .padding(.vertical, 2)
 
-                    Text("cosa c'è dentro")
-                        .font(Theme.mono(10, .semibold))
-                        .tracking(1.2)
-                        .textCase(.uppercase)
-                        .foregroundStyle(Theme.inkSoft)
+                    fieldLabel("cosa c'è dentro")
 
                     switch newEntryKind {
                     case .login, .password:
@@ -1562,7 +1557,7 @@ struct ProjectsHomeView: View {
 
     private var openPasswordSheet: some View {
         VStack(alignment: .leading, spacing: 14) {
-            IndexLabel(number: 1, text: openingProject?.name ?? "progetto")
+            IndexLabel(text: openingProject?.name ?? "progetto")
             SecureField("master password", text: $openPassword)
                 .textFieldStyle(PaperFieldStyle())
                 .onSubmit { attemptOpen() }
@@ -1929,7 +1924,7 @@ struct IconLibrarySheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            IndexLabel(number: 1, text: "scegli icona")
+            IndexLabel(text: "scegli icona")
 
             TextField("cerca…", text: $search)
                 .textFieldStyle(PaperFieldStyle())
