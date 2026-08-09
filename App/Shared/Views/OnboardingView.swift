@@ -34,6 +34,11 @@ struct OnboardingView: View {
 
     @State private var showFileImporter = false
     @State private var importedCount = 0
+    #if os(iOS)
+    /// Importazione dei cassetti esportati dal Mac (cartella o singoli file).
+    @State private var showMacImporter = false
+    @State private var cassettiDalMac = 0
+    #endif
     /// Chiave di recupero: si vede solo qui, una volta.
     @State private var recoveryKey = ""
     @State private var recoverySaved = false
@@ -311,10 +316,34 @@ struct OnboardingView: View {
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(Theme.ink)
 
-            Text("se le password ce le hai già da un'altra parte, esporta\nil file da lì e caricalo qui: finisce tutto in un cassetto\nsolo, che poi puoi riordinare.")
+            Text("se le password ce le hai già da un'altra parte, esporta il file da lì e caricalo qui: finisce tutto in un cassetto solo, che poi puoi riordinare.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
+
+            #if os(iOS)
+            // chi arriva dal Mac ha già i cassetti: si portano qui pari
+            // pari. Sul Mac: impostazioni, esporta; poi AirDrop al telefono
+            // (finiscono in File) e da qui si scelgono.
+            if cassettiDalMac > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                    Text("\(cassettiDalMac) cassetti arrivati dal Mac")
+                        .font(Theme.mono(12, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+            } else {
+                Button { showMacImporter = true } label: {
+                    Label("cassetti esportati dal Mac", systemImage: "desktopcomputer.and.arrow.down")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(OutlineButtonStyle())
+                Text("sul Mac: impostazioni, «esporta i cassetti», poi mandali qui con AirDrop e scegli la cartella da File. usa la stessa master password del Mac, o non si apriranno.")
+                    .font(Theme.mono(10))
+                    .foregroundStyle(Theme.inkSoft)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            #endif
 
             if importedCount > 0 {
                 HStack(spacing: 8) {
@@ -326,7 +355,7 @@ struct OnboardingView: View {
                 .themedImportRow()
             } else {
                 Button { showFileImporter = true } label: {
-                    Label("scegli il file", systemImage: "doc.badge.plus")
+                    Label("un elenco esportato (csv)", systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(OutlineButtonStyle())
@@ -353,7 +382,34 @@ struct OnboardingView: View {
                       allowedContentTypes: [.commaSeparatedText, .text, .plainText]) { result in
             handleCSV(result)
         }
+        #if os(iOS)
+        .fileImporter(isPresented: $showMacImporter,
+                      allowedContentTypes: [.folder, .data],
+                      allowsMultipleSelection: true) { result in
+            handleMacExport(result)
+        }
+        #endif
     }
+
+    #if os(iOS)
+    /// Copia dentro al telefono i cassetti esportati dal Mac: stessa
+    /// importazione delle impostazioni del Mac, con nomi, icone e colori
+    /// presi dall'indice dell'esportazione se c'è.
+    private func handleMacExport(_ result: Result<[URL], Error>) {
+        error = nil
+        guard case .success(let urls) = result, !urls.isEmpty else { return }
+        let accessi = urls.map { ($0, $0.startAccessingSecurityScopedResource()) }
+        defer { for (url, ok) in accessi where ok { url.stopAccessingSecurityScopedResource() } }
+        do {
+            cassettiDalMac = try VaultTransfer.importAll(from: urls)
+            if cassettiDalMac == 0 {
+                error = "lì dentro non ci sono cassetti."
+            }
+        } catch {
+            self.error = "importazione non riuscita: \(error.localizedDescription)"
+        }
+    }
+    #endif
 
     private func handleCSV(_ result: Result<URL, Error>) {
         error = nil
@@ -394,16 +450,42 @@ struct OnboardingView: View {
     private static let larghezzaPrimaria: CGFloat? = 170
     #endif
 
-    private var footer: some View {
-        HStack(spacing: 10) {
-            // pallini di avanzamento
-            HStack(spacing: 6) {
-                ForEach(Step.allCases, id: \.rawValue) { s in
-                    Rectangle()
-                        .fill(s.rawValue <= step.rawValue ? Theme.ink : Theme.line.opacity(0.3))
-                        .frame(width: 16, height: 3)
-                }
+    private var trattini: some View {
+        HStack(spacing: 6) {
+            ForEach(Step.allCases, id: \.rawValue) { s in
+                Rectangle()
+                    .fill(s.rawValue <= step.rawValue ? Theme.ink : Theme.line.opacity(0.3))
+                    .frame(width: 16, height: 3)
             }
+        }
+    }
+
+    private var footer: some View {
+        #if os(iOS)
+        // sul telefono le CTA stanno sotto i trattini, a tutta larghezza
+        VStack(alignment: .leading, spacing: 16) {
+            trattini
+            HStack(spacing: 10) {
+                if step == .biometry {
+                    Button("non ora") { step = .importing }
+                        .buttonStyle(OutlineButtonStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                if step == .importing && importedCount == 0 {
+                    Button("salta") { step = .ready }
+                        .buttonStyle(OutlineButtonStyle())
+                        .frame(maxWidth: .infinity)
+                }
+                Button(primaryLabel) { advance() }
+                    .buttonStyle(InkButtonStyle(prominent: true))
+                    .frame(maxWidth: .infinity)
+                    .disabled(!canAdvance)
+                    .opacity(canAdvance ? 1 : 0.4)
+            }
+        }
+        #else
+        HStack(spacing: 10) {
+            trattini
 
             Spacer()
 
@@ -424,6 +506,7 @@ struct OnboardingView: View {
                 .disabled(!canAdvance)
                 .opacity(canAdvance ? 1 : 0.4)
         }
+        #endif
     }
 
     private var primaryLabel: String {
@@ -432,7 +515,11 @@ struct OnboardingView: View {
         case .password:  return "imposta"
         case .recovery:  return recoverySaved ? "avanti" : "l'ho messa al sicuro"
         case .biometry:  return "attiva"
-        case .importing: return importedCount > 0 ? "avanti" : "scegli file"
+        case .importing:
+            #if os(iOS)
+            if cassettiDalMac > 0 { return "avanti" }
+            #endif
+            return importedCount > 0 ? "avanti" : "scegli file"
         case .ready:     return "entra"
         }
     }
@@ -480,6 +567,9 @@ struct OnboardingView: View {
             }
 
         case .importing:
+            #if os(iOS)
+            if cassettiDalMac > 0 || importedCount > 0 { step = .ready; return }
+            #endif
             if importedCount > 0 { step = .ready } else { showFileImporter = true }
 
         case .ready:
