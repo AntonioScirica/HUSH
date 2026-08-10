@@ -91,6 +91,15 @@ final class VaultLibrary: ObservableObject {
 
     private var loading: Set<String> = []
 
+    /// Butta via la copia in memoria di un progetto (senza salvarla): la
+    /// prossima lettura ricarica da disco. Serve alla vista a elenco, che
+    /// scrive il file per conto suo: la copia qui dentro resterebbe vecchia.
+    func invalida(_ project: VaultFileManager.Project) {
+        open.removeValue(forKey: project.path)
+        dirty.remove(project.path)
+        objectWillChange.send()
+    }
+
     // MARK: - Scrittura
 
     func add(_ entry: VaultEntry, to project: VaultFileManager.Project) {

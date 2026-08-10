@@ -239,6 +239,9 @@ struct ClassicHomeView: View {
         let entry: VaultEntry?
     }
     @State private var editor: BersaglioEditor?
+    /// Osservata per la ricerca globale: quando carica un vault in più,
+    /// i risultati si aggiornano da soli.
+    @ObservedObject private var libreria = VaultLibrary.shared
     /// Voce in attesa del "sei sicuro?" prima di sparire davvero.
     @State private var daEliminare: VaultEntry?
     /// Progetto in attesa dello stesso "sei sicuro?".
@@ -547,6 +550,61 @@ struct ClassicHomeView: View {
                 Rectangle().fill(Theme.line.opacity(0.35)).frame(height: 1.2)
                     .padding(.bottom, 18)
 
+                if !vm.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    // ricerca su tutti i cassetti, non solo su quello aperto
+                    let gruppi = risultatiGlobali
+                    if progetti.contains(where: { !VaultLibrary.shared.isLoaded($0) && $0.id != correnteID }) {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("apro anche gli altri cassetti…")
+                                .font(Theme.mono(10))
+                        }
+                        .foregroundStyle(Theme.inkSoft)
+                        .padding(.bottom, 12)
+                    }
+                    if gruppi.isEmpty {
+                        Text("nessun risultato")
+                            .font(Theme.mono(12))
+                            .foregroundStyle(Theme.inkSoft)
+                            .padding(.top, 20)
+                    }
+                    ForEach(gruppi, id: \.progetto.id) { gruppo in
+                        HStack(spacing: 8) {
+                            Image(systemName: gruppo.progetto.icon ?? "archivebox")
+                                .font(.system(size: 10))
+                            Text(gruppo.progetto.name.lowercased())
+                                .font(Theme.mono(10, .semibold))
+                                .tracking(1.5)
+                        }
+                        .foregroundStyle(Theme.inkSoft)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, 8)
+
+                        ForEach(Array(gruppo.voci.enumerated()), id: \.element.id) { i, r in
+                            Button {
+                                apriRisultato(r)
+                            } label: {
+                                HStack {
+                                    Text(r.titolo.isEmpty ? "senza titolo" : r.titolo.lowercased())
+                                        .font(Theme.mono(12, .semibold))
+                                        .foregroundStyle(Theme.ink)
+                                    Spacer()
+                                    Image(systemName: "arrow.right")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(Theme.inkSoft)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 9)
+                                .background(Theme.paperRaised)
+                                .overlay(Rectangle().strokeBorder(Theme.line.opacity(0.5), lineWidth: 1))
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.bottom, 6)
+                        }
+                        Color.clear.frame(height: 10)
+                    }
+                } else {
                 ForEach(Array(vm.filteredEntries.enumerated()), id: \.element.id) { index, entry in
                     let aperta = apertaID == entry.id
                     EntryTabRow(
@@ -582,9 +640,17 @@ struct ClassicHomeView: View {
                         .transition(.opacity)
                     }
                 }
+                }
             }
             .padding(.top, 34)
             .padding(.horizontal, 10)
+        }
+        // al primo carattere si aprono anche gli altri cassetti (una volta
+        // sola: poi restano in memoria per la sessione)
+        .onChange(of: vm.searchText) { _, q in
+            guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            let daCaricare = progetti
+            Task { await VaultLibrary.shared.preload(daCaricare) }
         }
         #if os(macOS)
         .ignoresSafeArea(edges: .top)
@@ -626,7 +692,6 @@ struct ClassicHomeView: View {
         apertaID = nil
         vm.searchText = ""
         Task { @MainActor in
-            VaultLibrary.shared.closeAll(progetti)
             try? VaultFileManager.shared.selectProject(p)
             if let bytes = try? VaultFileManager.shared.readVault() {
                 await vm.open(fileData: bytes, password: chiave)
@@ -650,6 +715,52 @@ struct ClassicHomeView: View {
         Task {
             guard let bytes = await vm.save() else { return }
             try? VaultFileManager.shared.writeVault(bytes)
+            // la copia che la libreria usa per la ricerca globale è
+            // rimasta indietro: alla prossima lettura si ricarica da disco
+            if let corrente = progetti.first(where: { $0.id == correnteID }) {
+                VaultLibrary.shared.invalida(corrente)
+            }
+        }
+    }
+
+    // MARK: - Ricerca su tutti i cassetti
+
+    private struct RisultatoGlobale: Identifiable {
+        let id: UUID
+        let progetto: VaultFileManager.Project
+        let titolo: String
+    }
+
+    /// Cerca in TUTTI i progetti: quello aperto dallo store (fresco),
+    /// gli altri dalla libreria condivisa, caricata al primo carattere.
+    private var risultatiGlobali: [(progetto: VaultFileManager.Project, voci: [RisultatoGlobale])] {
+        let q = vm.searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return [] }
+        return progetti.compactMap { p in
+            let entries: [VaultEntry] = p.id == correnteID
+                ? vm.store.allEntries
+                : VaultLibrary.shared.entries(of: p)
+            let voci = entries
+                .filter {
+                    $0.title.lowercased().contains(q)
+                        || $0.username.lowercased().contains(q)
+                        || $0.url.lowercased().contains(q)
+                }
+                .map { RisultatoGlobale(id: $0.id, progetto: p, titolo: $0.title) }
+            return voci.isEmpty ? nil : (progetto: p, voci: voci)
+        }
+    }
+
+    private func apriRisultato(_ r: RisultatoGlobale) {
+        if r.progetto.id == correnteID {
+            vm.searchText = ""
+            withAnimation(.easeInOut(duration: 0.22)) { apertaID = r.id }
+        } else {
+            apri(r.progetto)          // azzera ricerca e apertaID…
+            apertaID = r.id           // …ma la voce da aprire è questa
+            #if os(iOS)
+            percorso = [r.progetto.id]
+            #endif
         }
     }
 }

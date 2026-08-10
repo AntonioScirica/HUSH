@@ -93,6 +93,10 @@ struct ProjectsHomeView: View {
     @State private var openCell: Int?
     private var drawerOpen: Bool { openCell != nil }
     @State private var searchText = ""
+    /// Cartella da selezionare appena il cassetto scelto dalla ricerca ha
+    /// finito di aprirsi: impostarla insieme a openCell non funzionava,
+    /// l'onChange di openCell la azzerava subito.
+    @State private var searchPendingFolder: Int?
     /// Cartella estratta al centro (1-based nel cassetto; voce = indice - 1).
     @State private var selectedFolder: Int?
     /// Cartella appena creata: si alza sola, senza estrarsi (niente card).
@@ -560,7 +564,14 @@ struct ProjectsHomeView: View {
             // cassetto cambiato: nessuna cartella estratta, altrimenti una
             // selezione rimasta appesa terrebbe nascosti modifica/chiudi
             .onChange(of: openCell) { _, _ in
-                if selectedFolder != nil { selectedFolder = nil }
+                if let f = searchPendingFolder {
+                    // arrivo dalla ricerca: il cassetto si sta aprendo e la
+                    // cartella va selezionata DOPO, non azzerata
+                    searchPendingFolder = nil
+                    DispatchQueue.main.async { selectedFolder = f }
+                } else if selectedFolder != nil {
+                    selectedFolder = nil
+                }
             }
 
             // agli angoli, staccati dalla barra centrale: chiudere a sinistra,
@@ -928,8 +939,12 @@ struct ProjectsHomeView: View {
     /// estrae la cartella al centro.
     private func openEntry(project: VaultFileManager.Project, folder: Int) {
         let cell = cellIndex(for: project)
-        if openCell != cell { openCell = cell }
-        selectedFolder = folder
+        if openCell != cell {
+            searchPendingFolder = folder
+            openCell = cell
+        } else {
+            selectedFolder = folder
+        }
     }
 
     private static let entryTypeOrder: [EntryKind] = [.login, .secureNote, .card, .identity, .password, .document]
