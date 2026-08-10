@@ -590,31 +590,34 @@ struct OnboardingView: View {
     /// Gli altri gestori di password e i browser esportano tutti un elenco.
     /// Da dove possono arrivare le password: schede informative, per far
     /// capire a colpo d'occhio che qualunque cosa si abbia già va bene.
-    private func fonteImport(numero: String, icona: String, titolo: String, testo: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(numero)
-                    .font(Theme.mono(10))
-                    .foregroundStyle(Theme.inkSoft)
-                Spacer()
+    /// Una riga intera è il bottone: ci clicchi sopra e parte l'azione,
+    /// non serve una CTA a parte più sotto.
+    private func fonteImport(icona: String, titolo: String, testo: String, azione: @escaping () -> Void) -> some View {
+        Button(action: azione) {
+            HStack(spacing: 14) {
                 Image(systemName: icona)
-                    .font(.system(size: 14))
+                    .font(.system(size: 16))
                     .foregroundStyle(Theme.ink)
+                    .frame(width: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(titolo)
+                        .font(Theme.mono(12, .semibold))
+                        .foregroundStyle(Theme.ink)
+                    Text(testo)
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.inkSoft)
             }
-            Text(titolo)
-                .font(Theme.mono(12, .semibold))
-                .foregroundStyle(Theme.ink)
-            Text(testo)
-                .font(Theme.mono(10))
-                .lineSpacing(2)
-                .foregroundStyle(Theme.inkSoft)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
+            .padding(14)
+            .background(Theme.paperRaised)
+            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1.1))
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.paperRaised)
-        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1.1))
+        .buttonStyle(.plain)
     }
 
     private var importStep: some View {
@@ -625,20 +628,32 @@ struct OnboardingView: View {
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // ultima pagina prima della fine: si prende tutto lo spazio,
-            // con le tre strade da cui si può arrivare
-            HStack(alignment: .top, spacing: 12) {
-                fonteImport(numero: "001", icona: "lock.rectangle.stack",
+            // ultima pagina prima della fine: si prende tutto lo spazio.
+            // Quattro righe, tutte cliccabili: le prime tre aprono il
+            // file, l'ultima è la via d'uscita per chi non ha niente da
+            // portare — così il piede qui sotto resta senza CTA doppie.
+            VStack(spacing: 10) {
+                fonteImport(icona: "lock.rectangle.stack",
                             titolo: "Un altro gestore",
-                            testo: "L'esportazione di 1Password, Bitwarden, LastPass e simili.")
-                fonteImport(numero: "002", icona: "globe",
+                            testo: "L'esportazione di un altro programma per le password.") {
+                    showFileImporter = true
+                }
+                fonteImport(icona: "globe",
                             titolo: "Il browser",
-                            testo: "Le password salvate in Chrome, Safari o Firefox, esportate da lì.")
-                fonteImport(numero: "003", icona: "doc.text",
+                            testo: "Le password salvate lì, esportate in un file.") {
+                    showFileImporter = true
+                }
+                fonteImport(icona: "doc.text",
                             titolo: "Un elenco",
-                            testo: "Un file csv qualunque, anche scritto a mano: titolo, utente, password.")
+                            testo: "Un file csv qualunque, anche scritto a mano: titolo, utente, password.") {
+                    showFileImporter = true
+                }
+                fonteImport(icona: "arrow.uturn.left",
+                            titolo: "Niente, per ora",
+                            testo: "Si può sempre fare più avanti, dalle impostazioni.") {
+                    step = .ready
+                }
             }
-            .frame(maxHeight: 150)
 
             if importedCount > 0 {
                 HStack(spacing: 10) {
@@ -783,6 +798,9 @@ struct OnboardingView: View {
         VStack(spacing: 24) {
             trattini
                 .frame(maxWidth: .infinity, alignment: .center)
+            // sul passo dell'import, senza niente importato, le quattro
+            // righe qui sopra sono già l'azione: nessuna CTA doppia sotto
+            if !(step == .importing && importedCount == 0) {
             HStack(spacing: 10) {
                 Spacer(minLength: 0)
 
@@ -795,11 +813,6 @@ struct OnboardingView: View {
                 // indietro, ma non saltare avanti senza i cassetti del Mac —
                 // un telefono senza sarebbe un guscio vuoto con una password
                 // diversa da quella vera
-                if step == .importing && importedCount == 0 {
-                    Button("Salta") { step = .ready }
-                        .buttonStyle(OutlineButtonStyle())
-                        .fixedSize()
-                }
 
                 Button(primaryLabel) { advance() }
                     .buttonStyle(InkButtonStyle(prominent: true))
@@ -808,6 +821,7 @@ struct OnboardingView: View {
                     .opacity(canAdvance ? 1 : 0.4)
 
                 Spacer(minLength: 0)
+            }
             }
         }
         // niente animazione implicita quando "non ora" compare/sparisce:

@@ -150,7 +150,7 @@ enum MasterKey {
         let context = LAContext()
         context.localizedCancelTitle = "Annulla"
         context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
-                               localizedReason: "attivare lo sblocco veloce di Hush") { ok, error in
+                               localizedReason: "confermare che sei tu, prima di mettere la password nel Portachiavi") { ok, error in
             DispatchQueue.main.async {
                 guard ok else {
                     completion(.failure(error ?? KeychainError.unhandled(errSecUserCanceled)))
