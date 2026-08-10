@@ -40,8 +40,7 @@ struct EntryEditorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                IndexLabel(number: entry == nil ? 4 : 5,
-                           text: entry == nil ? "nuova voce · \(kind.label)" : "modifica voce")
+                IndexLabel(text: entry == nil ? "nuova voce · \(kind.label)" : "modifica voce")
                     .padding(.bottom, 2)
 
                 // la categoria si sceglie solo alla nascita: cambiarla a una
@@ -80,38 +79,37 @@ struct EntryEditorView: View {
                     }
 
                     HStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            Group {
-                                if showPassword {
-                                    TextField("password", text: $password)
-                                } else {
-                                    SecureField("password", text: $password)
-                                }
+                        Group {
+                            if showPassword {
+                                TextField("password", text: $password)
+                            } else {
+                                SecureField("password", text: $password)
                             }
-                            .textFieldStyle(.plain)
-                            .font(Theme.mono(13))
-                            // SecureField e TextField hanno metriche interne
-                            // leggermente diverse: senza altezza fissa il campo
-                            // "respira" un pelo passando dall'una all'altra
-                            .frame(height: 18)
-
-                            Button { showPassword.toggle() } label: {
-                                Image(systemName: showPassword ? "eye.slash" : "eye")
-                                    .frame(width: 16, height: 16)
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(Theme.ink)
                         }
-                        .padding(10)
-                        .background(Theme.paperRaised)
-                        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                        .textFieldStyle(.plain)
+                        .font(Theme.mono(13))
+                        // SecureField e TextField hanno metriche interne
+                        // leggermente diverse: senza altezza fissa il campo
+                        // "respira" un pelo passando dall'una all'altra
+                        .frame(height: 18)
+
+                        Button { showPassword.toggle() } label: {
+                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                                .frame(width: 16, height: 16)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(Theme.ink)
 
                         Button { password = PasswordGenerator.generate(.init()) } label: {
                             Image(systemName: "dice")
+                                .frame(width: 16, height: 16)
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(.plain)
                         .foregroundStyle(Theme.ink)
                     }
+                    .padding(10)
+                    .background(Theme.paperRaised)
+                    .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
                     if !password.isEmpty {
                         let strength = PasswordGenerator.strength(of: password)

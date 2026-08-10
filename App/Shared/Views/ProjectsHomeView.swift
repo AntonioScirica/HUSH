@@ -1132,39 +1132,38 @@ struct ProjectsHomeView: View {
             .textFieldStyle(PaperFieldStyle())
 
         HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Group {
-                    if revealNewEntryPassword {
-                        TextField("password", text: $newEntryPassword)
-                    } else {
-                        SecureField("password", text: $newEntryPassword)
-                    }
+            Group {
+                if revealNewEntryPassword {
+                    TextField("password", text: $newEntryPassword)
+                } else {
+                    SecureField("password", text: $newEntryPassword)
                 }
-                .textFieldStyle(.plain)
-                .font(Theme.mono(13))
-                // SecureField e TextField hanno metriche interne
-                // leggermente diverse: senza altezza fissa il campo
-                // "respira" un pelo passando dall'una all'altra
-                .frame(height: 18)
-
-                Button { revealNewEntryPassword.toggle() } label: {
-                    Image(systemName: revealNewEntryPassword ? "eye.slash" : "eye")
-                        .foregroundStyle(Theme.inkSoft)
-                        .frame(width: 16, height: 16)
-                }
-                .buttonStyle(.plain)
             }
-            .padding(10)
-            .background(Theme.paperRaised)
-            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+            .textFieldStyle(.plain)
+            .font(Theme.mono(13))
+            // SecureField e TextField hanno metriche interne
+            // leggermente diverse: senza altezza fissa il campo
+            // "respira" un pelo passando dall'una all'altra
+            .frame(height: 18)
+
+            Button { revealNewEntryPassword.toggle() } label: {
+                Image(systemName: revealNewEntryPassword ? "eye.slash" : "eye")
+                    .foregroundStyle(Theme.inkSoft)
+                    .frame(width: 16, height: 16)
+            }
+            .buttonStyle(.plain)
 
             Button { newEntryPassword = Self.randomPassword() } label: {
                 Image(systemName: "die.face.5")
                     .foregroundStyle(Theme.inkSoft)
+                    .frame(width: 16, height: 16)
             }
             .buttonStyle(.plain)
             .help("Genera password")
         }
+        .padding(10)
+        .background(Theme.paperRaised)
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
         // url: più di uno, come i "siti web" di 1Password
         VStack(alignment: .leading, spacing: 8) {

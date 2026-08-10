@@ -241,6 +241,8 @@ struct ClassicHomeView: View {
     @State private var editor: BersaglioEditor?
     /// Voce in attesa del "sei sicuro?" prima di sparire davvero.
     @State private var daEliminare: VaultEntry?
+    /// Progetto in attesa dello stesso "sei sicuro?".
+    @State private var progettoDaEliminare: VaultFileManager.Project?
     @State private var nuovoProgetto = false
     @State private var nomeProgetto = ""
 
@@ -306,9 +308,25 @@ struct ClassicHomeView: View {
                 Rectangle().fill(Theme.line.opacity(0.3)).frame(width: 1)
                 listaVoci
             }
+            // altrimenti il divisore si fermava dove iniziava il
+            // contenuto delle colonne, staccato dai semafori invece
+            // che filarci dritto da cima a fondo
+            .ignoresSafeArea(edges: .top)
         }
         #endif
     }
+
+    #if os(macOS)
+    /// Maschera per lo ScrollView delle colonne: il contenuto che arriva
+    /// in cima si dissolve invece di apparire dietro ai semafori.
+    private var sfumaturaSuperiore: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: 40)
+            Color.black
+        }
+    }
+    #endif
 
     // MARK: - Colonne
 
@@ -345,6 +363,11 @@ struct ClassicHomeView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Elimina progetto", role: .destructive) {
+                            progettoDaEliminare = p
+                        }
+                    }
                 }
             }
             .padding(8)
@@ -353,6 +376,9 @@ struct ClassicHomeView: View {
             #endif
         }
         #if os(macOS)
+        // i nomi dei progetti che scorrono in cima si dissolvono invece
+        // di finire dietro ai semafori della finestra
+        .mask(sfumaturaSuperiore)
         .ignoresSafeArea(edges: .top)
         // lucchetto e impostazioni vivono in fondo, fuori dallo scroll:
         // sopra restano solo il cerca e l'elenco, che parte sotto i semafori
@@ -419,6 +445,30 @@ struct ClassicHomeView: View {
         } message: {
             Text("Un cassetto nuovo, chiuso con la tua master password.")
         }
+        .alert("Eliminare «\(progettoDaEliminare?.name ?? "")»?",
+               isPresented: Binding(get: { progettoDaEliminare != nil },
+                                    set: { if !$0 { progettoDaEliminare = nil } })) {
+            Button("Annulla", role: .cancel) { progettoDaEliminare = nil }
+            Button("Elimina", role: .destructive) {
+                if let p = progettoDaEliminare { eliminaProgetto(p) }
+                progettoDaEliminare = nil
+            }
+        } message: {
+            Text("Il cassetto e tutto quello che contiene vengono cancellati. Non si può annullare.")
+        }
+    }
+
+    /// Chiude il vault se era quello aperto, cancella il file e aggiorna
+    /// l'elenco: il gemello di "elimina progetto" della parete 3D.
+    private func eliminaProgetto(_ progetto: VaultFileManager.Project) {
+        if progetto.id == correnteID {
+            VaultLibrary.shared.closeAll([progetto])
+            vm.lock()
+            correnteID = nil
+        }
+        VaultFileManager.shared.deleteProject(id: progetto.id)
+        progetti = VaultFileManager.shared.projects
+        if correnteID == nil, let primo = progetti.first { apri(primo) }
     }
 
     /// Crea un progetto vuoto e lo apre: il gemello di "crea progetto"
@@ -511,6 +561,7 @@ struct ClassicHomeView: View {
             .padding(.horizontal, 10)
         }
         #if os(macOS)
+        .mask(sfumaturaSuperiore)
         .ignoresSafeArea(edges: .top)
         #endif
         .background(Theme.paper)
