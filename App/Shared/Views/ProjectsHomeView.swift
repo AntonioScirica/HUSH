@@ -187,6 +187,8 @@ struct ProjectsHomeView: View {
     @State private var newEntryFields: [CustomField] = []
     @State private var newEntryNotes = ""
     @State private var revealNewEntryPassword = false
+    /// Col campo password a fuoco, il dado si accende.
+    @FocusState private var newEntryPasswordFocused: Bool
     // campi delle voci "carta di credito" e "identità" — mostrati solo per
     // il tipo giusto, tutto il resto (progetto, titolo, note) è condiviso
     @State private var newCardHolder = ""
@@ -1145,6 +1147,7 @@ struct ProjectsHomeView: View {
             // leggermente diverse: senza altezza fissa il campo
             // "respira" un pelo passando dall'una all'altra
             .frame(height: 18)
+            .focused($newEntryPasswordFocused)
 
             Button { revealNewEntryPassword.toggle() } label: {
                 Image(systemName: revealNewEntryPassword ? "eye.slash" : "eye")
@@ -1155,12 +1158,29 @@ struct ProjectsHomeView: View {
 
             Button { newEntryPassword = Self.randomPassword() } label: {
                 Image(systemName: "die.face.5")
-                    .foregroundStyle(Theme.inkSoft)
                     .frame(width: 16, height: 16)
             }
             .buttonStyle(.plain)
-            .help("Genera password")
+            .foregroundStyle(newEntryPasswordFocused ? Theme.ink : Theme.inkSoft)
+            .padding(4)
+            .background(newEntryPasswordFocused ? Theme.yellow.opacity(0.7) : .clear)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .help("genera una password casuale")
+            .overlay(alignment: .top) {
+                if newEntryPasswordFocused {
+                    Text("random")
+                        .font(Theme.mono(9, .semibold))
+                        .foregroundStyle(Theme.paper)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Theme.ink)
+                        .fixedSize()
+                        .offset(y: -22)
+                        .transition(.opacity)
+                }
+            }
         }
+        .animation(.easeOut(duration: 0.15), value: newEntryPasswordFocused)
         .padding(10)
         .background(Theme.paperRaised)
         .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))

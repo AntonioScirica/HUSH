@@ -28,6 +28,9 @@ struct EntryEditorView: View {
     @State private var campi: [Campo] = []
     @State private var showPassword = false
     @State private var showDeleteConfirm = false
+    /// Col campo password a fuoco, il dado si accende: capita facilmente
+    /// di non accorgersi che può generarla lui.
+    @FocusState private var passwordFocused: Bool
 
     /// Il documento vive sulla parete del Mac (serve l'allegato cifrato):
     /// qui si può modificare una voce documento esistente, non crearne.
@@ -92,6 +95,7 @@ struct EntryEditorView: View {
                         // leggermente diverse: senza altezza fissa il campo
                         // "respira" un pelo passando dall'una all'altra
                         .frame(height: 18)
+                        .focused($passwordFocused)
 
                         Button { showPassword.toggle() } label: {
                             Image(systemName: showPassword ? "eye.slash" : "eye")
@@ -105,8 +109,26 @@ struct EntryEditorView: View {
                                 .frame(width: 16, height: 16)
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(Theme.ink)
+                        .foregroundStyle(passwordFocused ? Theme.ink : Theme.inkSoft)
+                        .padding(4)
+                        .background(passwordFocused ? Theme.yellow.opacity(0.7) : .clear)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .help("genera una password casuale")
+                        .overlay(alignment: .top) {
+                            if passwordFocused {
+                                Text("random")
+                                    .font(Theme.mono(9, .semibold))
+                                    .foregroundStyle(Theme.paper)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(Theme.ink)
+                                    .fixedSize()
+                                    .offset(y: -22)
+                                    .transition(.opacity)
+                            }
+                        }
                     }
+                    .animation(.easeOut(duration: 0.15), value: passwordFocused)
                     .padding(10)
                     .background(Theme.paperRaised)
                     .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))

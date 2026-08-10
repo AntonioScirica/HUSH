@@ -243,6 +243,9 @@ struct ClassicHomeView: View {
     @State private var daEliminare: VaultEntry?
     /// Progetto in attesa dello stesso "sei sicuro?".
     @State private var progettoDaEliminare: VaultFileManager.Project?
+    /// Progetto il cui bottoncino "elimina" (aperto col tasto destro) è
+    /// visibile in questo momento — uno alla volta.
+    @State private var progettoMenuID: String?
     @State private var nuovoProgetto = false
     @State private var nomeProgetto = ""
 
@@ -322,7 +325,7 @@ struct ClassicHomeView: View {
     private var sfumaturaSuperiore: some View {
         VStack(spacing: 0) {
             LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
-                .frame(height: 40)
+                .frame(height: 90)
             Color.black
         }
     }
@@ -341,33 +344,56 @@ struct ClassicHomeView: View {
 
                 ForEach(progetti) { p in
                     let scelto = p.id == correnteID
-                    Button {
-                        apri(p)
-                        #if os(iOS)
-                        percorso = [p.id]
+                    VStack(alignment: .leading, spacing: 0) {
+                        Button {
+                            apri(p)
+                            #if os(iOS)
+                            percorso = [p.id]
+                            #endif
+                        } label: {
+                            HStack(spacing: 9) {
+                                Image(systemName: p.icon ?? "archivebox")
+                                    .font(.system(size: 12))
+                                    .frame(width: 16)
+                                Text(p.name.lowercased())
+                                    .font(Theme.mono(12, scelto ? .bold : .regular))
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                            }
+                            .foregroundStyle(scelto ? Theme.paper : Theme.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(scelto ? Theme.ink : .clear)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        #if os(macOS)
+                        .background(RightClickCatcher {
+                            progettoMenuID = (progettoMenuID == p.id) ? nil : p.id
+                        })
                         #endif
-                    } label: {
-                        HStack(spacing: 9) {
-                            Image(systemName: p.icon ?? "archivebox")
-                                .font(.system(size: 12))
-                                .frame(width: 16)
-                            Text(p.name.lowercased())
-                                .font(Theme.mono(12, scelto ? .bold : .regular))
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
+
+                        // tasto destro apre questo, non il menu di sistema:
+                        // stessi tratti, stesso font di tutto il resto
+                        if progettoMenuID == p.id {
+                            Button {
+                                progettoDaEliminare = p
+                                progettoMenuID = nil
+                            } label: {
+                                Text("elimina progetto")
+                                    .font(Theme.mono(11, .semibold))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Theme.danger)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                            .background(Theme.paperRaised)
+                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                            .transition(.opacity)
                         }
-                        .foregroundStyle(scelto ? Theme.paper : Theme.ink)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
-                        .background(scelto ? Theme.ink : .clear)
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Elimina progetto", role: .destructive) {
-                            progettoDaEliminare = p
-                        }
-                    }
+                    .animation(.easeOut(duration: 0.12), value: progettoMenuID)
                 }
             }
             .padding(8)
@@ -514,11 +540,11 @@ struct ClassicHomeView: View {
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .fixedSize()
                 }
-                .padding(.horizontal, 10)
                 .padding(.bottom, 14)
 
+                // stessa larghezza delle cartelle sotto: niente più
+                // padding qui, lo mette l'inset comune del contenitore
                 Rectangle().fill(Theme.line.opacity(0.35)).frame(height: 1.2)
-                    .padding(.horizontal, 10)
                     .padding(.bottom, 18)
 
                 ForEach(Array(vm.filteredEntries.enumerated()), id: \.element.id) { index, entry in
@@ -628,3 +654,29 @@ struct ClassicHomeView: View {
         }
     }
 }
+
+#if os(macOS)
+import AppKit
+
+/// Cattura il tasto destro: SwiftUI puro lo offre solo tramite
+/// `.contextMenu`, che è il menu di sistema. Qui invece il clic apre un
+/// bottoncino nostro, disegnato come tutto il resto dell'app.
+private struct RightClickCatcher: NSViewRepresentable {
+    let onRightClick: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = Catcher()
+        view.onRightClick = onRightClick
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        (nsView as? Catcher)?.onRightClick = onRightClick
+    }
+
+    private final class Catcher: NSView {
+        var onRightClick: (() -> Void)?
+        override func rightMouseDown(with event: NSEvent) { onRightClick?() }
+    }
+}
+#endif
