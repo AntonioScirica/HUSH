@@ -241,12 +241,10 @@ struct ClassicHomeView: View {
 
     var body: some View {
         base
-        #if os(macOS)
-        // niente barra del titolo di sistema: vive SOPRA la porta del
-        // caveau e non si può né coprire né dissolvere. Tasti e ricerca
-        // stanno nel contenuto, che la porta copre come tutto il resto.
-        .toolbar(.hidden, for: .windowToolbar)
-        #endif
+        // niente bottoni nella barra del titolo (tasti e ricerca stanno nel
+        // contenuto, che la porta copre come tutto il resto): ma la barra
+        // va lasciata al suo posto, senza nasconderla, o se ne va anche la
+        // striscia coi tasti di chiusura/minimizza/zoom della finestra
         .tint(Theme.ink)
         .preferredColorScheme(.light)
         .onAppear { if attiva { carica() } }
@@ -354,8 +352,9 @@ struct ClassicHomeView: View {
             }
             .padding(8)
             #if os(macOS)
-            // la barra di sistema non c'è più: si lascia spazio ai semafori
-            .padding(.top, 34)
+            // i semafori stanno a sinistra, i tasti a destra: non si
+            // pestano i piedi, basta un filo d'aria sopra
+            .padding(.top, 14)
             #endif
         }
         #if os(macOS)
@@ -436,6 +435,10 @@ struct ClassicHomeView: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.bottom, 14)
+
+                Rectangle().fill(Theme.line).frame(height: 1.2)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 18)
 
                 ForEach(Array(vm.filteredEntries.enumerated()), id: \.element.id) { index, entry in
                     let aperta = apertaID == entry.id
