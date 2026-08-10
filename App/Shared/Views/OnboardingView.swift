@@ -40,6 +40,10 @@ struct OnboardingView: View {
     @State private var reveal = false
     @State private var error: String?
     @FocusState private var passwordFocused: Bool
+    /// Vera solo appena generata dal dado: un edit manuale la spegne, o
+    /// l'avviso "non te la ricorderai" resterebbe attaccato a una password
+    /// scritta a mano solo perché coincide per lunghezza/contenuto.
+    @State private var passwordGenerata = false
 
     @State private var showFileImporter = false
     @State private var importedCount = 0
@@ -231,6 +235,9 @@ struct OnboardingView: View {
                 // "respira" un pelo quando si passa dall'uno all'altro
                 .frame(height: 18)
                 .focused($passwordFocused)
+                .onChange(of: password) { _, _ in
+                    if passwordFocused { passwordGenerata = false }
+                }
 
                 Button { reveal.toggle() } label: {
                     Image(systemName: reveal ? "eye.slash" : "eye")
@@ -244,6 +251,7 @@ struct OnboardingView: View {
                     password = generata
                     confirm = generata
                     reveal = true
+                    passwordGenerata = true
                 } label: {
                     Image(systemName: "dice")
                         .frame(width: 16, height: 16)
@@ -273,7 +281,7 @@ struct OnboardingView: View {
             .background(Theme.paperRaised)
             .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
-            if reveal && !password.isEmpty && password == confirm {
+            if passwordGenerata && !password.isEmpty {
                 Text("è casuale: non te la ricorderai. scrivila subito da qualche parte al sicuro, oltre alla chiave di scorta che arriva dopo.")
                     .font(Theme.mono(10))
                     .foregroundStyle(Theme.danger)
@@ -283,6 +291,7 @@ struct OnboardingView: View {
             SecureField("ripetila", text: $confirm)
                 .textFieldStyle(PaperFieldStyle())
                 .onSubmit(advance)
+                .onChange(of: confirm) { _, _ in passwordGenerata = false }
 
             strengthBar
 
@@ -751,7 +760,7 @@ struct OnboardingView: View {
         // trattini sempre centrati sopra; sotto, le CTA centrate insieme —
         // "indietro" non c'è più qui, è la freccina accanto al numero del
         // passo, in testata
-        VStack(spacing: 16) {
+        VStack(spacing: 24) {
             trattini
                 .frame(maxWidth: .infinity, alignment: .center)
             HStack(spacing: 10) {
