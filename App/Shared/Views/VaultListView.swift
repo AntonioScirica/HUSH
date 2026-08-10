@@ -318,8 +318,13 @@ struct ClassicHomeView: View {
     private func rimuoviToggleSidebar() {
         for ritardo in [0.0, 0.5, 1.5] {
             DispatchQueue.main.asyncAfter(deadline: .now() + ritardo) {
-                for finestra in NSApp.windows where finestra.toolbar != nil {
-                    finestra.toolbar = nil
+                for finestra in NSApp.windows {
+                    if finestra.toolbar != nil { finestra.toolbar = nil }
+                    // senza, sotto ai semafori restava uno strato vuoto del
+                    // colore della finestra: una riga che tagliava in due
+                    // il bordo arrotondato invece di lasciarlo continuo
+                    finestra.styleMask.insert(.fullSizeContentView)
+                    finestra.titlebarAppearsTransparent = true
                 }
             }
         }
@@ -364,8 +369,15 @@ struct ClassicHomeView: View {
                 }
             }
             .padding(8)
+            #if os(macOS)
+            // il colore ora arriva fin sotto ai semafori (niente più
+            // striscia vuota), ma il primo contenuto resta staccato da
+            // loro: non deve sembrare incollato
+            .padding(.top, 46)
+            #endif
         }
         #if os(macOS)
+        .ignoresSafeArea(edges: .top)
         // lucchetto e impostazioni vivono in fondo, fuori dallo scroll:
         // sopra restano solo il cerca e l'elenco, che parte sotto i semafori
         .safeAreaInset(edge: .bottom) {
@@ -522,12 +534,10 @@ struct ClassicHomeView: View {
                     }
                 }
             }
-            .padding(.top, 14)
+            .padding(.top, 46)
             .padding(.horizontal, 10)
         }
         #if os(macOS)
-        // la barra sopra questa colonna non ha tasti: era solo vuoto,
-        // il contenuto può salire fin quasi al bordo della finestra
         .ignoresSafeArea(edges: .top)
         #endif
         .background(Theme.paper)
