@@ -231,8 +231,14 @@ struct ClassicHomeView: View {
     @State private var showSettings = false
     /// La voce aperta nell'accordion (una alla volta).
     @State private var apertaID: UUID?
-    @State private var editingEntry: VaultEntry?
-    @State private var showEditor = false
+    /// Cosa sta modificando l'editor: la sheet nasce da QUESTO valore,
+    /// non da uno stato letto a parte che al primo giro arrivava vuoto.
+    private struct BersaglioEditor: Identifiable {
+        let id = UUID()
+        /// nil = voce nuova
+        let entry: VaultEntry?
+    }
+    @State private var editor: BersaglioEditor?
     @State private var nuovoProgetto = false
     @State private var nomeProgetto = ""
 
@@ -247,18 +253,23 @@ struct ClassicHomeView: View {
         // contenuto, che la porta copre come tutto il resto): ma la barra
         // va lasciata al suo posto, senza nasconderla, o se ne va anche la
         // striscia coi tasti di chiusura/minimizza/zoom della finestra.
-        // Il toggle che NavigationSplitView aggiunge da sé per aprire e
-        // chiudere la sidebar invece non serve: qui la sidebar c'è sempre.
-        #if os(macOS)
-        .toolbar(removing: .sidebarToggle)
-        #endif
         .tint(Theme.ink)
         .preferredColorScheme(.light)
-        .onAppear { if attiva { carica() } }
-        .onChange(of: attiva) { _, on in if on { carica() } }
-        .sheet(isPresented: $showEditor) {
-            EntryEditorView(entry: editingEntry) { saved in
-                if editingEntry != nil {
+        .onAppear {
+            if attiva { carica() }
+            #if os(macOS)
+            rimuoviToggleSidebar()
+            #endif
+        }
+        .onChange(of: attiva) { _, on in
+            if on { carica() }
+            #if os(macOS)
+            rimuoviToggleSidebar()
+            #endif
+        }
+        .sheet(item: $editor) { bersaglio in
+            EntryEditorView(entry: bersaglio.entry) { saved in
+                if bersaglio.entry != nil {
                     vm.store.updateEntry(saved)
                 } else {
                     vm.store.addEntry(saved)
@@ -295,6 +306,26 @@ struct ClassicHomeView: View {
         }
         #endif
     }
+
+    #if os(macOS)
+    /// `.toolbar(removing: .sidebarToggle)` su macOS spesso non toglie
+    /// niente: il bottone sta nella NSToolbar della finestra, e da lì lo si
+    /// leva a mano. Un paio di passaggi ritardati coprono il caso in cui la
+    /// barra nasce dopo la vista.
+    private func rimuoviToggleSidebar() {
+        for ritardo in [0.0, 0.5, 1.5] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + ritardo) {
+                for finestra in NSApp.windows {
+                    guard let toolbar = finestra.toolbar else { continue }
+                    for (i, item) in toolbar.items.enumerated().reversed()
+                    where item.itemIdentifier.rawValue.lowercased().contains("togglesidebar") {
+                        toolbar.removeItem(at: i)
+                    }
+                }
+            }
+        }
+    }
+    #endif
 
     // MARK: - Colonne
 
@@ -429,8 +460,7 @@ struct ClassicHomeView: View {
                         .foregroundStyle(Theme.ink)
                     Spacer()
                     Button {
-                        editingEntry = nil
-                        showEditor = true
+                        editor = BersaglioEditor(entry: nil)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
@@ -460,10 +490,7 @@ struct ClassicHomeView: View {
                         }
                     }
                     .contextMenu {
-                        Button("Modifica") {
-                            editingEntry = entry
-                            showEditor = true
-                        }
+                        Button("Modifica") { editor = BersaglioEditor(entry: entry) }
                         Button("Elimina", role: .destructive) { elimina(entry) }
                     }
 
@@ -471,10 +498,7 @@ struct ClassicHomeView: View {
                     if aperta {
                         EntryInlineDetail(
                             entry: entry,
-                            onEdit: {
-                                editingEntry = entry
-                                showEditor = true
-                            },
+                            onEdit: { editor = BersaglioEditor(entry: entry) },
                             onDelete: { elimina(entry) }
                         )
                         .overlay(alignment: .bottom) {
