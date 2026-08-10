@@ -587,7 +587,6 @@ struct ClassicHomeView: View {
             .padding(.horizontal, 10)
         }
         #if os(macOS)
-        .mask(sfumaturaSuperiore)
         .ignoresSafeArea(edges: .top)
         #endif
         .background(Theme.paper)
