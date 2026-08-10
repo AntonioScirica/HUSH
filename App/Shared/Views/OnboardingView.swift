@@ -56,6 +56,9 @@ struct OnboardingView: View {
     /// Chiave di recupero: si vede solo qui, una volta.
     @State private var recoveryKey = ""
     @State private var recoverySaved = false
+    /// Conferma dopo "copia"/"salva su file": senza, il salvataggio andato
+    /// a buon fine sembrava non aver fatto niente.
+    @State private var recoveryEsito: String?
 
     var body: some View {
         ZStack {
@@ -103,12 +106,36 @@ struct OnboardingView: View {
         }
     }
 
+    /// Il passo a cui si torna cliccando la freccia — non è sempre
+    /// "un rawValue in meno": l'avanzamento salta dei passi (nessun dito,
+    /// nessuna importazione da fare), e tornare indietro deve saltarli
+    /// allo stesso modo, non fermarsi su uno che non si è mai visto.
+    private var passoPrecedente: Step? {
+        switch step {
+        case .intro:     return nil
+        #if os(iOS)
+        case .mac:       return .intro
+        case .password:  return .mac
+        #else
+        case .password:  return .intro
+        #endif
+        case .recovery:  return .password
+        case .biometry:  return .recovery
+        case .importing: return MasterKey.biometryAvailable ? .biometry : .recovery
+        case .ready:
+            #if os(iOS)
+            if cassettiDalMac > 0 { return MasterKey.biometryAvailable ? .biometry : .recovery }
+            #endif
+            return .importing
+        }
+    }
+
     private var title: String {
         switch step {
         case .intro:     return "benvenuto"
         case .password:  return "la tua unica password"
         case .recovery:  return "la chiave di scorta"
-        case .biometry:  return "sblocco col dito"
+        case .biometry:  return MasterKey.tipoBiometria == .volto ? "sblocco col volto" : "sblocco col dito"
         #if os(iOS)
         case .mac:       return "i cassetti del tuo Mac"
         #endif
@@ -198,10 +225,47 @@ struct OnboardingView: View {
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    let generata = PasswordGenerator.generate(.init())
+                    password = generata
+                    confirm = generata
+                    reveal = true
+                } label: {
+                    Image(systemName: "dice")
+                        .frame(width: 16, height: 16)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(passwordFocused ? Theme.ink : Theme.inkSoft)
+                .padding(4)
+                .background(passwordFocused ? Theme.yellow.opacity(0.7) : .clear)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .help("genera una password casuale")
+                .overlay(alignment: .top) {
+                    if passwordFocused {
+                        Text("random")
+                            .font(Theme.mono(9, .semibold))
+                            .foregroundStyle(Theme.paper)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Theme.ink)
+                            .fixedSize()
+                            .offset(y: -22)
+                            .transition(.opacity)
+                    }
+                }
             }
+            .animation(.easeOut(duration: 0.15), value: passwordFocused)
             .padding(10)
             .background(Theme.paperRaised)
             .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+
+            if reveal && !password.isEmpty && password == confirm {
+                Text("è casuale: non te la ricorderai. scrivila subito da qualche parte al sicuro, oltre alla chiave di scorta che arriva dopo.")
+                    .font(Theme.mono(10))
+                    .foregroundStyle(Theme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             SecureField("ripetila", text: $confirm)
                 .textFieldStyle(PaperFieldStyle())
@@ -274,6 +338,7 @@ struct OnboardingView: View {
                     pb.clearContents()
                     pb.setString(recoveryKey, forType: .string)
                     #endif
+                    recoveryEsito = "copiata negli appunti."
                 } label: {
                     Label("copia", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
                 }
@@ -286,7 +351,17 @@ struct OnboardingView: View {
                 .buttonStyle(OutlineButtonStyle())
             }
 
-            HStack(alignment: .top, spacing: 8) {
+            if let recoveryEsito {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark").font(.system(size: 10))
+                    Text(recoveryEsito)
+                }
+                .font(Theme.mono(10, .semibold))
+                .foregroundStyle(Theme.ink)
+                .transition(.opacity)
+            }
+
+            HStack(alignment: .center, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle").font(.system(size: 11))
                 Text("vale quanto la master password: chi ce l'ha entra. stampala o mettila in cassaforte, non lasciarla sul computer accanto ai vault.")
                     .fixedSize(horizontal: false, vertical: true)
@@ -302,6 +377,7 @@ struct OnboardingView: View {
         // su iPhone niente pannello di salvataggio: la chiave si copia negli
         // appunti e la si incolla dove si vuole (Note, un messaggio a sé...)
         UIPasteboard.general.string = recoveryKey
+        recoveryEsito = "copiata negli appunti: incollala dove preferisci."
         #else
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "Hush chiave di recupero.txt"
@@ -316,17 +392,24 @@ struct OnboardingView: View {
             Vale quanto la password stessa: chi ce l'ha apre tutto.
             Stampala e conservala lontano dal computer.
             """
-            try? testo.write(to: url, atomically: true, encoding: .utf8)
+            do {
+                try testo.write(to: url, atomically: true, encoding: .utf8)
+                recoveryEsito = "salvata in «\(url.deletingLastPathComponent().lastPathComponent)/\(url.lastPathComponent)»."
+            } catch {
+                recoveryEsito = "salvataggio non riuscito: \(error.localizedDescription)"
+            }
         }
         #endif
     }
 
     private var biometryStep: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: "touchid")
+            Image(systemName: MasterKey.tipoBiometria == .volto ? "faceid" : "touchid")
                 .font(.system(size: 46, weight: .light))
                 .foregroundStyle(Theme.ink)
-            Text("puoi aprire Hush col dito invece di riscrivere la\npassword ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
+            Text(MasterKey.tipoBiometria == .volto
+                 ? "puoi aprire Hush guardando lo schermo invece di riscrivere\nla password ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore."
+                 : "puoi aprire Hush col dito invece di riscrivere la\npassword ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -641,16 +724,6 @@ struct OnboardingView: View {
 
     // MARK: - Navigazione
 
-    /// Su Mac i bottoni del piede hanno larghezze fisse; sul telefono si
-    /// stringono sul contenuto, o la riga sborda dallo schermo.
-    #if os(iOS)
-    private static let larghezzaSecondaria: CGFloat? = nil
-    private static let larghezzaPrimaria: CGFloat? = nil
-    #else
-    private static let larghezzaSecondaria: CGFloat? = 130
-    private static let larghezzaPrimaria: CGFloat? = 170
-    #endif
-
     private var trattini: some View {
         HStack(spacing: 6) {
             ForEach(Step.allCases, id: \.rawValue) { s in
@@ -662,68 +735,50 @@ struct OnboardingView: View {
     }
 
     private var footer: some View {
-        #if os(iOS)
-        // sul telefono le CTA stanno sotto i trattini, a tutta larghezza
-        VStack(alignment: .leading, spacing: 16) {
+        // stessa struttura ovunque: i trattini stanno sempre centrati sopra,
+        // sotto "indietro" a sinistra e le CTA vere a destra — .fixedSize()
+        // toglie ai bottoni la larghezza infinita che il loro stile impone
+        // di default, o "indietro" e lo Spacer non avrebbero senso
+        VStack(spacing: 16) {
             trattini
                 .frame(maxWidth: .infinity, alignment: .center)
-            if step == .mac {
-                // passaggio obbligato: da qui non si esce senza i cassetti
-                // del Mac. L'app del telefono senza quelli è un guscio vuoto
-                // con una password diversa da quella vera, e sarebbe solo
-                // un pasticcio da spiegare dopo.
+            HStack(spacing: 10) {
+                if let precedente = passoPrecedente {
+                    Button("indietro") {
+                        error = nil
+                        step = precedente
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                    .fixedSize()
+                }
+
+                Spacer(minLength: 12)
+
+                if step == .biometry {
+                    Button("non ora") { step = dopoBiometria }
+                        .buttonStyle(OutlineButtonStyle())
+                        .fixedSize()
+                }
+                // il passo .mac non ha "non ora": da lì si può tornare
+                // indietro, ma non saltare avanti senza i cassetti del Mac —
+                // un telefono senza sarebbe un guscio vuoto con una password
+                // diversa da quella vera
+                if step == .importing && importedCount == 0 {
+                    Button("salta") { step = .ready }
+                        .buttonStyle(OutlineButtonStyle())
+                        .fixedSize()
+                }
+
                 Button(primaryLabel) { advance() }
                     .buttonStyle(InkButtonStyle(prominent: true))
-                    .frame(maxWidth: .infinity)
+                    .fixedSize()
                     .disabled(!canAdvance)
                     .opacity(canAdvance ? 1 : 0.4)
-            } else {
-                HStack(spacing: 10) {
-                    if step == .biometry {
-                        Button("non ora") { step = dopoBiometria }
-                            .buttonStyle(OutlineButtonStyle())
-                            .frame(maxWidth: .infinity)
-                    }
-                    if step == .importing && importedCount == 0 {
-                        Button("salta") { step = .ready }
-                            .buttonStyle(OutlineButtonStyle())
-                            .frame(maxWidth: .infinity)
-                    }
-                    Button(primaryLabel) { advance() }
-                        .buttonStyle(InkButtonStyle(prominent: true))
-                        .frame(maxWidth: .infinity)
-                        .disabled(!canAdvance)
-                        .opacity(canAdvance ? 1 : 0.4)
-                }
             }
         }
         // niente animazione implicita quando "non ora" compare/sparisce:
-        // altrimenti il bottone sopra sembra scivolare al suo posto
+        // altrimenti il bottone accanto sembra scivolare al suo posto
         .transaction { $0.animation = nil }
-        #else
-        HStack(spacing: 10) {
-            trattini
-
-            Spacer()
-
-            if step == .biometry {
-                Button("non ora") { step = .importing }
-                    .buttonStyle(OutlineButtonStyle())
-                    .frame(width: Self.larghezzaSecondaria)
-            }
-            if step == .importing && importedCount == 0 {
-                Button("salta") { step = .ready }
-                    .buttonStyle(OutlineButtonStyle())
-                    .frame(width: Self.larghezzaSecondaria)
-            }
-
-            Button(primaryLabel) { advance() }
-                .buttonStyle(InkButtonStyle(prominent: true))
-                .frame(width: Self.larghezzaPrimaria)
-                .disabled(!canAdvance)
-                .opacity(canAdvance ? 1 : 0.4)
-        }
-        #endif
     }
 
     private var primaryLabel: String {
@@ -734,7 +789,7 @@ struct OnboardingView: View {
             if verificandoPassword { return "verifico…" }
             #endif
             return "imposta"
-        case .recovery:  return "l'ho messa al sicuro"
+        case .recovery:  return "fatto"
         case .biometry:  return "attiva"
         #if os(iOS)
         case .mac:       return cassettiDalMac > 0 ? "avanti" : "scegli la cartella"

@@ -106,7 +106,7 @@ struct VaultDoorView: View {
                         passwordControls
                     } else {
                         Text(waitingTap ? "tocca la porta per aprire"
-                                        : "appoggia il dito sul sensore")
+                                        : (MasterKey.tipoBiometria == .volto ? "guarda lo schermo" : "appoggia il dito sul sensore"))
                             .font(Theme.mono(11))
                             .foregroundStyle(Theme.inkSoft)
                     }

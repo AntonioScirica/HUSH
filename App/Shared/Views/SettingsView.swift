@@ -112,7 +112,7 @@ struct SettingsView: View {
                     section("chiave d'accesso")
 
                     if MasterKey.biometryAvailable {
-                        row("sblocco col dito",
+                        row(MasterKey.tipoBiometria == .volto ? "sblocco col volto" : "sblocco col dito",
                             "apre Hush col sensore invece della password.") {
                             Toggle("", isOn: $biometry)
                                 .labelsHidden()
@@ -122,7 +122,9 @@ struct SettingsView: View {
                     }
 
                     row("riscrivi la password ogni",
-                        "col dito soltanto la si dimentica, e qui non c'è nessun recupero.") {
+                        MasterKey.tipoBiometria == .volto
+                        ? "col volto soltanto la si dimentica, e qui non c'è nessun recupero."
+                        : "col dito soltanto la si dimentica, e qui non c'è nessun recupero.") {
                         Picker("", selection: $typeAgain) {
                             Text("3 giorni").tag(3)
                             Text("7 giorni").tag(7)

@@ -120,6 +120,22 @@ enum MasterKey {
         LAContext().canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
     }
 
+    /// Quale dei due c'è su questa macchina: cambia nome, icona e verbo
+    /// nei testi ("guarda" vs "tocca"). Va chiesto DOPO aver verificato che
+    /// la biometria è disponibile: prima di allora LAContext non lo sa.
+    enum TipoBiometria { case volto, impronta, nessuna }
+    static var tipoBiometria: TipoBiometria {
+        let context = LAContext()
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) else {
+            return .nessuna
+        }
+        switch context.biometryType {
+        case .faceID: return .volto
+        case .touchID: return .impronta
+        default: return .nessuna
+        }
+    }
+
     static var biometryEnabled: Bool {
         UserDefaults.standard.bool(forKey: biometryKey) && SharedKeychain.hasStoredPassword
     }
