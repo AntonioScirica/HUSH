@@ -204,32 +204,6 @@ struct ProjectsHomeView: View {
     @State private var showDocumentImporter = false
     @State private var pendingDocumentURL: URL?
 
-    enum EntryKind: String {
-        case login, secureNote, card, identity, password, document
-
-        var label: String {
-            switch self {
-            case .login: return "accesso"
-            case .secureNote: return "nota sicura"
-            case .card: return "carta di credito"
-            case .identity: return "identità"
-            case .password: return "password"
-            case .document: return "documento"
-            }
-        }
-        var icon: String {
-            switch self {
-            case .login: return "person.crop.circle.badge.checkmark"
-            case .secureNote: return "note.text"
-            case .card: return "creditcard"
-            case .identity: return "person.text.rectangle"
-            case .password: return "key"
-            case .document: return "doc"
-            }
-        }
-    }
-
-
     /// Campo extra libero (stile 1Password): etichetta + valore, testo o
     /// mascherato come una password.
     struct CustomField: Identifiable {

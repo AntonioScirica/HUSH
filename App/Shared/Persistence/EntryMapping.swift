@@ -8,6 +8,34 @@ import VaultCore
 /// note, documento) usano i campi liberi, che il KDBX prevede: restano
 /// leggibili anche aprendo il file con KeePass, invece di finire impastati
 /// dentro alle note.
+/// I tipi di voce dell'app: accesso, nota, carta e così via. Vive qui,
+/// accanto alla mappatura, perché serve sia alla parete 3D del Mac sia
+/// all'editor della vista a elenco (e quindi al telefono).
+enum EntryKind: String, CaseIterable {
+    case login, secureNote, card, identity, password, document
+
+    var label: String {
+        switch self {
+        case .login: return "accesso"
+        case .secureNote: return "nota sicura"
+        case .card: return "carta di credito"
+        case .identity: return "identità"
+        case .password: return "password"
+        case .document: return "documento"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .login: return "person.crop.circle.badge.checkmark"
+        case .secureNote: return "note.text"
+        case .card: return "creditcard"
+        case .identity: return "person.text.rectangle"
+        case .password: return "key"
+        case .document: return "doc"
+        }
+    }
+}
+
 enum EntryMapping {
     /// Chiave in cui si annota di che tipo è la voce. Il prefisso evita di
     /// pestare i piedi ai campi di altri programmi.

@@ -242,7 +242,10 @@ struct ClassicHomeView: View {
     var body: some View {
         base
         #if os(macOS)
-        .toolbar(removing: .sidebarToggle)
+        // niente barra del titolo di sistema: vive SOPRA la porta del
+        // caveau e non si può né coprire né dissolvere. Tasti e ricerca
+        // stanno nel contenuto, che la porta copre come tutto il resto.
+        .toolbar(.hidden, for: .windowToolbar)
         #endif
         .tint(Theme.ink)
         .preferredColorScheme(.light)
@@ -293,6 +296,30 @@ struct ClassicHomeView: View {
     private var colonnaProgetti: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 6) {
+                #if os(macOS)
+                // tasti nel contenuto, non nella barra di sistema: così la
+                // porta del caveau li copre e li scopre insieme al resto
+                HStack(spacing: 14) {
+                    Spacer(minLength: 0)
+                    Button { nomeProgetto = ""; nuovoProgetto = true } label: {
+                        Image(systemName: "plus")
+                    }
+                    .help("Nuovo progetto")
+                    Button { showSettings = true } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .help("Impostazioni")
+                    Button { onLock() } label: {
+                        Image(systemName: "lock")
+                    }
+                    .help("Blocca")
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.ink)
+                .padding(.bottom, 10)
+                #endif
+
                 // il cerca vive qui, sopra il primo progetto: filtra le
                 // voci del progetto aperto, mostrate nella colonna accanto
                 TextField("cerca…", text: $vm.searchText)
@@ -326,37 +353,34 @@ struct ClassicHomeView: View {
                 }
             }
             .padding(8)
+            #if os(macOS)
+            // la barra di sistema non c'è più: si lascia spazio ai semafori
+            .padding(.top, 34)
+            #endif
         }
+        #if os(macOS)
+        .ignoresSafeArea(edges: .top)
+        #endif
         .background(Theme.paper)
         .navigationTitle("progetti")
         // larga abbastanza da mostrare tutti i tasti della barra: più
         // stretta, macOS li nasconde dietro il menu »
         .navigationSplitViewColumnWidth(min: 220, ideal: 260)
+        #if os(iOS)
         .toolbar {
             ToolbarItemGroup {
-                // la barra vive sopra la porta e non si può coprire: a vault
-                // chiuso i tasti svaniscono in dissolvenza invece di sparire
-                // di colpo (nascondere la barra intera faceva saltare tutto
-                // il contenuto, perché cambiava l'altezza del titolo)
-                HStack(spacing: 14) {
-                    Button { nomeProgetto = ""; nuovoProgetto = true } label: {
-                        Image(systemName: "plus")
-                    }
-                    .help("Nuovo progetto")
-                    Button { showSettings = true } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .help("Impostazioni")
-                    Button { onLock() } label: {
-                        Image(systemName: "lock")
-                    }
-                    .help("Blocca")
+                Button { nomeProgetto = ""; nuovoProgetto = true } label: {
+                    Image(systemName: "plus")
                 }
-                .opacity(chromeVisibile ? 1 : 0)
-                .allowsHitTesting(chromeVisibile)
-                .animation(.easeInOut(duration: 0.35), value: chromeVisibile)
+                Button { showSettings = true } label: {
+                    Image(systemName: "gearshape")
+                }
+                Button { onLock() } label: {
+                    Image(systemName: "lock")
+                }
             }
         }
+        #endif
         .alert("Nuovo progetto", isPresented: $nuovoProgetto) {
             TextField("nome", text: $nomeProgetto)
             Button("Crea") { creaProgetto() }

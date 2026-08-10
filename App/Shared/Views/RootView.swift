@@ -125,8 +125,16 @@ public struct RootView: View {
                             if vistaClassica { Spacer() }
                             #endif
                             HStack {
+                                // vista a elenco: in basso a destra, fuori
+                                // dalla sidebar. Parete: in alto a sinistra.
+                                #if os(macOS)
+                                if vistaClassica { Spacer() }
+                                TrialBanner { openSettings = true }
+                                if !vistaClassica { Spacer() }
+                                #else
                                 TrialBanner { openSettings = true }
                                 Spacer()
+                                #endif
                             }
                             #if os(macOS)
                             if !vistaClassica { Spacer() }
