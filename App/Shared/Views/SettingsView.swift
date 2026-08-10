@@ -275,7 +275,7 @@ struct SettingsView: View {
 
                     divider
                     section("manda al telefono")
-                    Text("via WiFi, senza passare da nessun server: mentre Hush è aperto qui, resta in ascolto da solo. apri Hush sul telefono e cerca il Mac.")
+                    Text("via WiFi, senza passare da nessun server. resta acceso solo quanto ti serve: fuori casa il Mac non deve annunciarsi in giro.")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
@@ -366,14 +366,9 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             switch sync.stato {
             case .fermo, .inCerca:
-                // RootView lo rimette in ascolto da sé un attimo dopo:
-                // capita solo per un istante, ad esempio appena sbloccato
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("mi metto in ascolto…")
-                        .font(Theme.mono(11))
-                }
-                .foregroundStyle(Theme.inkSoft)
+                Button("accendi la ricerca") { sync.avviaAscolto() }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
 
             case .inAttesa:
                 HStack(spacing: 8) {
@@ -382,6 +377,9 @@ struct SettingsView: View {
                         .font(Theme.mono(11))
                 }
                 .foregroundStyle(Theme.inkSoft)
+                Button("spegni") { sync.ferma() }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
 
             case .collegato(let nome):
                 HStack(spacing: 8) {

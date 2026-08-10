@@ -172,7 +172,10 @@ public struct RootView: View {
         .onChange(of: unlocked) { _, on in
             if on {
                 // il telefono che si collega non sa già cosa mandargli:
-                // lo prepariamo al volo solo quando serve davvero
+                // lo prepariamo al volo solo quando serve davvero. L'ascolto
+                // vero e proprio invece parte solo col bottone nelle
+                // impostazioni: da sbloccato e basta, il Mac trasmetterebbe
+                // "sono qui" su qualunque rete, anche fuori casa.
                 sync.quandoConnesso = { peer in
                     Task {
                         guard let (_, folder) = try? await VaultTransfer.exportAsync(
@@ -184,8 +187,8 @@ public struct RootView: View {
                         sync.pronto(files: files, per: peer)
                     }
                 }
-                sync.avviaAscolto()
             } else {
+                // richiuso Hush: l'ascolto si ferma comunque, di sicuro
                 sync.ferma()
             }
         }
