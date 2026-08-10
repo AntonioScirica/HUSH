@@ -310,19 +310,16 @@ struct ClassicHomeView: View {
     }
 
     #if os(macOS)
-    /// `.toolbar(removing: .sidebarToggle)` su macOS spesso non toglie
-    /// niente: il bottone sta nella NSToolbar della finestra, e da lì lo si
-    /// leva a mano. Un paio di passaggi ritardati coprono il caso in cui la
-    /// barra nasce dopo la vista.
+    /// La NSToolbar che NavigationSplitView appiccica alla finestra è una
+    /// striscia invisibile che si mangia i click su tutto quello che ci
+    /// finisce sotto (i nostri tasti). Non contiene niente di nostro: via
+    /// tutta. I semafori non le appartengono e restano. Passaggi ritardati
+    /// perché SwiftUI a volte la ricrea dopo la vista.
     private func rimuoviToggleSidebar() {
         for ritardo in [0.0, 0.5, 1.5] {
             DispatchQueue.main.asyncAfter(deadline: .now() + ritardo) {
-                for finestra in NSApp.windows {
-                    guard let toolbar = finestra.toolbar else { continue }
-                    for (i, item) in toolbar.items.enumerated().reversed()
-                    where item.itemIdentifier.rawValue.lowercased().contains("togglesidebar") {
-                        toolbar.removeItem(at: i)
-                    }
+                for finestra in NSApp.windows where finestra.toolbar != nil {
+                    finestra.toolbar = nil
                 }
             }
         }
@@ -334,30 +331,6 @@ struct ClassicHomeView: View {
     private var colonnaProgetti: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 6) {
-                #if os(macOS)
-                // tasti nel contenuto, non nella barra di sistema: così la
-                // porta del caveau li copre e li scopre insieme al resto
-                HStack(spacing: 14) {
-                    Spacer(minLength: 0)
-                    Button { nomeProgetto = ""; nuovoProgetto = true } label: {
-                        Image(systemName: "plus")
-                    }
-                    .help("Nuovo progetto")
-                    Button { showSettings = true } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .help("Impostazioni")
-                    Button { onLock() } label: {
-                        Image(systemName: "lock")
-                    }
-                    .help("Blocca")
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.ink)
-                .padding(.bottom, 10)
-                #endif
-
                 // il cerca vive qui, sopra il primo progetto: filtra le
                 // voci del progetto aperto, mostrate nella colonna accanto
                 TextField("cerca…", text: $vm.searchText)
@@ -391,14 +364,37 @@ struct ClassicHomeView: View {
                 }
             }
             .padding(8)
-            #if os(macOS)
-            // i semafori stanno a sinistra, i tasti a destra: non si
-            // pestano i piedi, basta un filo d'aria sopra
-            .padding(.top, 14)
-            #endif
         }
         #if os(macOS)
-        .ignoresSafeArea(edges: .top)
+        // lucchetto e impostazioni vivono in fondo, fuori dallo scroll:
+        // sopra restano solo il cerca e l'elenco, che parte sotto i semafori
+        .safeAreaInset(edge: .bottom) {
+            // scatolina in basso a sinistra, larga quanto i suoi tasti:
+            // come i pulsanti d'angolo della parete
+            HStack {
+                HStack(spacing: 14) {
+                    Button { showSettings = true } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .help("Impostazioni")
+                    Button { onLock() } label: {
+                        Image(systemName: "lock")
+                    }
+                    .help("Blocca")
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Theme.paperRaised)
+                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
         #endif
         .background(Theme.paper)
         .navigationTitle("progetti")
