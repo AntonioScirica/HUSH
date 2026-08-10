@@ -486,7 +486,7 @@ struct ClassicHomeView: View {
                 .padding(.horizontal, 10)
                 .padding(.bottom, 14)
 
-                Rectangle().fill(Theme.line).frame(height: 1.2)
+                Rectangle().fill(Theme.line.opacity(0.35)).frame(height: 1.2)
                     .padding(.horizontal, 10)
                     .padding(.bottom, 18)
 

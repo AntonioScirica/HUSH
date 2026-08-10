@@ -159,6 +159,14 @@ struct EntryEditorView: View {
                     }
                 }
 
+            }
+            .padding(26)
+        }
+        // le CTA stanno SEMPRE in fondo alla finestra, fuori dallo
+        // scorrimento: coi campi corti non salgono a metà, coi campi
+        // lunghi non scappano sotto
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 10) {
                 HStack(spacing: 10) {
                     Button("annulla") { dismiss() }
                         .buttonStyle(OutlineButtonStyle())
@@ -169,7 +177,6 @@ struct EntryEditorView: View {
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                         .opacity(title.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1)
                 }
-                .padding(.top, 8)
 
                 if entry != nil {
                     Button("elimina voce") { showDeleteConfirm = true }
@@ -177,10 +184,12 @@ struct EntryEditorView: View {
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.danger)
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 4)
                 }
             }
-            .padding(26)
+            .padding(.horizontal, 26)
+            .padding(.bottom, 22)
+            .padding(.top, 10)
+            .background(Theme.paper)
         }
         .frame(minWidth: 420, minHeight: 440)
         .background(Theme.paper)
