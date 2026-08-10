@@ -101,7 +101,20 @@ struct OnboardingView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
-            IndexLabel(number: step.rawValue + 1, text: title)
+            HStack(spacing: 10) {
+                if let precedente = passoPrecedente {
+                    Button {
+                        error = nil
+                        step = precedente
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Theme.inkSoft)
+                }
+                IndexLabel(number: step.rawValue + 1, text: title)
+            }
             Rectangle().fill(Theme.line).frame(height: 1.2)
         }
     }
@@ -735,24 +748,14 @@ struct OnboardingView: View {
     }
 
     private var footer: some View {
-        // stessa struttura ovunque: i trattini stanno sempre centrati sopra,
-        // sotto "indietro" a sinistra e le CTA vere a destra — .fixedSize()
-        // toglie ai bottoni la larghezza infinita che il loro stile impone
-        // di default, o "indietro" e lo Spacer non avrebbero senso
+        // trattini sempre centrati sopra; sotto, le CTA centrate insieme —
+        // "indietro" non c'è più qui, è la freccina accanto al numero del
+        // passo, in testata
         VStack(spacing: 16) {
             trattini
                 .frame(maxWidth: .infinity, alignment: .center)
             HStack(spacing: 10) {
-                if let precedente = passoPrecedente {
-                    Button("indietro") {
-                        error = nil
-                        step = precedente
-                    }
-                    .buttonStyle(OutlineButtonStyle())
-                    .fixedSize()
-                }
-
-                Spacer(minLength: 12)
+                Spacer(minLength: 0)
 
                 if step == .biometry {
                     Button("non ora") { step = dopoBiometria }
@@ -774,6 +777,8 @@ struct OnboardingView: View {
                     .fixedSize()
                     .disabled(!canAdvance)
                     .opacity(canAdvance ? 1 : 0.4)
+
+                Spacer(minLength: 0)
             }
         }
         // niente animazione implicita quando "non ora" compare/sparisce:
