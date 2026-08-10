@@ -184,6 +184,7 @@ struct EntryEditorView: View {
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.danger)
                         .frame(maxWidth: .infinity)
+                        .padding(.top, 8)
                 }
             }
             .padding(.horizontal, 26)
