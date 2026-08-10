@@ -176,6 +176,7 @@ struct EntryEditorView: View {
                         .buttonStyle(.plain)
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.danger)
+                        .frame(maxWidth: .infinity)
                         .padding(.top, 4)
                 }
             }

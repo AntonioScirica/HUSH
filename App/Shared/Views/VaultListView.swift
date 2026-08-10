@@ -239,6 +239,8 @@ struct ClassicHomeView: View {
         let entry: VaultEntry?
     }
     @State private var editor: BersaglioEditor?
+    /// Voce in attesa del "sei sicuro?" prima di sparire davvero.
+    @State private var daEliminare: VaultEntry?
     @State private var nuovoProgetto = false
     @State private var nomeProgetto = ""
 
@@ -418,6 +420,17 @@ struct ClassicHomeView: View {
             }
         }
         #endif
+        .alert("Eliminare «\(daEliminare?.title ?? "")»?",
+               isPresented: Binding(get: { daEliminare != nil },
+                                    set: { if !$0 { daEliminare = nil } })) {
+            Button("Annulla", role: .cancel) { daEliminare = nil }
+            Button("Elimina", role: .destructive) {
+                if let voce = daEliminare { eliminaDavvero(voce) }
+                daEliminare = nil
+            }
+        } message: {
+            Text("Non si può annullare.")
+        }
         .alert("Nuovo progetto", isPresented: $nuovoProgetto) {
             TextField("nome", text: $nomeProgetto)
             Button("Crea") { creaProgetto() }
@@ -566,7 +579,12 @@ struct ClassicHomeView: View {
         }
     }
 
+    /// Cancellare non si fa mai al primo click: prima il "sei sicuro?".
     private func elimina(_ entry: VaultEntry) {
+        daEliminare = entry
+    }
+
+    private func eliminaDavvero(_ entry: VaultEntry) {
         if apertaID == entry.id { apertaID = nil }
         vm.store.deleteEntry(id: entry.id)
         salva()
