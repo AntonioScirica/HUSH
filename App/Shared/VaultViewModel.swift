@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import UniformTypeIdentifiers
 import VaultCore
 
 #if os(iOS)
@@ -103,7 +104,16 @@ final class VaultViewModel: ObservableObject {
 
     func copyToClipboard(_ text: String, label: String) {
         #if os(iOS)
-        UIPasteboard.general.string = text
+        // localOnly: la password non deve rimbalzare sugli altri dispositivi
+        // con la clipboard universale. E una scadenza di sistema, oltre alla
+        // nostra: se l'app viene chiusa prima del timer, ci pensa iOS.
+        UIPasteboard.general.setItems(
+            [[UTType.utf8PlainText.identifier: text]],
+            options: [
+                .localOnly: true,
+                .expirationDate: Date().addingTimeInterval(clipboardClearSeconds),
+            ]
+        )
         #elseif os(macOS)
         let pb = NSPasteboard.general
         pb.clearContents()

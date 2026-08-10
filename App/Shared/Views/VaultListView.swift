@@ -201,6 +201,8 @@ private struct EntryTabRow: View {
                     .fill(Theme.line)
                     .frame(height: 1.1)
             }
+            // un po' d'aria fra una linguetta e la riga di quella dopo
+            .padding(.bottom, 14)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -217,6 +219,10 @@ struct ClassicHomeView: View {
     /// False finché la porta non si è aperta: la vista sta già lì sotto,
     /// ma i cassetti si caricano solo quando c'è la chiave di sessione.
     var attiva: Bool = true
+    /// La barra coi tasti (+, ingranaggio, lucchetto) compare solo a vault
+    /// aperto: a porta chiusa quei tasti sarebbero visibili E cliccabili
+    /// sopra la porta, perché la barra vive nel livello del titolo.
+    var chromeVisibile: Bool = true
 
     @State private var progetti = VaultFileManager.shared.projects
     @State private var correnteID: String?
@@ -235,6 +241,9 @@ struct ClassicHomeView: View {
 
     var body: some View {
         base
+        #if os(macOS)
+        .toolbar(removing: .sidebarToggle)
+        #endif
         .tint(Theme.ink)
         .preferredColorScheme(.light)
         .onAppear { if attiva { carica() } }
@@ -283,7 +292,13 @@ struct ClassicHomeView: View {
 
     private var colonnaProgetti: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 2) {
+            LazyVStack(alignment: .leading, spacing: 6) {
+                // il cerca vive qui, sopra il primo progetto: filtra le
+                // voci del progetto aperto, mostrate nella colonna accanto
+                TextField("cerca…", text: $vm.searchText)
+                    .textFieldStyle(PaperFieldStyle())
+                    .padding(.bottom, 8)
+
                 ForEach(progetti) { p in
                     let scelto = p.id == correnteID
                     Button {
@@ -314,21 +329,32 @@ struct ClassicHomeView: View {
         }
         .background(Theme.paper)
         .navigationTitle("progetti")
-        .navigationSplitViewColumnWidth(min: 170, ideal: 200)
+        // larga abbastanza da mostrare tutti i tasti della barra: più
+        // stretta, macOS li nasconde dietro il menu »
+        .navigationSplitViewColumnWidth(min: 220, ideal: 260)
         .toolbar {
             ToolbarItemGroup {
-                Button { nomeProgetto = ""; nuovoProgetto = true } label: {
-                    Image(systemName: "plus")
+                // la barra vive sopra la porta e non si può coprire: a vault
+                // chiuso i tasti svaniscono in dissolvenza invece di sparire
+                // di colpo (nascondere la barra intera faceva saltare tutto
+                // il contenuto, perché cambiava l'altezza del titolo)
+                HStack(spacing: 14) {
+                    Button { nomeProgetto = ""; nuovoProgetto = true } label: {
+                        Image(systemName: "plus")
+                    }
+                    .help("Nuovo progetto")
+                    Button { showSettings = true } label: {
+                        Image(systemName: "gearshape")
+                    }
+                    .help("Impostazioni")
+                    Button { onLock() } label: {
+                        Image(systemName: "lock")
+                    }
+                    .help("Blocca")
                 }
-                .help("Nuovo progetto")
-                Button { showSettings = true } label: {
-                    Image(systemName: "gearshape")
-                }
-                .help("Impostazioni")
-                Button { onLock() } label: {
-                    Image(systemName: "lock")
-                }
-                .help("Blocca")
+                .opacity(chromeVisibile ? 1 : 0)
+                .allowsHitTesting(chromeVisibile)
+                .animation(.easeInOut(duration: 0.35), value: chromeVisibile)
             }
         }
         .alert("Nuovo progetto", isPresented: $nuovoProgetto) {
@@ -429,8 +455,15 @@ struct ClassicHomeView: View {
             .padding(.top, 14)
             .padding(.horizontal, 10)
         }
+        #if os(macOS)
+        // la barra sopra questa colonna non ha tasti: era solo vuoto,
+        // il contenuto può salire fin quasi al bordo della finestra
+        .ignoresSafeArea(edges: .top)
+        #endif
         .background(Theme.paper)
+        #if os(iOS)
         .searchable(text: $vm.searchText, prompt: "cerca…")
+        #endif
         .navigationTitle("")
         .overlay {
             if vm.filteredEntries.isEmpty {

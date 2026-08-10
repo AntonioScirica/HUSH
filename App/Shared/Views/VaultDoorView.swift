@@ -8,6 +8,9 @@ struct VaultDoorView: View {
     /// quel caso la porta rifà l'apertura al contrario invece di comparire
     /// già chiusa.
     var closing = false
+    /// Scatta appena la password è giusta e l'anta comincia a muoversi:
+    /// chi sta dietro ha ~1,6s per farsi trovare già pronto nel vano.
+    var onOpeningStarted: () -> Void = {}
     let onUnlocked: () -> Void
 
     @State private var password = ""
@@ -303,6 +306,7 @@ struct VaultDoorView: View {
     /// stacca e ruota sul perno scoprendo la parete. Solo a fine corsa si
     /// passa alla schermata vera.
     private func open() {
+        onOpeningStarted()
         withAnimation(.easeInOut(duration: 0.45)) {
             wheelAngle += 720
             opening = true

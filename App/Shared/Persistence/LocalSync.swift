@@ -109,6 +109,13 @@ final class LocalSync: NSObject, ObservableObject {
                     self.stato = .trasferendo(fatti: fatti, totale: totale)
                     if fatti == totale {
                         self.stato = .fatto(totale)
+                        // la copia temporanea esportata per l'invio non
+                        // serve più: cifrata sì, ma in giro non si lascia
+                        let tmp = FileManager.default.temporaryDirectory.standardizedFileURL.path
+                        for cartella in Set(self.fileDaMandare.map { $0.deletingLastPathComponent() })
+                        where cartella.standardizedFileURL.path.hasPrefix(tmp) {
+                            try? FileManager.default.removeItem(at: cartella)
+                        }
                         // pronto per il prossimo: senza svuotarli, una
                         // seconda connessione rimanderebbe questi stessi
                         // file invece di ripreparali al volo
@@ -213,7 +220,11 @@ extension LocalSync: MCSessionDelegate {
                              fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Error?) {
         Task { @MainActor in
             guard let localURL, error == nil, let cartella = self.cartellaRicezione else { return }
-            let dest = cartella.appendingPathComponent(resourceName)
+            // il nome arriva dalla rete: si tiene solo l'ultimo pezzo, così
+            // un nome ostile con dentro "../" non può scrivere fuori dalla
+            // cartella d'atterraggio
+            let nome = (resourceName as NSString).lastPathComponent
+            let dest = cartella.appendingPathComponent(nome)
             try? FileManager.default.moveItem(at: localURL, to: dest)
             self.arrivati += 1
             let totale = self.totaleAtteso ?? self.arrivati
@@ -221,6 +232,10 @@ extension LocalSync: MCSessionDelegate {
             if self.arrivati >= totale {
                 self.stato = .fatto(self.arrivati)
                 self.alCompletamento?(cartella)
+                // i file sono stati copiati nella cartella dei progetti:
+                // la copia d'atterraggio non deve restare nei temporanei
+                try? FileManager.default.removeItem(at: cartella)
+                self.cartellaRicezione = nil
             }
         }
     }
