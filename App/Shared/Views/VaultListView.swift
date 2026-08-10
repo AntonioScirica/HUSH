@@ -257,18 +257,8 @@ struct ClassicHomeView: View {
         // striscia coi tasti di chiusura/minimizza/zoom della finestra.
         .tint(Theme.ink)
         .preferredColorScheme(.light)
-        .onAppear {
-            if attiva { carica() }
-            #if os(macOS)
-            rimuoviToggleSidebar()
-            #endif
-        }
-        .onChange(of: attiva) { _, on in
-            if on { carica() }
-            #if os(macOS)
-            rimuoviToggleSidebar()
-            #endif
-        }
+        .onAppear { if attiva { carica() } }
+        .onChange(of: attiva) { _, on in if on { carica() } }
         .sheet(item: $editor) { bersaglio in
             EntryEditorView(entry: bersaglio.entry) { saved in
                 if bersaglio.entry != nil {
@@ -301,35 +291,24 @@ struct ClassicHomeView: View {
                 }
         }
         #else
-        NavigationSplitView {
-            colonnaProgetti
-        } detail: {
-            listaVoci
+        // niente NavigationSplitView: da qualche versione di macOS la
+        // sidebar che offre è una card fluttuante, staccata dai semafori
+        // e dal resto della finestra, e non c'è modificatore che la rimetta
+        // a filo. Due colonne disegnate a mano, come il resto dell'app.
+        ZStack {
+            // sotto a tutto, carta piena fin dentro l'angolo: senza,
+            // il divisore fra le colonne spuntava di bianco appena sopra
+            // al punto in cui iniziava lo sfondo delle due colonne
+            Theme.paper.ignoresSafeArea()
+            HStack(spacing: 0) {
+                colonnaProgetti
+                    .frame(width: 260)
+                Rectangle().fill(Theme.line.opacity(0.3)).frame(width: 1)
+                listaVoci
+            }
         }
         #endif
     }
-
-    #if os(macOS)
-    /// La NSToolbar che NavigationSplitView appiccica alla finestra è una
-    /// striscia invisibile che si mangia i click su tutto quello che ci
-    /// finisce sotto (i nostri tasti). Non contiene niente di nostro: via
-    /// tutta. I semafori non le appartengono e restano. Passaggi ritardati
-    /// perché SwiftUI a volte la ricrea dopo la vista.
-    private func rimuoviToggleSidebar() {
-        for ritardo in [0.0, 0.5, 1.5] {
-            DispatchQueue.main.asyncAfter(deadline: .now() + ritardo) {
-                for finestra in NSApp.windows {
-                    if finestra.toolbar != nil { finestra.toolbar = nil }
-                    // senza, sotto ai semafori restava uno strato vuoto del
-                    // colore della finestra: una riga che tagliava in due
-                    // il bordo arrotondato invece di lasciarlo continuo
-                    finestra.styleMask.insert(.fullSizeContentView)
-                    finestra.titlebarAppearsTransparent = true
-                }
-            }
-        }
-    }
-    #endif
 
     // MARK: - Colonne
 
@@ -370,10 +349,7 @@ struct ClassicHomeView: View {
             }
             .padding(8)
             #if os(macOS)
-            // il colore ora arriva fin sotto ai semafori (niente più
-            // striscia vuota), ma il primo contenuto resta staccato da
-            // loro: non deve sembrare incollato
-            .padding(.top, 46)
+            .padding(.top, 34)
             #endif
         }
         #if os(macOS)
@@ -410,9 +386,6 @@ struct ClassicHomeView: View {
         #endif
         .background(Theme.paper)
         .navigationTitle("progetti")
-        // larga abbastanza da mostrare tutti i tasti della barra: più
-        // stretta, macOS li nasconde dietro il menu »
-        .navigationSplitViewColumnWidth(min: 220, ideal: 260)
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup {
@@ -534,7 +507,7 @@ struct ClassicHomeView: View {
                     }
                 }
             }
-            .padding(.top, 46)
+            .padding(.top, 34)
             .padding(.horizontal, 10)
         }
         #if os(macOS)
