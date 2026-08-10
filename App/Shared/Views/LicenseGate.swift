@@ -19,8 +19,8 @@ struct TrialBanner: View {
                 Image(systemName: "clock")
                     .font(.system(size: 10, weight: .semibold))
                 Text(License.trialDaysLeft == 1
-                     ? "ultimo giorno"
-                     : "prova · \(License.trialDaysLeft) giorni")
+                     ? "Ultimo giorno"
+                     : "Prova · \(License.trialDaysLeft) giorni")
                     .font(Theme.mono(10, .semibold))
             }
             .foregroundStyle(Theme.ink)
@@ -53,16 +53,16 @@ struct LicenseWall: View {
 
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 14) {
-                    IndexLabel(text: "la prova è finita")
+                    IndexLabel(text: "La prova è finita")
                     Rectangle().fill(Theme.line).frame(height: 1.2)
                 }
 
-                Text("i sette giorni sono passati. per continuare a usare\nHush serve una licenza.")
+                Text("I sette giorni sono passati. Per continuare a usare\nHush serve una licenza.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
 
-                TextField("incolla qui la licenza", text: $licenseText, axis: .vertical)
+                TextField("Incolla qui la licenza", text: $licenseText, axis: .vertical)
                     .textFieldStyle(PaperFieldStyle())
                     .lineLimit(2...4)
 
@@ -73,11 +73,11 @@ struct LicenseWall: View {
                     Text(note).font(Theme.mono(11)).foregroundStyle(Theme.ink)
                 }
 
-                Button("attiva") {
+                Button("Attiva") {
                     if License.register(licenseText) != nil {
                         onActivated()
                     } else {
-                        error = "questa licenza non è valida."
+                        error = "Questa licenza non è valida."
                     }
                 }
                 .buttonStyle(InkButtonStyle(prominent: true))
@@ -89,10 +89,10 @@ struct LicenseWall: View {
                 // I vault restano tuoi anche senza licenza: si possono
                 // portare via in qualunque momento.
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("i tuoi cassetti restano tuoi")
+                    Text("I tuoi cassetti restano tuoi")
                         .font(Theme.mono(11, .semibold))
                         .foregroundStyle(Theme.ink)
-                    Text("puoi portarli via anche adesso: restano chiusi con la tua password, e li riapri dove vuoi.")
+                    Text("Puoi portarli via anche adesso: restano chiusi con la tua password, e li riapri dove vuoi.")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
@@ -103,17 +103,17 @@ struct LicenseWall: View {
                             guard let folder else { return }
                             Task { do {
                                 let esito = try await VaultTransfer.exportAsync(to: folder)
-                                note = "esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
+                                note = "Esportati \(esito.count) cassetti in «\(esito.folder.lastPathComponent)»."
                                 error = nil
                                 #if os(macOS)
                                 NSWorkspace.shared.activateFileViewerSelecting([esito.folder])
                                 #endif
                             } catch {
-                                self.error = "esportazione non riuscita: \(error.localizedDescription)"
+                                self.error = "Esportazione non riuscita: \(error.localizedDescription)"
                             } }
                         }
                     } label: {
-                        Label("esporta tutti i cassetti", systemImage: "square.and.arrow.up")
+                        Label("Esporta tutti i cassetti", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())

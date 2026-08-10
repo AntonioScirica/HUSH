@@ -483,10 +483,10 @@ struct ProjectsHomeView: View {
                 // c'è la sua scheda a comandare, questi sparirebbero sotto
                 if drawerOpen && selectedFolder == nil {
                     HStack(spacing: 10) {
-                        Button("modifica") { startEditingOpenProject() }
+                        Button("Modifica") { startEditingOpenProject() }
                             .buttonStyle(OutlineButtonStyle())
                             .frame(width: 110)
-                        Button("chiudi") { openCell = nil }
+                        Button("Chiudi") { openCell = nil }
                             .buttonStyle(OutlineButtonStyle())
                             .frame(width: 110)
                     }
@@ -511,7 +511,7 @@ struct ProjectsHomeView: View {
                                 Image(systemName: "magnifyingglass")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundStyle(Theme.inkSoft)
-                                TextField("cerca…", text: $searchText)
+                                TextField("Cerca…", text: $searchText)
                                     .textFieldStyle(.plain)
                                     .font(Theme.mono(13))
                                     .foregroundStyle(Theme.ink)
@@ -617,16 +617,16 @@ struct ProjectsHomeView: View {
                     ZStack(alignment: .bottom) {
                         VStack(spacing: 12) {
                             if nameEmpty {
-                                Button("annulla") { endEditing() }
+                                Button("Annulla") { endEditing() }
                                     .buttonStyle(OutlineButtonStyle())
                             } else {
-                                Button(isEditingProject ? "salva" : "crea progetto") {
+                                Button(isEditingProject ? "Salva" : "Crea progetto") {
                                     isEditingProject ? saveEditedProject() : confirmCreationName()
                                 }
                                 .buttonStyle(InkButtonStyle(prominent: true))
 
                                 if isEditingProject {
-                                    Button("elimina progetto") { showDeleteConfirm = true }
+                                    Button("Elimina progetto") { showDeleteConfirm = true }
                                         .buttonStyle(OutlineButtonStyle())
                                         .foregroundStyle(Theme.danger)
                                 }
@@ -706,19 +706,19 @@ struct ProjectsHomeView: View {
                 .position(x: note.maxX + 44, y: note.midY)
 
                 VStack(spacing: 10) {
-                    Button(newIcon == nil ? "scegli icona" : "cambia icona") {
+                    Button(newIcon == nil ? "Scegli icona" : "Cambia icona") {
                         showIconLibrary = true
                     }
                     .buttonStyle(OutlineButtonStyle())
 
                     HStack(spacing: 10) {
-                        Button("annulla") {
+                        Button("Annulla") {
                             newIcon = nil
                             focusNote = false
                         }
                         .buttonStyle(OutlineButtonStyle())
 
-                        Button("fatto") { focusNote = false }
+                        Button("Fatto") { focusNote = false }
                             .buttonStyle(InkButtonStyle(prominent: true))
                     }
                 }
@@ -826,8 +826,8 @@ struct ProjectsHomeView: View {
             Button("OK") { localError = nil }
         }, message: { Text(localError ?? "") })
         .alert("Eliminare il progetto?", isPresented: $showDeleteConfirm, actions: {
-            Button("annulla", role: .cancel) {}
-            Button("elimina", role: .destructive) { deleteEditedProject() }
+            Button("Annulla", role: .cancel) {}
+            Button("Elimina", role: .destructive) { deleteEditedProject() }
         }, message: { Text("Il cassetto e tutto quello che contiene vengono cancellati. Non si può annullare.") })
         .onChange(of: showSettingsSignal?.wrappedValue ?? false) { _, wants in
             if wants { showSettings = true; showSettingsSignal?.wrappedValue = false }
@@ -953,7 +953,7 @@ struct ProjectsHomeView: View {
         // stessa testata del modulo che segue: prima aveva 40 pt di margine
         // in più in cima e i due passi partivano ad altezze diverse
         VStack(alignment: .leading, spacing: 16) {
-            IndexLabel(text: "cosa vuoi creare")
+            IndexLabel(text: "Cosa vuoi creare")
                 .padding(.bottom, 6)
 
             ScrollView {
@@ -990,7 +990,7 @@ struct ProjectsHomeView: View {
 
             Spacer(minLength: 0)
 
-            Button("annulla") {
+            Button("Annulla") {
                 showEntryFlow = false
             }
             .buttonStyle(OutlineButtonStyle())
@@ -1016,7 +1016,7 @@ struct ProjectsHomeView: View {
                     // campo è identico agli altri e l'elenco è lo stesso
                     // riquadro dei suggerimenti della ricerca.
                     VStack(alignment: .leading, spacing: 6) {
-                        fieldLabel("progetto")
+                        fieldLabel("Progetto")
 
                         Button {
                             withAnimation(.easeOut(duration: 0.15)) {
@@ -1089,14 +1089,14 @@ struct ProjectsHomeView: View {
                     // Il titolo è il nome della CARTELLA, non un campo come
                     // gli altri: sta in cima, staccato, con la sua etichetta.
                     VStack(alignment: .leading, spacing: 6) {
-                        fieldLabel("nome della cartella")
-                        AutoFocusField(placeholder: "titolo", text: $newEntryName)
+                        fieldLabel("Nome della cartella")
+                        AutoFocusField(placeholder: "Titolo", text: $newEntryName)
                     }
 
                     Rectangle().fill(Theme.line.opacity(0.4)).frame(height: 1)
                         .padding(.vertical, 2)
 
-                    fieldLabel("cosa c'è dentro")
+                    fieldLabel("Cosa c'è dentro")
 
                     switch newEntryKind {
                     case .login, .password:
@@ -1112,7 +1112,7 @@ struct ProjectsHomeView: View {
                     }
 
                     if newEntryKind != .secureNote {
-                        TextField("note", text: $newEntryNotes, axis: .vertical)
+                        TextField("Note", text: $newEntryNotes, axis: .vertical)
                             .textFieldStyle(PaperFieldStyle())
                             .lineLimit(3...5)
                     }
@@ -1122,16 +1122,16 @@ struct ProjectsHomeView: View {
             .frame(maxHeight: .infinity)
 
             if !newEntryName.trimmingCharacters(in: .whitespaces).isEmpty && !newEntryHasContent {
-                Text("serve almeno un dato oltre al titolo")
+                Text("Serve almeno un dato oltre al titolo")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
             }
 
             HStack(spacing: 10) {
-                Button("annulla") { resetNewEntryForm() }
+                Button("Annulla") { resetNewEntryForm() }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(width: 120)
-                Button("crea") { confirmNewEntry() }
+                Button("Crea") { confirmNewEntry() }
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .disabled(!canCreateNewEntry)
                     .opacity(canCreateNewEntry ? 1 : 0.4)
@@ -1145,15 +1145,15 @@ struct ProjectsHomeView: View {
     }
 
     @ViewBuilder private var loginFields: some View {
-        TextField("utente / email", text: $newEntryUser)
+        TextField("Utente / email", text: $newEntryUser)
             .textFieldStyle(PaperFieldStyle())
 
         HStack(spacing: 8) {
             Group {
                 if revealNewEntryPassword {
-                    TextField("password", text: $newEntryPassword)
+                    TextField("Password", text: $newEntryPassword)
                 } else {
-                    SecureField("password", text: $newEntryPassword)
+                    SecureField("Password", text: $newEntryPassword)
                 }
             }
             .textFieldStyle(.plain)
@@ -1183,7 +1183,7 @@ struct ProjectsHomeView: View {
             .help("genera una password casuale")
             .overlay(alignment: .top) {
                 if newEntryPasswordFocused {
-                    Text("random")
+                    Text("Random")
                         .font(Theme.mono(9, .semibold))
                         .foregroundStyle(Theme.paper)
                         .padding(.horizontal, 6)
@@ -1204,7 +1204,7 @@ struct ProjectsHomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach($newEntryURLs) { $url in
                 HStack(spacing: 8) {
-                    TextField("url", text: $url.value)
+                    TextField("Url", text: $url.value)
                         .textFieldStyle(PaperFieldStyle())
                     if newEntryURLs.count > 1 {
                         Button {
@@ -1217,7 +1217,7 @@ struct ProjectsHomeView: View {
                 }
             }
             Button { newEntryURLs.append(IdentifiedString()) } label: {
-                Label("aggiungi un altro url", systemImage: "plus")
+                Label("Aggiungi un altro url", systemImage: "plus")
             }
             .buttonStyle(.plain)
             .font(Theme.mono(11))
@@ -1229,14 +1229,14 @@ struct ProjectsHomeView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach($newEntryFields) { $field in
                 HStack(spacing: 8) {
-                    TextField("etichetta", text: $field.label)
+                    TextField("Etichetta", text: $field.label)
                         .textFieldStyle(PaperFieldStyle())
                         .frame(width: 110)
                     Group {
                         if field.isSecret {
-                            SecureField("valore", text: $field.value)
+                            SecureField("Valore", text: $field.value)
                         } else {
-                            TextField("valore", text: $field.value)
+                            TextField("Valore", text: $field.value)
                         }
                     }
                     .textFieldStyle(PaperFieldStyle())
@@ -1254,7 +1254,7 @@ struct ProjectsHomeView: View {
                 }
             }
             Button { newEntryFields.append(CustomField()) } label: {
-                Label("aggiungi un campo", systemImage: "plus")
+                Label("Aggiungi un campo", systemImage: "plus")
             }
             .buttonStyle(.plain)
             .font(Theme.mono(11))
@@ -1263,19 +1263,19 @@ struct ProjectsHomeView: View {
     }
 
     @ViewBuilder private var cardFields: some View {
-        TextField("intestatario", text: $newCardHolder)
+        TextField("Intestatario", text: $newCardHolder)
             .textFieldStyle(PaperFieldStyle())
-        TextField("numero carta", text: $newCardNumber)
+        TextField("Numero carta", text: $newCardNumber)
             .textFieldStyle(PaperFieldStyle())
         HStack(spacing: 8) {
-            TextField("scadenza (MM/AA)", text: $newCardExpiry)
+            TextField("Scadenza (MM/AA)", text: $newCardExpiry)
                 .textFieldStyle(PaperFieldStyle())
                 // la barra la mette lui dopo il mese: si scrivono solo i numeri
                 .onChange(of: newCardExpiry) { _, v in
                     let formatted = Self.formatExpiry(v)
                     if formatted != v { newCardExpiry = formatted }
                 }
-            TextField("cvv", text: $newCardCVV)
+            TextField("Cvv", text: $newCardCVV)
                 .textFieldStyle(PaperFieldStyle())
                 .frame(width: 90)
                 // solo cifre, al massimo quattro: tre sulla gran parte dei
@@ -1285,22 +1285,22 @@ struct ProjectsHomeView: View {
                     if digits != v { newCardCVV = digits }
                 }
         }
-        TextField("pin", text: $newCardPIN)
+        TextField("Pin", text: $newCardPIN)
             .textFieldStyle(PaperFieldStyle())
     }
 
     @ViewBuilder private var identityFields: some View {
         HStack(spacing: 8) {
-            TextField("nome", text: $newIdentityFirstName)
+            TextField("Nome", text: $newIdentityFirstName)
                 .textFieldStyle(PaperFieldStyle())
-            TextField("cognome", text: $newIdentityLastName)
+            TextField("Cognome", text: $newIdentityLastName)
                 .textFieldStyle(PaperFieldStyle())
         }
-        TextField("indirizzo", text: $newIdentityAddress)
+        TextField("Indirizzo", text: $newIdentityAddress)
             .textFieldStyle(PaperFieldStyle())
-        TextField("telefono", text: $newIdentityPhone)
+        TextField("Telefono", text: $newIdentityPhone)
             .textFieldStyle(PaperFieldStyle())
-        TextField("email", text: $newIdentityEmail)
+        TextField("Email", text: $newIdentityEmail)
             .textFieldStyle(PaperFieldStyle())
     }
 
@@ -1311,7 +1311,7 @@ struct ProjectsHomeView: View {
             ForEach(Array($newSecureNotes.enumerated()), id: \.element.id) { i, $note in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        TextField("titolo della nota \(i + 1)", text: $note.label)
+                        TextField("Titolo della nota \(i + 1)", text: $note.label)
                             .textFieldStyle(PaperFieldStyle())
                         if newSecureNotes.count > 1 {
                             Button {
@@ -1322,13 +1322,13 @@ struct ProjectsHomeView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    TextField("testo", text: $note.value, axis: .vertical)
+                    TextField("Testo", text: $note.value, axis: .vertical)
                         .textFieldStyle(PaperFieldStyle())
                         .lineLimit(3...6)
                 }
             }
             Button { newSecureNotes.append(CustomField()) } label: {
-                Label("aggiungi un'altra nota", systemImage: "plus")
+                Label("Aggiungi un'altra nota", systemImage: "plus")
             }
             .buttonStyle(.plain)
             .font(Theme.mono(11))
@@ -1353,7 +1353,7 @@ struct ProjectsHomeView: View {
             .themedRow()
         } else {
             Button { showDocumentImporter = true } label: {
-                Label("scegli file…", systemImage: "doc.badge.plus")
+                Label("Scegli file…", systemImage: "doc.badge.plus")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(OutlineButtonStyle())
@@ -1711,21 +1711,21 @@ struct ProjectsHomeView: View {
 
     private var openPasswordSheet: some View {
         VStack(alignment: .leading, spacing: 14) {
-            IndexLabel(text: openingProject?.name ?? "progetto")
-            SecureField("master password", text: $openPassword)
+            IndexLabel(text: openingProject?.name ?? "Progetto")
+            SecureField("Master password", text: $openPassword)
                 .textFieldStyle(PaperFieldStyle())
                 .onSubmit { attemptOpen() }
             if vm.isBusy {
                 ProgressView("Decifro il vault…").font(Theme.mono(11)).tint(Theme.ink)
             }
             HStack(spacing: 10) {
-                Button("annulla") {
+                Button("Annulla") {
                     showOpenPasswordSheet = false
                     openPassword = ""
                 }
                 .buttonStyle(OutlineButtonStyle())
                 .frame(width: 110)
-                Button("apri") { attemptOpen() }
+                Button("Apri") { attemptOpen() }
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .disabled(openPassword.isEmpty || vm.isBusy)
                     .opacity(openPassword.isEmpty || vm.isBusy ? 0.4 : 1)
@@ -1772,7 +1772,7 @@ struct GenericEntryCard: View {
     var body: some View {
         VStack(spacing: 18) {
             if rows.isEmpty && !editing {
-                Text("nessun dato")
+                Text("Nessun dato")
                     .font(Theme.mono(12))
                     .foregroundStyle(Theme.inkSoft)
                     .frame(maxHeight: .infinity)
@@ -1783,12 +1783,12 @@ struct GenericEntryCard: View {
                         ForEach($rows) { $field in
                             if editing {
                                 HStack(spacing: 8) {
-                                    TextField("etichetta", text: $field.label)
+                                    TextField("Etichetta", text: $field.label)
                                         .textFieldStyle(.plain)
                                         .font(Theme.mono(11))
                                         .foregroundStyle(Theme.inkSoft)
                                         .frame(width: 90, alignment: .leading)
-                                    TextField("valore", text: $field.value)
+                                    TextField("Valore", text: $field.value)
                                         .textFieldStyle(.plain)
                                         .font(Theme.mono(12, .semibold))
                                         .foregroundStyle(Theme.ink)
@@ -1820,7 +1820,7 @@ struct GenericEntryCard: View {
 
                         if editing {
                             Button { rows.append(ProjectsHomeView.CustomField()) } label: {
-                                Label("aggiungi un campo", systemImage: "plus")
+                                Label("Aggiungi un campo", systemImage: "plus")
                             }
                             .buttonStyle(.plain)
                             .font(Theme.mono(11))
@@ -1836,20 +1836,20 @@ struct GenericEntryCard: View {
             // evidenza, dove prima stava "chiudi"
             HStack(spacing: 10) {
                 if editing {
-                    Button("chiudi") { onClose() }
+                    Button("Chiudi") { onClose() }
                         .buttonStyle(OutlineButtonStyle())
 
-                    Button("salva") {
+                    Button("Salva") {
                         rows = rows.filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
                         onSave(rows)
                         editing = false
                     }
                     .buttonStyle(InkButtonStyle(prominent: true))
                 } else {
-                    Button("modifica") { editing = true }
+                    Button("Modifica") { editing = true }
                         .buttonStyle(OutlineButtonStyle())
 
-                    Button("chiudi") { onClose() }
+                    Button("Chiudi") { onClose() }
                         .buttonStyle(InkButtonStyle(prominent: true))
                 }
             }
@@ -1907,19 +1907,19 @@ struct EntryCard: View {
         VStack(spacing: 18) {
             ScrollView {
                 VStack(spacing: 12) {
-                    fieldRow("utente", value: $user)
+                    fieldRow("Utente", value: $user)
                     passwordRow
-                    fieldRow("url", value: $url)
+                    fieldRow("Url", value: $url)
 
                     ForEach($extras) { $field in
                         if editing {
                             HStack(spacing: 8) {
-                                TextField("etichetta", text: $field.label)
+                                TextField("Etichetta", text: $field.label)
                                     .textFieldStyle(.plain)
                                     .font(Theme.mono(11))
                                     .foregroundStyle(Theme.inkSoft)
                                     .frame(width: 90, alignment: .leading)
-                                TextField("valore", text: $field.value)
+                                TextField("Valore", text: $field.value)
                                     .textFieldStyle(.plain)
                                     .font(Theme.mono(12, .semibold))
                                     .foregroundStyle(Theme.ink)
@@ -1950,12 +1950,12 @@ struct EntryCard: View {
                     }
 
                     if editing || !notes.isEmpty {
-                        fieldRow("note", value: $notes)
+                        fieldRow("Note", value: $notes)
                     }
 
                     if editing {
                         Button { extras.append(ProjectsHomeView.CustomField()) } label: {
-                            Label("aggiungi un campo", systemImage: "plus")
+                            Label("Aggiungi un campo", systemImage: "plus")
                         }
                         .buttonStyle(.plain)
                         .font(Theme.mono(11))
@@ -1972,20 +1972,20 @@ struct EntryCard: View {
             // in modifica il tasto che conta è "salva": va a destra, in evidenza
             HStack(spacing: 10) {
                 if editing {
-                    Button("chiudi") { onClose() }
+                    Button("Chiudi") { onClose() }
                         .buttonStyle(OutlineButtonStyle())
 
-                    Button("salva") {
+                    Button("Salva") {
                         onSave(user, password, url, notes,
                                extras.filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty })
                         editing = false
                     }
                     .buttonStyle(InkButtonStyle(prominent: true))
                 } else {
-                    Button("modifica") { editing = true }
+                    Button("Modifica") { editing = true }
                         .buttonStyle(OutlineButtonStyle())
 
-                    Button("copia password") {
+                    Button("Copia password") {
                         copyToClipboard(password)
                         onClose()
                     }
@@ -2028,7 +2028,7 @@ struct EntryCard: View {
 
     private var passwordRow: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("password")
+            Text("Password")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .frame(width: 90, alignment: .leading)
@@ -2079,9 +2079,9 @@ struct IconLibrarySheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            IndexLabel(text: "scegli icona")
+            IndexLabel(text: "Scegli icona")
 
-            TextField("cerca…", text: $search)
+            TextField("Cerca…", text: $search)
                 .textFieldStyle(PaperFieldStyle())
 
             ScrollView {
@@ -2104,7 +2104,7 @@ struct IconLibrarySheet: View {
             }
             .frame(height: 320)
 
-            Button("chiudi") { dismiss() }
+            Button("Chiudi") { dismiss() }
                 .buttonStyle(OutlineButtonStyle())
                 .frame(width: 120)
         }

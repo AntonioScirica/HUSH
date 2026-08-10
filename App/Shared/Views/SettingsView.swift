@@ -48,60 +48,60 @@ struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
-                IndexLabel(text: "impostazioni")
+                IndexLabel(text: "Impostazioni")
                 Rectangle().fill(Theme.line).frame(height: 1.2)
             }
             .padding(.bottom, 18)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    section("licenza")
+                    section("Licenza")
 
                     if let info = License.active {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.seal")
-                            Text("attiva · \(info.email)")
+                            Text("Attiva · \(info.email)")
                                 .font(Theme.mono(11, .semibold))
                         }
                         .foregroundStyle(Theme.ink)
 
-                        Text("vale per un computer. per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
+                        Text("Vale per un computer. Per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button { confirmDetach = true } label: {
-                            Label("stacca da questo computer", systemImage: "rectangle.portrait.and.arrow.right")
+                            Label("Stacca da questo computer", systemImage: "rectangle.portrait.and.arrow.right")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(OutlineButtonStyle())
                     } else {
                         Text(License.trialDaysLeft > 0
-                             ? "prova: mancano \(License.trialDaysLeft) giorni."
-                             : "la prova è finita: inserisci la licenza per continuare.")
+                             ? "Prova: mancano \(License.trialDaysLeft) giorni."
+                             : "La prova è finita: inserisci la licenza per continuare.")
                             .font(Theme.mono(10))
                             .foregroundStyle(License.trialDaysLeft > 0 ? Theme.inkSoft : Theme.danger)
 
                         // Dirlo prima, non quando succede: chi affida le
                         // proprie password a un programma ha diritto di
                         // sapere in partenza cosa gli resta in mano.
-                        Text("passati i 7 giorni Hush si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre portartelo via, e lo riapri anche senza Hush.")
+                        Text("Passati i 7 giorni Hush si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre portartelo via, e lo riapri anche senza Hush.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        TextField("incolla qui la licenza", text: $licenseText, axis: .vertical)
+                        TextField("Incolla qui la licenza", text: $licenseText, axis: .vertical)
                             .textFieldStyle(PaperFieldStyle())
                             .lineLimit(2...4)
 
                         Button {
                             if License.register(licenseText) != nil {
-                                licenseText = ""; note = "licenza attivata."; error = nil
+                                licenseText = ""; note = "Licenza attivata."; error = nil
                             } else {
-                                error = "questa licenza non è valida."
+                                error = "Questa licenza non è valida."
                             }
                         } label: {
-                            Label("attiva", systemImage: "checkmark.seal")
+                            Label("Attiva", systemImage: "checkmark.seal")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(OutlineButtonStyle())
@@ -109,11 +109,11 @@ struct SettingsView: View {
                     }
 
                     divider
-                    section("chiave d'accesso")
+                    section("Chiave d'accesso")
 
                     if MasterKey.biometryAvailable {
-                        row(MasterKey.tipoBiometria == .volto ? "sblocco col volto" : "sblocco col dito",
-                            "apre Hush col sensore invece della password.") {
+                        row(MasterKey.tipoBiometria == .volto ? "Sblocco col volto" : "Sblocco col dito",
+                            "Apre Hush col sensore invece della password.") {
                             Toggle("", isOn: $biometry)
                                 .labelsHidden()
                                 .toggleStyle(.switch)
@@ -121,16 +121,16 @@ struct SettingsView: View {
                         }
                     }
 
-                    row("riscrivi la password ogni",
+                    row("Riscrivi la password ogni",
                         MasterKey.tipoBiometria == .volto
-                        ? "col volto soltanto la si dimentica, e qui non c'è nessun recupero."
-                        : "col dito soltanto la si dimentica, e qui non c'è nessun recupero.") {
+                        ? "Col volto soltanto la si dimentica, e qui non c'è nessun recupero."
+                        : "Col dito soltanto la si dimentica, e qui non c'è nessun recupero.") {
                         Picker("", selection: $typeAgain) {
                             Text("3 giorni").tag(3)
                             Text("7 giorni").tag(7)
                             Text("14 giorni").tag(14)
                             Text("30 giorni").tag(30)
-                            Text("mai").tag(0)
+                            Text("Mai").tag(0)
                         }
                         .labelsHidden()
                         .onChange(of: typeAgain) { _, v in Preferences.typeAgainDays = v }
@@ -141,10 +141,10 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.inkSoft)
 
                     divider
-                    section("aspetto")
+                    section("Aspetto")
 
-                    row("vista a elenco",
-                        "la schermata classica con la barra laterale, al posto della parete di cassetti.") {
+                    row("Vista a elenco",
+                        "La schermata classica con la barra laterale, al posto della parete di cassetti.") {
                         Toggle("", isOn: $vistaClassica)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -154,36 +154,36 @@ struct SettingsView: View {
                     }
 
                     divider
-                    section("da sé")
+                    section("Da sé")
 
-                    row("richiudi dopo",
+                    row("Richiudi dopo",
                         "Hush si blocca da solo se lo lasci lì aperto.") {
                         Picker("", selection: $autolock) {
                             Text("1 min").tag(1)
                             Text("5 min").tag(5)
                             Text("15 min").tag(15)
-                            Text("mai").tag(0)
+                            Text("Mai").tag(0)
                         }
                         .labelsHidden()
                         .onChange(of: autolock) { _, v in Preferences.autolockMinutes = v }
                     }
 
-                    row("svuota gli appunti dopo",
-                        "una password copiata la legge qualunque cosa incolli dopo.") {
+                    row("Svuota gli appunti dopo",
+                        "Una password copiata la legge qualunque cosa incolli dopo.") {
                         Picker("", selection: $clipboard) {
                             Text("15 s").tag(15)
                             Text("30 s").tag(30)
                             Text("60 s").tag(60)
-                            Text("mai").tag(0)
+                            Text("Mai").tag(0)
                         }
                         .labelsHidden()
                         .onChange(of: clipboard) { _, v in Preferences.clipboardSeconds = v }
                     }
 
                     divider
-                    section("password generate")
+                    section("Password generate")
 
-                    row("lunghezza", "quanti caratteri hanno quelle create dal dado.") {
+                    row("Lunghezza", "Quanti caratteri hanno quelle create dal dado.") {
                         Picker("", selection: $length) {
                             ForEach([12, 16, 20, 24, 32], id: \.self) { Text("\($0)").tag($0) }
                         }
@@ -191,7 +191,7 @@ struct SettingsView: View {
                         .onChange(of: length) { _, v in Preferences.passwordLength = v }
                     }
 
-                    row("con simboli", "alcuni siti non li accettano: qui li togli.") {
+                    row("Con simboli", "Alcuni siti non li accettano: qui li togli.") {
                         Toggle("", isOn: $symbols)
                             .labelsHidden()
                             .toggleStyle(.switch)
@@ -199,11 +199,11 @@ struct SettingsView: View {
                     }
 
                     divider
-                    section("chiave di recupero")
+                    section("Chiave di recupero")
 
                     Text(RecoveryKit.exists
-                         ? "c'è già. rigenerandola la vecchia smette di funzionare."
-                         : "non ce n'è nessuna: senza, una master password dimenticata vuol dire vault persi.")
+                         ? "C'è già. Rigenerandola la vecchia smette di funzionare."
+                         : "Non ce n'è nessuna: senza, una master password dimenticata vuol dire vault persi.")
                         .font(Theme.mono(10))
                         .foregroundStyle(RecoveryKit.exists ? Theme.inkSoft : Theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
@@ -217,20 +217,20 @@ struct SettingsView: View {
                             .frame(maxWidth: .infinity)
                             .background(Theme.paperRaised)
                             .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
-                        Text("annotala adesso: chiudendo qui non si rivede più.")
+                        Text("Annotala adesso: chiudendo qui non si rivede più.")
                             .font(Theme.mono(10, .semibold))
                             .foregroundStyle(Theme.danger)
                     }
 
                     Button { confirmRegenerate = true } label: {
-                        Label(RecoveryKit.exists ? "rigenera la chiave" : "genera la chiave",
+                        Label(RecoveryKit.exists ? "Rigenera la chiave" : "Genera la chiave",
                               systemImage: "key.horizontal")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
 
                     divider
-                    section("dati")
+                    section("Dati")
 
 #if os(macOS)
                     // Un comando solo: a capire cosa gli hai dato (cassetti
@@ -251,10 +251,10 @@ struct SettingsView: View {
                         HStack(spacing: 8) {
                             if leggendo {
                                 ProgressView().controlSize(.small)
-                                Text("leggo…")
+                                Text("Leggo…")
                             } else {
                                 Image(systemName: "square.and.arrow.down")
-                                Text("importa password")
+                                Text("Importa password")
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -270,14 +270,14 @@ struct SettingsView: View {
                             [VaultFileManager.shared.projectsDirectory]
                         )
                     } label: {
-                        Label("mostra i vault nel Finder", systemImage: "folder")
+                        Label("Mostra i vault nel Finder", systemImage: "folder")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
 
                     divider
-                    section("manda al telefono")
-                    Text("via WiFi, senza passare da nessun server. resta acceso solo quanto ti serve: fuori casa il Mac non deve annunciarsi in giro.")
+                    section("Manda al telefono")
+                    Text("Via WiFi, senza passare da nessun server. Resta acceso solo quanto ti serve: fuori casa il Mac non deve annunciarsi in giro.")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
                         .fixedSize(horizontal: false, vertical: true)
@@ -287,7 +287,7 @@ struct SettingsView: View {
                     if importando {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
-                            Text("importo i cassetti…").font(Theme.mono(11))
+                            Text("Importo i cassetti…").font(Theme.mono(11))
                         }
                         .foregroundStyle(Theme.ink)
                     }
@@ -301,7 +301,7 @@ struct SettingsView: View {
                 .padding(.trailing, 4)
             }
 
-            Button("chiudi") { onClose() }
+            Button("Chiudi") { onClose() }
                 .buttonStyle(InkButtonStyle(prominent: true))
                 .padding(.top, 18)
         }
@@ -322,10 +322,10 @@ struct SettingsView: View {
                 Task {
                     do {
                         let n = try await VaultTransfer.importChosenAsync(scelti)
-                        note = "importati \(n) cassetti, \(voci) voci."
+                        note = "Importati \(n) cassetti, \(voci) voci."
                         error = nil
                     } catch {
-                        self.error = "importazione non riuscita: \(error.localizedDescription)"
+                        self.error = "Importazione non riuscita: \(error.localizedDescription)"
                     }
                     importando = false
                 }
@@ -335,14 +335,14 @@ struct SettingsView: View {
             .sheetPaperLocal()
         }
         .alert("Staccare la licenza da questo computer?", isPresented: $confirmDetach) {
-            Button("annulla", role: .cancel) {}
-            Button("stacca", role: .destructive) { License.detach(); onClose() }
+            Button("Annulla", role: .cancel) {}
+            Button("Stacca", role: .destructive) { License.detach(); onClose() }
         } message: {
             Text("Hush tornerà bloccato qui e potrai attivare la licenza su un altro Mac.\n\nI cassetti restano su questo computer: se ti servono di là, esportali PRIMA di staccare.")
         }
         .alert("Rigenerare la chiave di recupero?", isPresented: $confirmRegenerate) {
-            Button("annulla", role: .cancel) {}
-            Button("rigenera", role: .destructive) { regenerateRecovery() }
+            Button("Annulla", role: .cancel) {}
+            Button("Rigenera", role: .destructive) { regenerateRecovery() }
         } message: {
             Text(RecoveryKit.exists
                  ? "La chiave che hai stampato smetterà di funzionare all'istante. Quella nuova va annotata subito: se chiudi questa finestra senza copiarla, resti senza via di recupero.\n\nFallo se la vecchia è finita in mani sbagliate: è l'unico modo di revocarla."
@@ -368,25 +368,25 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 10) {
             switch sync.stato {
             case .fermo, .inCerca:
-                Button("accendi la ricerca") { sync.avviaAscolto() }
+                Button("Accendi la ricerca") { sync.avviaAscolto() }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(maxWidth: .infinity)
 
             case .inAttesa:
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("in ascolto: apri Hush sul telefono e cerca il Mac")
+                    Text("In ascolto: apri Hush sul telefono e cerca il Mac")
                         .font(Theme.mono(11))
                 }
                 .foregroundStyle(Theme.inkSoft)
-                Button("spegni") { sync.ferma() }
+                Button("Spegni") { sync.ferma() }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(maxWidth: .infinity)
 
             case .collegato(let nome):
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("collegato a \(nome), mando i cassetti…")
+                    Text("Collegato a \(nome), mando i cassetti…")
                         .font(Theme.mono(11))
                 }
                 .foregroundStyle(Theme.ink)
@@ -394,7 +394,7 @@ struct SettingsView: View {
             case .trasferendo(let fatti, let totale):
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("invio in corso… \(fatti)/\(totale)")
+                    Text("Invio in corso… \(fatti)/\(totale)")
                         .font(Theme.mono(11, .semibold))
                 }
                 .foregroundStyle(Theme.ink)
@@ -452,15 +452,15 @@ struct SettingsView: View {
 
     private var reminderText: String {
         guard MasterKey.biometryEnabled else {
-            return "la password si digita a ogni apertura."
+            return "La password si digita a ogni apertura."
         }
         guard typeAgain > 0 else {
-            return "non verrà più richiesta: se la dimentichi non c'è modo di recuperarla."
+            return "Non verrà più richiesta: se la dimentichi non c'è modo di recuperarla."
         }
         let left = max(0, typeAgain - Int(MasterKey.sinceTyped / 86_400))
         return left == 0
-            ? "alla prossima apertura la password va riscritta a mano."
-            : "mancano \(left) giorni alla prossima volta."
+            ? "Alla prossima apertura la password va riscritta a mano."
+            : "Mancano \(left) giorni alla prossima volta."
     }
 
     // MARK: - Azioni
@@ -474,15 +474,15 @@ struct SettingsView: View {
             return
         }
         guard let key = MasterKey.session else {
-            error = "bloccato: riapri e riprova."
+            error = "Bloccato: riapri e riprova."
             biometry = false
             return
         }
-        do {
-            try MasterKey.enableBiometry(password: key)
-        } catch {
-            self.error = "non è stato possibile attivarlo: \(error.localizedDescription)"
-            biometry = false
+        MasterKey.enableBiometry(password: key) { esito in
+            if case .failure(let error) = esito {
+                self.error = "Non è stato possibile attivarlo: \(error.localizedDescription)"
+                biometry = false
+            }
         }
     }
 
@@ -491,13 +491,13 @@ struct SettingsView: View {
     private func regenerateRecovery() {
         error = nil
         guard let key = MasterKey.session else {
-            error = "bloccato: riapri e riprova."
+            error = "Bloccato: riapri e riprova."
             return
         }
         do {
             newRecovery = try RecoveryKit.create(masterPassword: key)
         } catch {
-            self.error = "non è stato possibile generarla: \(error.localizedDescription)"
+            self.error = "Non è stato possibile generarla: \(error.localizedDescription)"
         }
     }
 

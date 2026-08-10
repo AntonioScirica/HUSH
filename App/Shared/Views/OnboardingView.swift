@@ -7,14 +7,6 @@ import AppKit
 import UIKit
 #endif
 
-private extension View {
-    func themedImportRow() -> some View {
-        padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.paperRaised)
-            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
-    }
-}
 
 /// Primo avvio: si presenta Hush, si sceglie la master password e —
 /// se la macchina ce l'ha — si attiva il dito. Stessa carta, stesso
@@ -149,15 +141,15 @@ struct OnboardingView: View {
 
     private var title: String {
         switch step {
-        case .intro:     return "benvenuto"
-        case .password:  return "la tua unica password"
-        case .recovery:  return "la chiave di scorta"
-        case .biometry:  return MasterKey.tipoBiometria == .volto ? "sblocco col volto" : "sblocco col dito"
+        case .intro:     return "Benvenuto"
+        case .password:  return "La tua unica password"
+        case .recovery:  return "La chiave di scorta"
+        case .biometry:  return MasterKey.tipoBiometria == .volto ? "Sblocco col volto" : "Sblocco col dito"
         #if os(iOS)
-        case .mac:       return "i cassetti del tuo Mac"
+        case .mac:       return "I cassetti del tuo Mac"
         #endif
-        case .importing: return "porta dentro quelle che hai già"
-        case .ready:     return "tutto pronto"
+        case .importing: return "Porta dentro quelle che hai già"
+        case .ready:     return "Tutto pronto"
         }
     }
 
@@ -171,14 +163,14 @@ struct OnboardingView: View {
                 .foregroundStyle(Theme.ink)
 
             VStack(alignment: .leading, spacing: 14) {
-                bullet("un caveau, non un servizio",
-                       "i tuoi dati restano su questo computer. nessun account, nessun server.")
-                bullet("un cassetto per progetto",
-                       "ogni progetto ha il suo cassetto, chiuso a chiave per conto suo.")
-                bullet("una password per tutto",
-                       "una sola chiave apre tutto: quella che scegli adesso.")
+                bullet("Un caveau, non un servizio",
+                       "I tuoi dati restano su questo computer. Nessun account, nessun server.")
+                bullet("Un cassetto per progetto",
+                       "Ogni progetto ha il suo cassetto, chiuso a chiave per conto suo.")
+                bullet("Una password per tutto",
+                       "Una sola chiave apre tutto: quella che scegli adesso.")
                 bullet("7 giorni di prova",
-                       "poi serve una licenza. quello che hai messo dentro resta tuo: puoi portartelo via quando vuoi.")
+                       "Poi serve una licenza. Quello che hai messo dentro resta tuo: puoi portartelo via quando vuoi.")
             }
         }
     }
@@ -203,18 +195,18 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 16) {
             #if os(iOS)
             if cassettiDalMac > 0 {
-                Text("qui deve essere la stessa password del Mac, altrimenti i cassetti che hai appena importato restano chiusi.")
+                Text("Qui deve essere la stessa password del Mac, altrimenti i cassetti che hai appena importato restano chiusi.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("scegline una lunga e che ricordi. non si può recuperare:\nnon esiste nessuno a cui chiederla.")
+                Text("Scegline una lunga e che ricordi. Non si può recuperare:\nnon esiste nessuno a cui chiederla.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             }
             #else
-            Text("scegline una lunga e che ricordi. non si può recuperare:\nnon esiste nessuno a cui chiederla.")
+            Text("Scegline una lunga e che ricordi. Non si può recuperare:\nnon esiste nessuno a cui chiederla.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -223,9 +215,9 @@ struct OnboardingView: View {
             HStack(spacing: 8) {
                 Group {
                     if reveal {
-                        TextField("master password", text: $password)
+                        TextField("Master password", text: $password)
                     } else {
-                        SecureField("master password", text: $password)
+                        SecureField("Master password", text: $password)
                     }
                 }
                 .textFieldStyle(.plain)
@@ -264,7 +256,7 @@ struct OnboardingView: View {
                 .help("genera una password casuale")
                 .overlay(alignment: .top) {
                     if passwordFocused {
-                        Text("random")
+                        Text("Random")
                             .font(Theme.mono(9, .semibold))
                             .foregroundStyle(Theme.paper)
                             .padding(.horizontal, 6)
@@ -282,13 +274,13 @@ struct OnboardingView: View {
             .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
             if passwordGenerata && !password.isEmpty {
-                Text("è casuale: non te la ricorderai. scrivila subito da qualche parte al sicuro, oltre alla chiave di scorta che arriva dopo.")
+                Text("È casuale: non te la ricorderai. Scrivila subito da qualche parte al sicuro, oltre alla chiave di scorta che arriva dopo.")
                     .font(Theme.mono(10))
                     .foregroundStyle(Theme.danger)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            SecureField("ripetila", text: $confirm)
+            SecureField("Ripetila", text: $confirm)
                 .textFieldStyle(PaperFieldStyle())
                 .onSubmit(advance)
                 .onChange(of: confirm) { _, _ in passwordGenerata = false }
@@ -315,7 +307,7 @@ struct OnboardingView: View {
                         .frame(height: 4)
                 }
             }
-            Text(["troppo corta", "debole", "discreta", "buona", "solida"][score])
+            Text(["Troppo corta", "Debole", "Discreta", "Buona", "Solida"][score])
                 .font(Theme.mono(10))
                 .foregroundStyle(Theme.inkSoft)
         }
@@ -335,7 +327,7 @@ struct OnboardingView: View {
     /// stessa, quindi nemmeno l'app può rileggerla.
     private var recoveryStep: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("se dimentichi la master password, questa è l'unica via\nper rientrare. non c'è nessun altro a cui chiederla.")
+            Text("Se dimentichi la master password, questa è l'unica via\nper rientrare. Non c'è nessun altro a cui chiederla.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -360,14 +352,14 @@ struct OnboardingView: View {
                     pb.clearContents()
                     pb.setString(recoveryKey, forType: .string)
                     #endif
-                    recoveryEsito = "copiata negli appunti."
+                    recoveryEsito = "Copiata negli appunti."
                 } label: {
-                    Label("copia", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
+                    Label("Copia", systemImage: "doc.on.doc").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(OutlineButtonStyle())
 
                 Button { saveRecoveryToFile() } label: {
-                    Label("salva su file", systemImage: "square.and.arrow.down")
+                    Label("Salva su file", systemImage: "square.and.arrow.down")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(OutlineButtonStyle())
@@ -385,7 +377,7 @@ struct OnboardingView: View {
 
             HStack(alignment: .center, spacing: 8) {
                 Image(systemName: "exclamationmark.triangle").font(.system(size: 11))
-                Text("vale quanto la master password: chi ce l'ha entra. stampala o mettila in cassaforte, non lasciarla sul computer accanto ai vault.")
+                Text("Vale quanto la master password: chi ce l'ha entra. Stampala o mettila in cassaforte, non lasciarla sul computer accanto ai vault.")
                     .fixedSize(horizontal: false, vertical: true)
             }
             .font(Theme.mono(10))
@@ -399,7 +391,7 @@ struct OnboardingView: View {
         // su iPhone niente pannello di salvataggio: la chiave si copia negli
         // appunti e la si incolla dove si vuole (Note, un messaggio a sé...)
         UIPasteboard.general.string = recoveryKey
-        recoveryEsito = "copiata negli appunti: incollala dove preferisci."
+        recoveryEsito = "Copiata negli appunti: incollala dove preferisci."
         #else
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "Hush chiave di recupero.txt"
@@ -416,9 +408,9 @@ struct OnboardingView: View {
             """
             do {
                 try testo.write(to: url, atomically: true, encoding: .utf8)
-                recoveryEsito = "salvata in «\(url.deletingLastPathComponent().lastPathComponent)/\(url.lastPathComponent)»."
+                recoveryEsito = "Salvata in «\(url.deletingLastPathComponent().lastPathComponent)/\(url.lastPathComponent)»."
             } catch {
-                recoveryEsito = "salvataggio non riuscito: \(error.localizedDescription)"
+                recoveryEsito = "Salvataggio non riuscito: \(error.localizedDescription)"
             }
         }
         #endif
@@ -430,8 +422,8 @@ struct OnboardingView: View {
                 .font(.system(size: 46, weight: .light))
                 .foregroundStyle(Theme.ink)
             Text(MasterKey.tipoBiometria == .volto
-                 ? "puoi aprire Hush guardando lo schermo invece di riscrivere\nla password ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore."
-                 : "puoi aprire Hush col dito invece di riscrivere la\npassword ogni volta. resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
+                 ? "Puoi aprire Hush guardando lo schermo invece di riscrivere\nla password ogni volta. Resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore."
+                 : "Puoi aprire Hush col dito invece di riscrivere la\npassword ogni volta. Resta tutto su questo computer:\nla password va nel Portachiavi, protetta dal sensore.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -460,28 +452,28 @@ struct OnboardingView: View {
                         .font(Theme.mono(12, .semibold))
                 }
                 .foregroundStyle(Theme.ink)
-                Text("nomi, icone e post-it compresi. li trovi dentro appena entri.")
+                Text("Nomi, icone e post-it compresi. Li trovi dentro appena entri.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("l'app del telefono è il compagno di quella sul Mac: per continuare servono i tuoi cassetti. arrivano pari pari, con nomi, icone e post-it — sulla stessa rete WiFi, senza passare da nessun server.")
+                Text("L'app del telefono è il compagno di quella sul Mac: per continuare servono i tuoi cassetti. Arrivano pari pari, con nomi, icone e post-it — sulla stessa rete WiFi, senza passare da nessun server.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
 
                 syncBox
 
-                Text("oppure, a mano")
+                Text("Oppure, a mano")
                     .font(Theme.mono(10, .semibold))
                     .tracking(1.5)
                     .foregroundStyle(Theme.inkSoft)
                     .padding(.top, 4)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    riga(numero: "1", testo: "sul Mac apri le impostazioni e tocca «esporta i cassetti»")
-                    riga(numero: "2", testo: "manda la cartella al telefono con AirDrop: finisce in File")
-                    riga(numero: "3", testo: "qui sotto, scegli quella cartella")
+                    riga(numero: "1", testo: "Sul Mac apri le impostazioni e tocca «esporta i cassetti»")
+                    riga(numero: "2", testo: "Manda la cartella al telefono con AirDrop: finisce in File")
+                    riga(numero: "3", testo: "Qui sotto, scegli quella cartella")
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -491,7 +483,7 @@ struct OnboardingView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "key")
                         .font(.system(size: 11))
-                    Text("in tutti e due i casi serve la stessa master password del Mac, o i cassetti non si apriranno.")
+                    Text("In tutti e due i casi serve la stessa master password del Mac, o i cassetti non si apriranno.")
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .font(Theme.mono(10))
@@ -523,14 +515,14 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 10) {
             switch sync.stato {
             case .fermo, .inAttesa:
-                Button("cerca il Mac sulla rete") { sync.avviaRicerca() }
+                Button("Cerca il Mac sulla rete") { sync.avviaRicerca() }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(maxWidth: .infinity)
 
             case .inCerca:
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(sync.trovati.isEmpty ? "cerco un Mac con Hush aperto sulla stessa rete…" : "trovati:")
+                    Text(sync.trovati.isEmpty ? "Cerco un Mac con Hush aperto sulla stessa rete…" : "Trovati:")
                         .font(Theme.mono(11))
                 }
                 .foregroundStyle(Theme.inkSoft)
@@ -543,7 +535,7 @@ struct OnboardingView: View {
             case .collegato(let nome):
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("collegato a \(nome), aspetto i cassetti…")
+                    Text("Collegato a \(nome), aspetto i cassetti…")
                         .font(Theme.mono(11))
                 }
                 .foregroundStyle(Theme.ink)
@@ -551,7 +543,7 @@ struct OnboardingView: View {
             case .trasferendo(let fatti, let totale):
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("arrivano i cassetti… \(fatti)/\(totale)")
+                    Text("Arrivano i cassetti… \(fatti)/\(totale)")
                         .font(Theme.mono(11, .semibold))
                 }
                 .foregroundStyle(Theme.ink)
@@ -568,7 +560,7 @@ struct OnboardingView: View {
                 Text(messaggio)
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.danger)
-                Button("riprova") { sync.avviaRicerca() }
+                Button("Riprova") { sync.avviaRicerca() }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(maxWidth: .infinity)
             }
@@ -596,43 +588,71 @@ struct OnboardingView: View {
 
     /// Import da un altro gestore. Il CSV è il minimo comun denominatore:
     /// Gli altri gestori di password e i browser esportano tutti un elenco.
-    private var importStep: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: "square.and.arrow.down")
-                .font(.system(size: 40, weight: .light))
+    /// Da dove possono arrivare le password: schede informative, per far
+    /// capire a colpo d'occhio che qualunque cosa si abbia già va bene.
+    private func fonteImport(numero: String, icona: String, titolo: String, testo: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(numero)
+                    .font(Theme.mono(10))
+                    .foregroundStyle(Theme.inkSoft)
+                Spacer()
+                Image(systemName: icona)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.ink)
+            }
+            Text(titolo)
+                .font(Theme.mono(12, .semibold))
                 .foregroundStyle(Theme.ink)
+            Text(testo)
+                .font(Theme.mono(10))
+                .lineSpacing(2)
+                .foregroundStyle(Theme.inkSoft)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.paperRaised)
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1.1))
+    }
 
-            Text("se le password ce le hai già da un'altra parte, esporta il file da lì e caricalo qui: finisce tutto in un cassetto solo, che poi puoi riordinare.")
+    private var importStep: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("Se le password ce le hai già da un'altra parte, esporta il file da lì e caricalo qui: finisce tutto in un cassetto solo, che poi puoi riordinare con calma.")
                 .font(Theme.mono(11))
+                .lineSpacing(3)
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
 
+            // ultima pagina prima della fine: si prende tutto lo spazio,
+            // con le tre strade da cui si può arrivare
+            HStack(alignment: .top, spacing: 12) {
+                fonteImport(numero: "001", icona: "lock.rectangle.stack",
+                            titolo: "Un altro gestore",
+                            testo: "L'esportazione di 1Password, Bitwarden, LastPass e simili.")
+                fonteImport(numero: "002", icona: "globe",
+                            titolo: "Il browser",
+                            testo: "Le password salvate in Chrome, Safari o Firefox, esportate da lì.")
+                fonteImport(numero: "003", icona: "doc.text",
+                            titolo: "Un elenco",
+                            testo: "Un file csv qualunque, anche scritto a mano: titolo, utente, password.")
+            }
+            .frame(maxHeight: 150)
+
             if importedCount > 0 {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark")
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
                     Text("\(importedCount) voci pronte da mettere dentro")
-                        .font(Theme.mono(12, .semibold))
+                        .font(Theme.mono(13, .semibold))
                 }
                 .foregroundStyle(Theme.ink)
-                .themedImportRow()
-            } else {
-                Button { showFileImporter = true } label: {
-                    Label("scegli il file", systemImage: "doc.badge.plus")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(OutlineButtonStyle())
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.yellow.opacity(0.35))
+                .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
             }
-
-            // Promemoria, non errore: in rosso sembrava che qualcosa fosse
-            // andato storto ancora prima di toccare qualsiasi cosa.
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 11))
-                Text("il file esportato contiene le password in chiaro: cancellalo appena finito.")
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .font(Theme.mono(10))
-            .foregroundStyle(Theme.inkSoft)
 
             if let error {
                 Text(error)
@@ -679,7 +699,7 @@ struct OnboardingView: View {
                     PendingImport.projectName = url.deletingPathExtension().lastPathComponent
                     importedCount = entries.count
                 } else {
-                    error = "elenco illeggibile."
+                    error = "Elenco illeggibile."
                 }
             default:
                 perCassetti.append(url)
@@ -691,7 +711,7 @@ struct OnboardingView: View {
                 cassettiDalMac += importati
                 if importati > 0 { cassettoDalMacDaVerificare = VaultFileManager.shared.projects.last?.path }
             } catch {
-                self.error = "importazione non riuscita: \(error.localizedDescription)"
+                self.error = "Importazione non riuscita: \(error.localizedDescription)"
             }
         }
     }
@@ -707,12 +727,12 @@ struct OnboardingView: View {
         do {
             cassettiDalMac = try VaultTransfer.importAll(from: urls)
             if cassettiDalMac == 0 {
-                error = "lì dentro non ci sono cassetti."
+                error = "Lì dentro non ci sono cassetti."
             } else {
                 cassettoDalMacDaVerificare = VaultFileManager.shared.projects.last?.path
             }
         } catch {
-            self.error = "importazione non riuscita: \(error.localizedDescription)"
+            self.error = "Importazione non riuscita: \(error.localizedDescription)"
         }
     }
     #endif
@@ -737,7 +757,7 @@ struct OnboardingView: View {
             Text("Hush è chiuso a chiave.")
                 .font(Theme.display(26))
                 .foregroundStyle(Theme.ink)
-            Text("da qui in poi vedrai la parete dei cassetti: uno per\nprogetto. creane uno col + e mettici dentro la prima\npassword.")
+            Text("Da qui in poi vedrai la parete dei cassetti: uno per\nprogetto. Creane uno col + e mettici dentro la prima\npassword.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -767,7 +787,7 @@ struct OnboardingView: View {
                 Spacer(minLength: 0)
 
                 if step == .biometry {
-                    Button("non ora") { step = dopoBiometria }
+                    Button("Non ora") { step = dopoBiometria }
                         .buttonStyle(OutlineButtonStyle())
                         .fixedSize()
                 }
@@ -776,7 +796,7 @@ struct OnboardingView: View {
                 // un telefono senza sarebbe un guscio vuoto con una password
                 // diversa da quella vera
                 if step == .importing && importedCount == 0 {
-                    Button("salta") { step = .ready }
+                    Button("Salta") { step = .ready }
                         .buttonStyle(OutlineButtonStyle())
                         .fixedSize()
                 }
@@ -797,19 +817,19 @@ struct OnboardingView: View {
 
     private var primaryLabel: String {
         switch step {
-        case .intro:     return "comincia"
+        case .intro:     return "Comincia"
         case .password:
             #if os(iOS)
-            if verificandoPassword { return "verifico…" }
+            if verificandoPassword { return "Verifico…" }
             #endif
-            return "imposta"
-        case .recovery:  return "fatto"
-        case .biometry:  return "attiva"
+            return "Imposta"
+        case .recovery:  return "Fatto"
+        case .biometry:  return "Attiva"
         #if os(iOS)
-        case .mac:       return cassettiDalMac > 0 ? "avanti" : "scegli la cartella"
+        case .mac:       return cassettiDalMac > 0 ? "Avanti" : "Scegli la cartella"
         #endif
-        case .importing: return importedCount > 0 ? "avanti" : "scegli file"
-        case .ready:     return "entra"
+        case .importing: return importedCount > 0 ? "Avanti" : "Scegli file"
+        case .ready:     return "Entra"
         }
     }
 
@@ -844,11 +864,11 @@ struct OnboardingView: View {
 
         case .password:
             guard password.count >= 8 else {
-                error = "almeno 8 caratteri."
+                error = "Almeno 8 caratteri."
                 return
             }
             guard password == confirm else {
-                error = "le due password non combaciano."
+                error = "Le due password non combaciano."
                 return
             }
             #if os(iOS)
@@ -863,11 +883,13 @@ struct OnboardingView: View {
             step = MasterKey.biometryAvailable ? .biometry : dopoBiometria
 
         case .biometry:
-            do {
-                try MasterKey.enableBiometry(password: password)
-                step = dopoBiometria
-            } catch {
-                self.error = "non è stato possibile attivarlo: \(error.localizedDescription)"
+            MasterKey.enableBiometry(password: password) { esito in
+                switch esito {
+                case .success:
+                    step = dopoBiometria
+                case .failure(let error):
+                    self.error = "Non è stato possibile attivarlo: \(error.localizedDescription)"
+                }
             }
 
         case .importing:
@@ -918,7 +940,7 @@ struct OnboardingView: View {
                 if corrisponde {
                     configuraMasterPassword()
                 } else {
-                    error = "non è la password del Mac: i cassetti che hai importato non si aprirebbero. riscrivila uguale a quella di là."
+                    error = "Non è la password del Mac: i cassetti che hai importato non si aprirebbero. Riscrivila uguale a quella di là."
                 }
             }
         }

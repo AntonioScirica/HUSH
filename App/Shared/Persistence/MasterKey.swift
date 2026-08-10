@@ -140,10 +140,39 @@ enum MasterKey {
         UserDefaults.standard.bool(forKey: biometryKey) && SharedKeychain.hasStoredPassword
     }
 
-    static func enableBiometry(password: String) throws {
-        try SharedKeychain.store(password: password)
-        UserDefaults.standard.set(true, forKey: biometryKey)
-        UserDefaults.standard.set(firmaAttuale, forKey: firmaKey)
+    /// Chiede la biometria per DAVVERO prima di accendere lo sblocco veloce:
+    /// prima qui si limitava a salvare la password nel Portachiavi senza mai
+    /// mostrare il pannello del sensore, e il tasto "attiva" sembrava non
+    /// fare niente. Il pannello semmai compare a un unlock col dito, ma
+    /// nessuno ne aveva ancora provato uno.
+    static func enableBiometry(password: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        #if os(macOS)
+        let context = LAContext()
+        context.localizedCancelTitle = "Annulla"
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                               localizedReason: "attivare lo sblocco veloce di Hush") { ok, error in
+            DispatchQueue.main.async {
+                guard ok else {
+                    completion(.failure(error ?? KeychainError.unhandled(errSecUserCanceled)))
+                    return
+                }
+                salvaNelPortachiavi(password, completion: completion)
+            }
+        }
+        #else
+        salvaNelPortachiavi(password, completion: completion)
+        #endif
+    }
+
+    private static func salvaNelPortachiavi(_ password: String, completion: (Result<Void, Error>) -> Void) {
+        do {
+            try SharedKeychain.store(password: password)
+            UserDefaults.standard.set(true, forKey: biometryKey)
+            UserDefaults.standard.set(firmaAttuale, forKey: firmaKey)
+            completion(.success(()))
+        } catch {
+            completion(.failure(error))
+        }
     }
 
     static func disableBiometry() {

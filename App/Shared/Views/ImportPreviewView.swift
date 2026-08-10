@@ -25,13 +25,13 @@ struct ImportPreviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
-                IndexLabel(text: "cosa stai importando")
+                IndexLabel(text: "Cosa stai importando")
                 Rectangle().fill(Theme.line).frame(height: 1.2)
             }
             .padding(.bottom, 16)
 
             if previews.isEmpty {
-                Text("in quella cartella non ci sono cassetti.")
+                Text("In quella cartella non ci sono cassetti.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -47,9 +47,9 @@ struct ImportPreviewView: View {
             }
 
             HStack(spacing: 10) {
-                Button("annulla") { onCancel() }
+                Button("Annulla") { onCancel() }
                     .buttonStyle(OutlineButtonStyle())
-                Button(selected.isEmpty ? "importa" : "importa \(selected.count)") {
+                Button(selected.isEmpty ? "Importa" : "Importa \(selected.count)") {
                     onConfirm(selected)
                 }
                 .buttonStyle(InkButtonStyle(prominent: true))
@@ -67,17 +67,17 @@ struct ImportPreviewView: View {
         .onAppear { chosen = Set(selectable.map(\.id)) }
         .sheet(item: $unlocking) { p in
             VStack(alignment: .leading, spacing: 16) {
-                IndexLabel(text: "password di «\(p.name)»")
+                IndexLabel(text: "Password di «\(p.name)»")
                 Rectangle().fill(Theme.line).frame(height: 1.2)
 
                 Text(previews.filter { !$0.isReadable }.count > 1
-                     ? "questo cassetto è cifrato con un'altra password.\nse gli altri hanno la stessa, si aprono anche loro."
-                     : "questo cassetto è cifrato con un'altra password.\nscrivila: verrà riscritto con quella di Hush.")
+                     ? "Questo cassetto è cifrato con un'altra password.\nSe gli altri hanno la stessa, si aprono anche loro."
+                     : "Questo cassetto è cifrato con un'altra password.\nScrivila: verrà riscritto con quella di Hush.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                     .fixedSize(horizontal: false, vertical: true)
 
-                SecureField("password del file", text: $foreignPassword)
+                SecureField("Password del file", text: $foreignPassword)
                     .textFieldStyle(PaperFieldStyle())
                     .onSubmit { tentaSblocco(p) }
 
@@ -88,9 +88,9 @@ struct ImportPreviewView: View {
                 Spacer(minLength: 0)
 
                 HStack(spacing: 10) {
-                    Button("annulla") { unlocking = nil }
+                    Button("Annulla") { unlocking = nil }
                         .buttonStyle(OutlineButtonStyle())
-                    Button(provando ? "apro…" : "apri") { tentaSblocco(p) }
+                    Button(provando ? "Apro…" : "Apri") { tentaSblocco(p) }
                         .buttonStyle(InkButtonStyle(prominent: true))
                         .disabled(foreignPassword.isEmpty || provando)
                         .opacity(foreignPassword.isEmpty || provando ? 0.4 : 1)
@@ -118,7 +118,7 @@ struct ImportPreviewView: View {
 
             provando = false
             guard sbloccati.contains(where: { $0.id == p.id }) else {
-                unlockError = "password sbagliata."
+                unlockError = "Password sbagliata."
                 return
             }
             for aperto in sbloccati {
@@ -173,7 +173,7 @@ struct ImportPreviewView: View {
                     // se la password ce l'hai, il cassetto non è perso: si
                     // apre e si ricifra con quella delHush
                     if problem.hasPrefix("cifrato") {
-                    Button("ho la password") {
+                    Button("Ho la password") {
                         unlocking = p
                         foreignPassword = ""
                         unlockError = nil
@@ -184,7 +184,7 @@ struct ImportPreviewView: View {
                     .underline()
                     }
                 } else {
-                    Text(p.entries.isEmpty ? "vuoto" : "\(p.entries.count) voci")
+                    Text(p.entries.isEmpty ? "Vuoto" : "\(p.entries.count) voci")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
                     if !p.entries.isEmpty {

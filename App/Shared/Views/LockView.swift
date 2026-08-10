@@ -46,7 +46,7 @@ struct LockView: View {
 
     private var inkPanel: some View {
         VStack(spacing: 10) {
-            Text("il tuo vault di password")
+            Text("Il tuo vault di password")
                 .font(Theme.mono(12))
                 .foregroundStyle(Theme.paper.opacity(0.6))
 
@@ -55,7 +55,7 @@ struct LockView: View {
                     .font(Theme.display(56))
                     .kerning(-1)
                     .foregroundStyle(Theme.paper)
-                Text("offline")
+                Text("Offline")
                     .font(Theme.mono(11, .bold))
                     .foregroundStyle(Theme.ink)
                     .padding(.horizontal, 8)
@@ -79,7 +79,7 @@ struct LockView: View {
     // (creazione nuovo vault disattivata temporaneamente — TODO riattivare)
 
     private var chooser: some View {
-        FolderTabButton(number: 1, title: "apri vault esistente", alignment: .leading, filled: true) {
+        FolderTabButton(number: 1, title: "Apri vault esistente", alignment: .leading, filled: true) {
             showFileImporter = true
         }
     }
@@ -107,8 +107,8 @@ struct LockView: View {
 
     private var openPasswordSheet: some View {
         VStack(alignment: .leading, spacing: 14) {
-            IndexLabel(number: 3, text: "master password")
-            SecureField("master password", text: $openPassword)
+            IndexLabel(number: 3, text: "Master password")
+            SecureField("Master password", text: $openPassword)
                 .textFieldStyle(PaperFieldStyle())
                 .onSubmit { attemptOpen() }
             if vm.isBusy {
@@ -117,13 +117,13 @@ struct LockView: View {
                     .tint(Theme.ink)
             }
             HStack(spacing: 10) {
-                Button("annulla") {
+                Button("Annulla") {
                     showOpenPasswordSheet = false
                     openPassword = ""
                 }
                 .buttonStyle(OutlineButtonStyle())
                 .frame(width: 110)
-                Button("apri") { attemptOpen() }
+                Button("Apri") { attemptOpen() }
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .disabled(openPassword.isEmpty || vm.isBusy)
                     .opacity(openPassword.isEmpty || vm.isBusy ? 0.4 : 1)

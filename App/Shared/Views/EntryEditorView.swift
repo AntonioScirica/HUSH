@@ -43,7 +43,7 @@ struct EntryEditorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                IndexLabel(text: entry == nil ? "nuova voce · \(kind.label)" : "modifica voce")
+                IndexLabel(text: entry == nil ? "Nuova voce · \(kind.label)" : "Modifica voce")
                     .padding(.bottom, 2)
 
                 // la categoria si sceglie solo alla nascita: cambiarla a una
@@ -69,12 +69,12 @@ struct EntryEditorView: View {
                     }
                 }
 
-                TextField("titolo", text: $title)
+                TextField("Titolo", text: $title)
                     .textFieldStyle(PaperFieldStyle())
 
                 if conCredenziali {
                     if kind == .login {
-                        TextField("utente / email", text: $username)
+                        TextField("Utente / email", text: $username)
                             .textFieldStyle(PaperFieldStyle())
                             #if os(iOS)
                             .textInputAutocapitalization(.never)
@@ -84,9 +84,9 @@ struct EntryEditorView: View {
                     HStack(spacing: 8) {
                         Group {
                             if showPassword {
-                                TextField("password", text: $password)
+                                TextField("Password", text: $password)
                             } else {
-                                SecureField("password", text: $password)
+                                SecureField("Password", text: $password)
                             }
                         }
                         .textFieldStyle(.plain)
@@ -116,7 +116,7 @@ struct EntryEditorView: View {
                         .help("genera una password casuale")
                         .overlay(alignment: .top) {
                             if passwordFocused {
-                                Text("random")
+                                Text("Random")
                                     .font(Theme.mono(9, .semibold))
                                     .foregroundStyle(Theme.paper)
                                     .padding(.horizontal, 6)
@@ -142,20 +142,20 @@ struct EntryEditorView: View {
                                     .frame(height: 4)
                             }
                         }
-                        Text("robustezza: \(strength.label.lowercased())")
+                        Text("Robustezza: \(strength.label.lowercased())")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
                     }
 
                     if kind == .login {
-                        TextField("url", text: $url)
+                        TextField("Url", text: $url)
                             .textFieldStyle(PaperFieldStyle())
                             #if os(iOS)
                             .textInputAutocapitalization(.never)
                             .keyboardType(.URL)
                             #endif
                     }
-                    TextField("note", text: $notes, axis: .vertical)
+                    TextField("Note", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                         .textFieldStyle(PaperFieldStyle())
                 } else {
@@ -188,10 +188,10 @@ struct EntryEditorView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
                 HStack(spacing: 10) {
-                    Button("annulla") { dismiss() }
+                    Button("Annulla") { dismiss() }
                         .buttonStyle(OutlineButtonStyle())
                         .frame(maxWidth: .infinity)
-                    Button("salva") { save() }
+                    Button("Salva") { save() }
                         .buttonStyle(InkButtonStyle(prominent: true))
                         .frame(maxWidth: .infinity)
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -199,7 +199,7 @@ struct EntryEditorView: View {
                 }
 
                 if entry != nil {
-                    Button("elimina voce") { showDeleteConfirm = true }
+                    Button("Elimina voce") { showDeleteConfirm = true }
                         .buttonStyle(.plain)
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.danger)

@@ -16,12 +16,12 @@ enum EntryKind: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .login: return "accesso"
-        case .secureNote: return "nota sicura"
-        case .card: return "carta di credito"
-        case .identity: return "identità"
-        case .password: return "password"
-        case .document: return "documento"
+        case .login: return "Accesso"
+        case .secureNote: return "Nota sicura"
+        case .card: return "Carta di credito"
+        case .identity: return "Identità"
+        case .password: return "Password"
+        case .document: return "Documento"
         }
     }
     var icon: String {

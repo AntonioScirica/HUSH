@@ -15,7 +15,7 @@ struct GeneratorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                IndexLabel(number: 6, text: "generatore")
+                IndexLabel(number: 6, text: "Generatore")
                 Spacer()
                 Button { dismiss() } label: {
                     Image(systemName: "xmark")
@@ -35,7 +35,7 @@ struct GeneratorView: View {
                 .textSelection(.enabled)
 
             HStack {
-                Text("lunghezza")
+                Text("Lunghezza")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
                 Slider(value: $length, in: 8...64, step: 1)
@@ -59,9 +59,9 @@ struct GeneratorView: View {
             .onChange(of: symbols) { regenerate() }
 
             HStack(spacing: 10) {
-                Button("rigenera") { regenerate() }
+                Button("Rigenera") { regenerate() }
                     .buttonStyle(OutlineButtonStyle())
-                Button("copia") { vm.copyToClipboard(generated, label: "Password generata") }
+                Button("Copia") { vm.copyToClipboard(generated, label: "Password generata") }
                     .buttonStyle(InkButtonStyle(prominent: true))
             }
         }

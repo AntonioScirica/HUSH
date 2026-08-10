@@ -23,7 +23,7 @@ struct VaultListView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "plus")
-                            Text("nuova voce")
+                            Text("Nuova voce")
                         }
                     }
                     .buttonStyle(InkButtonStyle(prominent: true))
@@ -57,7 +57,7 @@ struct VaultListView: View {
                 .padding(.horizontal, 4)
             }
             .background(Theme.paper)
-            .searchable(text: $vm.searchText, prompt: "cerca…")
+            .searchable(text: $vm.searchText, prompt: "Cerca…")
             .navigationTitle(vm.vaultName)
             .navigationSplitViewColumnWidth(min: 250, ideal: 300)
             .toolbar {
@@ -70,9 +70,9 @@ struct VaultListView: View {
             .overlay {
                 if vm.filteredEntries.isEmpty {
                     VStack(spacing: 8) {
-                        Text(vm.searchText.isEmpty ? "vault vuoto" : "nessun risultato")
+                        Text(vm.searchText.isEmpty ? "Vault vuoto" : "Nessun risultato")
                             .font(Theme.mono(13, .semibold))
-                        Text(vm.searchText.isEmpty ? "aggiungi la prima voce con +" : "prova un altro termine")
+                        Text(vm.searchText.isEmpty ? "Aggiungi la prima voce con +" : "Prova un altro termine")
                             .font(Theme.mono(11))
                             .foregroundStyle(Theme.inkSoft)
                     }
@@ -90,7 +90,7 @@ struct VaultListView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "key.horizontal")
                             .font(.system(size: 28))
-                        Text("seleziona una voce")
+                        Text("Seleziona una voce")
                             .font(Theme.mono(12))
                     }
                     .foregroundStyle(Theme.inkSoft)
@@ -341,7 +341,7 @@ struct ClassicHomeView: View {
             LazyVStack(alignment: .leading, spacing: 6) {
                 // il cerca vive qui, sopra il primo progetto: filtra le
                 // voci del progetto aperto, mostrate nella colonna accanto
-                TextField("cerca…", text: $vm.searchText)
+                TextField("Cerca…", text: $vm.searchText)
                     .textFieldStyle(PaperFieldStyle())
                     .padding(.bottom, 8)
 
@@ -383,7 +383,7 @@ struct ClassicHomeView: View {
                                 progettoDaEliminare = p
                                 progettoMenuID = nil
                             } label: {
-                                Text("elimina progetto")
+                                Text("Elimina progetto")
                                     .font(Theme.mono(11, .semibold))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -440,7 +440,7 @@ struct ClassicHomeView: View {
         }
         #endif
         .background(Theme.paper)
-        .navigationTitle("progetti")
+        .navigationTitle("Progetti")
         #if os(iOS)
         .toolbar {
             ToolbarItemGroup {
@@ -468,7 +468,7 @@ struct ClassicHomeView: View {
             Text("Non si può annullare.")
         }
         .alert("Nuovo progetto", isPresented: $nuovoProgetto) {
-            TextField("nome", text: $nomeProgetto)
+            TextField("Nome", text: $nomeProgetto)
             Button("Crea") { creaProgetto() }
             Button("Annulla", role: .cancel) {}
         } message: {
@@ -537,7 +537,7 @@ struct ClassicHomeView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus")
-                            Text("nuova voce")
+                            Text("Nuova voce")
                         }
                     }
                     .buttonStyle(InkButtonStyle(prominent: true))
@@ -556,14 +556,14 @@ struct ClassicHomeView: View {
                     if progetti.contains(where: { !VaultLibrary.shared.isLoaded($0) && $0.id != correnteID }) {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
-                            Text("apro anche gli altri cassetti…")
+                            Text("Apro anche gli altri cassetti…")
                                 .font(Theme.mono(10))
                         }
                         .foregroundStyle(Theme.inkSoft)
                         .padding(.bottom, 12)
                     }
                     if gruppi.isEmpty {
-                        Text("nessun risultato")
+                        Text("Nessun risultato")
                             .font(Theme.mono(12))
                             .foregroundStyle(Theme.inkSoft)
                             .padding(.top, 20)
@@ -657,15 +657,15 @@ struct ClassicHomeView: View {
         #endif
         .background(Theme.paper)
         #if os(iOS)
-        .searchable(text: $vm.searchText, prompt: "cerca…")
+        .searchable(text: $vm.searchText, prompt: "Cerca…")
         #endif
         .navigationTitle("")
         .overlay {
             if vm.filteredEntries.isEmpty {
                 VStack(spacing: 8) {
-                    Text(vm.searchText.isEmpty ? "cassetto vuoto" : "nessun risultato")
+                    Text(vm.searchText.isEmpty ? "Cassetto vuoto" : "Nessun risultato")
                         .font(Theme.mono(13, .semibold))
-                    Text(vm.searchText.isEmpty ? "aggiungi la prima voce con +" : "prova un altro termine")
+                    Text(vm.searchText.isEmpty ? "Aggiungi la prima voce con +" : "Prova un altro termine")
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.inkSoft)
                 }

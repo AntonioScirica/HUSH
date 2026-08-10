@@ -105,8 +105,8 @@ struct VaultDoorView: View {
                     if askPassword {
                         passwordControls
                     } else {
-                        Text(waitingTap ? "tocca la porta per aprire"
-                                        : (MasterKey.tipoBiometria == .volto ? "guarda lo schermo" : "appoggia il dito sul sensore"))
+                        Text(waitingTap ? "Tocca la porta per aprire"
+                                        : (MasterKey.tipoBiometria == .volto ? "Guarda lo schermo" : "Appoggia il dito sul sensore"))
                             .font(Theme.mono(11))
                             .foregroundStyle(Theme.inkSoft)
                     }
@@ -149,15 +149,15 @@ struct VaultDoorView: View {
                     .kerning(-0.5)
                     .foregroundStyle(Theme.ink)
                 Text(MasterKey.biometryEnabled && MasterKey.mustTypePassword
-                     ? "oggi la password va scritta a mano, per non dimenticarla"
-                     : "una password, tutti i cassetti")
+                     ? "Oggi la password va scritta a mano, per non dimenticarla"
+                     : "Una password, tutti i cassetti")
                     .font(Theme.mono(11))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Theme.inkSoft)
             }
 
             VStack(spacing: 10) {
-                SecureField("master password", text: $password)
+                SecureField("Master password", text: $password)
                     .textFieldStyle(PaperFieldStyle())
                     .focused($fieldFocused)
                     .onSubmit(attempt)
@@ -168,19 +168,19 @@ struct VaultDoorView: View {
                     )
 
                 if wrong {
-                    Text("password sbagliata")
+                    Text("Password sbagliata")
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.danger)
                 }
 
-                Button(checking ? "apro…" : "apri") { attempt() }
+                Button(checking ? "Apro…" : "Apri") { attempt() }
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .frame(width: 280)
                     .disabled(password.isEmpty || checking)
                     .opacity(password.isEmpty || checking ? 0.4 : 1)
 
                 if RecoveryKit.exists {
-                    Button("password dimenticata?") { showRecovery = true }
+                    Button("Password dimenticata?") { showRecovery = true }
                         .buttonStyle(.plain)
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
@@ -238,10 +238,10 @@ struct VaultDoorView: View {
     /// quindi non c'è niente da ricifrare — si entra e basta.
     private var recoverySheet: some View {
         VStack(alignment: .leading, spacing: 16) {
-            IndexLabel(text: "chiave di recupero")
+            IndexLabel(text: "Chiave di recupero")
             Rectangle().fill(Theme.line).frame(height: 1.2)
 
-            Text("quella generata al primo avvio. si può scrivere\nanche senza trattini.")
+            Text("Quella generata al primo avvio. Si può scrivere\nanche senza trattini.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
                 .fixedSize(horizontal: false, vertical: true)
@@ -257,9 +257,9 @@ struct VaultDoorView: View {
             Spacer(minLength: 0)
 
             HStack(spacing: 10) {
-                Button("annulla") { showRecovery = false; recoveryKey = ""; recoveryError = nil }
+                Button("Annulla") { showRecovery = false; recoveryKey = ""; recoveryError = nil }
                     .buttonStyle(OutlineButtonStyle())
-                Button("rientra") { attemptRecovery() }
+                Button("Rientra") { attemptRecovery() }
                     .buttonStyle(InkButtonStyle(prominent: true))
                     .disabled(recoveryKey.isEmpty)
                     .opacity(recoveryKey.isEmpty ? 0.4 : 1)

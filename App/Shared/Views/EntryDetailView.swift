@@ -75,7 +75,7 @@ struct EntryDetailView: View {
                     .padding(.top, 14)
                 }
 
-                Button("modifica") { onEdit() }
+                Button("Modifica") { onEdit() }
                     .buttonStyle(InkButtonStyle())
                     .frame(width: 160)
                     .padding(.top, 18)
@@ -174,10 +174,10 @@ struct EntryInlineDetail: View {
             }
 
             HStack(spacing: 10) {
-                Button("modifica") { onEdit() }
+                Button("Modifica") { onEdit() }
                     .buttonStyle(InkButtonStyle())
                     .frame(maxWidth: .infinity)
-                Button("elimina") { onDelete() }
+                Button("Elimina") { onDelete() }
                     .buttonStyle(OutlineButtonStyle())
                     .frame(maxWidth: .infinity)
             }
