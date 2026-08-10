@@ -201,8 +201,10 @@ private struct EntryTabRow: View {
                     .fill(Theme.line)
                     .frame(height: 1.1)
             }
-            // un po' d'aria fra una linguetta e la riga di quella dopo
-            .padding(.bottom, 14)
+            // un po' d'aria fra una linguetta e la riga di quella dopo; la
+            // voce aperta invece resta attaccata al suo pannello, che poi
+            // ci pensa lui a lasciare aria prima della prossima
+            .padding(.bottom, selected ? 0 : 14)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -244,7 +246,12 @@ struct ClassicHomeView: View {
         // niente bottoni nella barra del titolo (tasti e ricerca stanno nel
         // contenuto, che la porta copre come tutto il resto): ma la barra
         // va lasciata al suo posto, senza nasconderla, o se ne va anche la
-        // striscia coi tasti di chiusura/minimizza/zoom della finestra
+        // striscia coi tasti di chiusura/minimizza/zoom della finestra.
+        // Il toggle che NavigationSplitView aggiunge da sé per aprire e
+        // chiudere la sidebar invece non serve: qui la sidebar c'è sempre.
+        #if os(macOS)
+        .toolbar(removing: .sidebarToggle)
+        #endif
         .tint(Theme.ink)
         .preferredColorScheme(.light)
         .onAppear { if attiva { carica() } }
@@ -473,6 +480,9 @@ struct ClassicHomeView: View {
                         .overlay(alignment: .bottom) {
                             Rectangle().fill(Theme.line).frame(height: 1.1)
                         }
+                        // la stessa aria che c'è fra due linguette, o la
+                        // voce dopo restava attaccata al bordo del pannello
+                        .padding(.bottom, 14)
                         // niente .move: la scivolata dall'alto sembrava
                         // la voce che arriva da fuori, non che si apre
                         .transition(.opacity)
