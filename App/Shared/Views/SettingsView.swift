@@ -1,6 +1,7 @@
 import SwiftUI
 #if os(macOS)
 import AppKit
+import SafariServices
 #else
 import UIKit
 #endif
@@ -266,6 +267,24 @@ struct SettingsView: View {
                         )
                     } label: {
                         Label("Mostra i vault nel Finder", systemImage: "folder")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+
+                    divider
+                    section("Estensione Safari")
+                    Text("Compila utente e password nei siti, direttamente da Safari: un tasto 🔒 compare sopra ogni campo password.")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        SFSafariApplication.showPreferencesForExtension(
+                            withIdentifier: "com.antonioscirica.hush.safariextension",
+                            completionHandler: { _ in }
+                        )
+                    } label: {
+                        Label("Attiva in Safari", systemImage: "safari")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(OutlineButtonStyle())
