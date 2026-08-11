@@ -46,6 +46,7 @@ struct SettingsView: View {
     static let mostraBackupDrive = false
     @State private var estensioneSafariAttiva = false
     @State private var erroreSafariManuale = false
+    @State private var tokenChromeCopiato = false
     @State private var driveConnesso = GoogleDriveAuth.shared.isConnected
     @State private var driveBackupInCorso = false
     @State private var driveErrore: String?
@@ -320,6 +321,25 @@ struct SettingsView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
+
+                    divider
+                    section("Estensione Chrome")
+                    Text("Chrome non può leggere il Portachiavi come fa Safari: la prima volta va incollato un token, una volta sola. Copialo qui, poi incollalo nel popup dell'estensione.")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        let token = BridgeToken.ensureExists()
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(token, forType: .string)
+                        tokenChromeCopiato = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { tokenChromeCopiato = false }
+                    } label: {
+                        Text(tokenChromeCopiato ? "Copiato" : "Copia token per Chrome")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(OutlineButtonStyle())
 
                     // Nascosta finché l'app OAuth non è pubblicata su Google
                     // (oggi solo utenti di test possono collegarsi, e i
