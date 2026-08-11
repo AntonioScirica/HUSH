@@ -16,6 +16,15 @@ struct ScrignoMacApp: App {
         startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
     )
 
+    /// ⌃⌥H da qualunque app: apre il popup per aggiungere una password al
+    /// volo, senza passare dalla finestra principale. Va tenuta in vita
+    /// (un riferimento forte) o la scorciatoia smette di funzionare appena
+    /// l'oggetto viene ripulito.
+    private let scorciatoiaRapida = GlobalHotKey {
+        guard MasterKey.isConfigured else { return } // niente onboarding fatto, niente popup
+        QuickAddPanelController.shared.toggle()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
