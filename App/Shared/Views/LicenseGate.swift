@@ -132,6 +132,7 @@ struct LicenseWall: View {
             .frame(width: 520)
             #endif
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .preferredColorScheme(.light)
     }
 }

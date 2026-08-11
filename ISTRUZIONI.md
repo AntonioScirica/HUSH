@@ -122,22 +122,39 @@ in `project.yml`) — per pubblicarne una:
    xcodebuild -exportArchive -archivePath build/Hush.xcarchive -exportPath build/export \
      -exportOptionsPlist build/exportOptions.plist -allowProvisioningUpdates
    ```
-3. Impacchetta in `.dmg`:
+3. Impacchetta in `.dmg` (`create-dmg`, `brew install create-dmg`, per la
+   finestra d'installazione disegnata — sfondo in
+   `Resources/dmg-background.svg`):
    ```
-   mkdir -p build/dmgroot && cp -R build/export/Hush.app build/dmgroot/
-   ln -sf /Applications build/dmgroot/Applications
-   hdiutil create -volname Hush -srcfolder build/dmgroot -ov -format UDZO build/Hush.dmg
+   rsvg-convert -w 660 -h 420 Resources/dmg-background.svg -o build/dmg-bg.png
+   create-dmg --volname Hush --background build/dmg-bg.png --window-size 660 420 \
+     --icon-size 96 --icon "Hush.app" 175 175 --app-drop-link 485 175 \
+     --no-internet-enable build/Hush.dmg build/export/Hush.app
    ```
-4. Firma l'update (chiave privata nel Keychain di questo Mac, mai nel repo —
-   se manca, `generate_keys` del [tool ufficiale Sparkle](https://github.com/sparkle-project/Sparkle/releases) la ricrea):
+4. Notarizza (credenziali già in Keychain sotto il profilo
+   `hush-notarize` — se mancano, `xcrun notarytool store-credentials
+   hush-notarize --apple-id <email> --team-id 69SHH7M6DY --password
+   <password specifica per app da appleid.apple.com>`):
+   ```
+   xcrun notarytool submit build/Hush.dmg --keychain-profile hush-notarize --wait
+   xcrun stapler staple build/Hush.dmg
+   ```
+5. Firma l'update per Sparkle (chiave privata nel Keychain di questo Mac,
+   mai nel repo — se manca, `generate_keys` del [tool ufficiale
+   Sparkle](https://github.com/sparkle-project/Sparkle/releases) la ricrea):
    ```
    sign_update build/Hush.dmg
    ```
-5. Aggiungi una voce in `build/appcast.xml` con la firma ottenuta — inclusa
-   `<description>` (HTML, dentro `CDATA`): è il changelog che la gente vede
-   nel pannello di aggiornamento, senza non capisce cosa sta per installare.
-   Poi carica sia `hush.dmg` che `appcast.xml` nel bucket Supabase `assets`
-   (stesso posto del video demo), sovrascrivendo quelli che ci sono.
+6. Carica su Supabase (bucket `assets`, stesso posto del video demo) **due**
+   copie: `hush.dmg` (sovrascritto ogni volta — è il link fisso che usano i
+   bottoni "scarica" sul sito) e una versionata `hush-<versione>.dmg` (es.
+   `hush-1.2.dmg`, per lo storico). Tieni solo le ultime **5** versionate:
+   cancella la più vecchia da Supabase quando ne carichi una nuova.
+7. **Aggiungi** (non sostituire) una voce in cima a `build/appcast.xml`,
+   sopra quella precedente — inclusa `<description>` (HTML, dentro
+   `CDATA`): è sia il changelog nel pannello di aggiornamento sia quello
+   che compare su hush-topaz.vercel.app/novita, la stessa identica fonte.
+   Poi carica `appcast.xml` su Supabase, sovrascrivendolo.
 
 Chi ha già Hush aperto lo trova da solo entro un giorno (o subito, da
 **Hush → Verifica aggiornamenti…**).
