@@ -212,6 +212,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 69SHH7M6DY
         SKIP_INSTALL: YES
+        # Richiesto dalla notarizzazione, come sull'app principale.
+        ENABLE_HARDENED_RUNTIME: YES
     info:
       path: SafariExtension/Info.plist
       properties:
