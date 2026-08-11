@@ -32,5 +32,13 @@
 	<string>© Antonio Scirica</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Hush cerca il tuo iPhone sulla stessa rete WiFi per mandargli i cassetti, senza passare da nessun server.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>MG3Sq4+mqad/IhevSFSj3xupTO14vk2hZSKHcivJilA=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

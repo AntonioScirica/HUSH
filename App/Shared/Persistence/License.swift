@@ -24,7 +24,7 @@ import UIKit
 enum License {
     /// Chiave pubblica di firma. La privata sta sul server che emette le
     /// licenze: chi ce l'ha può fabbricarne di valide.
-    private static let publicKeyBase64 = "7fXzi+lxmJxcIlMx1FO5buQ2ZXOb+kyqSpWSKKdZ75E="
+    private static let publicKeyBase64 = "WRxxNOQWk/5qT1+I+BPQ1qVIRdg8ZshDUkVMOvlKpK0="
 
     private static let licenseKey = "scrigno.license"
     private static let firstRunKey = "scrigno.firstRun"

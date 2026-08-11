@@ -1,4 +1,5 @@
 import SwiftUI
+import Sparkle
 
 @main
 struct ScrignoMacApp: App {
@@ -7,6 +8,13 @@ struct ScrignoMacApp: App {
     /// È la misura del CONTENUTO: la finestra ci aggiunge sopra la barra del
     /// titolo nascosta (32 pt), e viene fuori il 829×612 di prima.
     private static let windowSize = CGSize(width: 829, height: 580)
+
+    /// Controlla da sé, in background, se c'è una versione nuova sul feed
+    /// (vedi SUFeedURL in project.yml) — l'utente vede solo il pannello
+    /// quando c'è davvero qualcosa di nuovo da installare.
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil
+    )
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +26,11 @@ struct ScrignoMacApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(replacing: .newItem) {} // "Nuovo documento" non ha senso per questa app
+            CommandGroup(after: .appInfo) {
+                Button("Verifica aggiornamenti…") {
+                    updaterController.checkForUpdates(nil)
+                }
+            }
         }
     }
 }

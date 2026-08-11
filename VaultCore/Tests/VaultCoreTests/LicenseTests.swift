@@ -5,8 +5,8 @@ import CryptoKit
 /// vive nel target dell'app. La licenza sotto è stata emessa davvero dallo
 /// script del server con la chiave privata vera.
 final class LicenseTests: XCTestCase {
-    private let publicKeyBase64 = "7fXzi+lxmJxcIlMx1FO5buQ2ZXOb+kyqSpWSKKdZ75E="
-    private let licenzaVera = "eyJlbWFpbCI6ImNsaWVudGVAZXNlbXBpby5pdCIsInBsYW4iOiJ2aXRhIiwiaXNzdWVkIjoxNzg2MjQwODYxfQ.fLy9wniDy52LXsrW4GULwTYpWDTzuZHfO0oqJ7XhIlI0wMFm7IbXDs55cy8nijE7zGMmYX9G38n2yK3MmSzzBA"
+    private let publicKeyBase64 = "WRxxNOQWk/5qT1+I+BPQ1qVIRdg8ZshDUkVMOvlKpK0="
+    private let licenzaVera = "eyJlbWFpbCI6ImNsaWVudGVAZXNlbXBpby5pdCIsInBsYW4iOiJ2aXRhIiwiaXNzdWVkIjoxNzg2MjQwODYxfQ.AlPyJiGzn0qyITKMTOFuCwMg1Dgx-8KxQ6ati2qYyyUfL3gRKXu-ajHr9iQuBRLl_2RgsaYJZKzlKBGLCpOeBw"
 
     private func b64url(_ s: String) -> Data? {
         var t = s.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")

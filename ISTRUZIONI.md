@@ -108,6 +108,38 @@ Keychain (`com.antonioscirica.hush.bridge`) solo fra Hush.app e l'estensione.
 Chiudi o blocchi Hush e il bridge si ferma: l'estensione lo trova muto, come
 deve essere. Vedi `App/macOS/LocalBridge.swift` per i dettagli.
 
+## 6. Pubblicare una nuova versione (aggiornamenti automatici)
+
+Hush controlla da solo se c'è una versione nuova (Sparkle, vedi `SUFeedURL`
+in `project.yml`) — per pubblicarne una:
+
+1. Alza `MARKETING_VERSION` e/o `CURRENT_PROJECT_VERSION` in `project.yml`,
+   poi `xcodegen generate`.
+2. Archivia ed esporta, firmato Developer ID (non serve toccare Xcode):
+   ```
+   xcodebuild -project Scrigno.xcodeproj -scheme Scrigno-macOS -configuration Release \
+     -allowProvisioningUpdates archive -archivePath build/Hush.xcarchive
+   xcodebuild -exportArchive -archivePath build/Hush.xcarchive -exportPath build/export \
+     -exportOptionsPlist build/exportOptions.plist -allowProvisioningUpdates
+   ```
+3. Impacchetta in `.dmg`:
+   ```
+   mkdir -p build/dmgroot && cp -R build/export/Hush.app build/dmgroot/
+   ln -sf /Applications build/dmgroot/Applications
+   hdiutil create -volname Hush -srcfolder build/dmgroot -ov -format UDZO build/Hush.dmg
+   ```
+4. Firma l'update (chiave privata nel Keychain di questo Mac, mai nel repo —
+   se manca, `generate_keys` del [tool ufficiale Sparkle](https://github.com/sparkle-project/Sparkle/releases) la ricrea):
+   ```
+   sign_update build/Hush.dmg
+   ```
+5. Aggiungi una voce in `build/appcast.xml` con la firma ottenuta, poi carica
+   sia `hush.dmg` che `appcast.xml` nel bucket Supabase `assets` (stesso
+   posto del video demo), sovrascrivendo quelli che ci sono.
+
+Chi ha già Hush aperto lo trova da solo entro un giorno (o subito, da
+**Hush → Verifica aggiornamenti…**).
+
 ## Cosa NON fa (ancora), onestamente
 
 - **Cronologia e campi personalizzati**: se apri con Scrigno un vault creato

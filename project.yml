@@ -27,6 +27,9 @@ settings:
 packages:
   VaultCore:
     path: VaultCore
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.6.4
 
 targets:
   Scrigno-macOS:
@@ -39,6 +42,8 @@ targets:
     dependencies:
       - package: VaultCore
         product: VaultCore
+      - package: Sparkle
+        product: Sparkle
       - target: ScrignoSafariExtension
         embed: true
     settings:
@@ -51,8 +56,15 @@ targets:
         # Firma stabile, non ad-hoc: l'ACL del portachiavi è legata alla firma,
         # e con quella ad-hoc (che cambia a ogni build) macOS vede ogni volta
         # un'app nuova e richiede la password del portachiavi "login".
-        CODE_SIGN_STYLE: Manual
-        CODE_SIGN_IDENTITY: "Developer ID Application"
+        # Automatic invece di Manual: la firma resta comunque quella vera
+        # (un certificato Apple, non ad-hoc, sempre lo stesso), ma è Xcode a
+        # scegliere/rinnovare il profilo — con Manual, ogni `xcodegen generate`
+        # ripartiva da zero e xcodebuild da riga di comando si bloccava
+        # chiedendo un profilo che solo l'interfaccia sapeva ritrovare. La
+        # firma Developer ID vera per la distribuzione arriva comunque, ma
+        # all'esportazione dell'archivio (`-exportOptionsPlist` con
+        # `method: developer-id`), non qui.
+        CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 69SHH7M6DY
         # Runtime irrobustito: senza, qualunque processo dell'utente può
         # attaccare un debugger a Hush e leggersi la master password
@@ -85,6 +97,14 @@ targets:
         NSLocalNetworkUsageDescription: "Hush cerca il tuo iPhone sulla stessa rete WiFi per mandargli i cassetti, senza passare da nessun server."
         NSBonjourServices:
           - _hush-sync._tcp
+        # Aggiornamenti automatici (Sparkle): feed e chiave pubblica per
+        # verificare che ogni update sia firmato da chi ha la privata (sul
+        # Mac di build, nel Keychain — mai nel repo). Vedi ISTRUZIONI.md
+        # per come si pubblica una nuova versione.
+        SUFeedURL: "https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/appcast.xml"
+        SUPublicEDKey: "MG3Sq4+mqad/IhevSFSj3xupTO14vk2hZSKHcivJilA="
+        SUEnableAutomaticChecks: true
+        SUScheduledCheckInterval: 86400
     entitlements:
       path: App/macOS/Scrigno-macOS.entitlements
       properties:
