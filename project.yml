@@ -39,6 +39,8 @@ targets:
     dependencies:
       - package: VaultCore
         product: VaultCore
+      - target: ScrignoSafariExtension
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush
@@ -66,8 +68,11 @@ targets:
           # la master password in memoria. In Debug serve per lo sviluppo,
           # nella build che si distribuisce no.
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
-    # Nessuna entitlement -> niente App Sandbox: l'app Mac legge/scrive
-    # liberamente il file .kdbx dove lo metti tu (es. iCloud Drive).
+    # L'app resta senza App Sandbox (legge/scrive liberamente il .kdbx dove
+    # lo metti tu, es. iCloud Drive): l'unica entitlement è quella che serve
+    # per condividere col Keychain "Data Protection" il token del bridge
+    # locale usato dall'estensione Safari (vedi App/macOS/LocalBridge.swift).
+    # Non è App Sandbox: quell'entitlement qui non c'è.
     info:
       path: App/macOS/Info.plist
       properties:
@@ -80,6 +85,11 @@ targets:
         NSLocalNetworkUsageDescription: "Hush cerca il tuo iPhone sulla stessa rete WiFi per mandargli i cassetti, senza passare da nessun server."
         NSBonjourServices:
           - _hush-sync._tcp
+    entitlements:
+      path: App/macOS/Scrigno-macOS.entitlements
+      properties:
+        keychain-access-groups:
+          - 69SHH7M6DY.com.antonioscirica.hush.bridge
 
   Scrigno-iOS:
     type: application
@@ -166,11 +176,47 @@ targets:
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.antonioscirica.scrigno.shared
 
+  ScrignoSafariExtension:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: SafariExtension/Native
+      - path: SafariExtension/Resources
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush.safariextension
+        PRODUCT_NAME: "Hush Safari Extension"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 69SHH7M6DY
+        SKIP_INSTALL: YES
+    info:
+      path: SafariExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Hush
+        CFBundleShortVersionString: "1.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.Safari.web-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SafariWebExtensionHandler
+    # In sandbox (obbligatorio per le estensioni Safari): niente accesso ai
+    # file del vault da qui, solo loopback verso Hush.app e il token nel
+    # Keychain condiviso — vedi SafariExtension/Native/BridgeToken.swift.
+    entitlements:
+      path: SafariExtension/HushSafariExtension.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        keychain-access-groups:
+          - 69SHH7M6DY.com.antonioscirica.hush.bridge
+
 schemes:
   Scrigno-macOS:
     build:
       targets:
         Scrigno-macOS: all
+        ScrignoSafariExtension: all
     run:
       config: Debug
   Scrigno-iOS:

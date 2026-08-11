@@ -42,14 +42,16 @@ struct AutoFillRootView: View {
     }
 
     private var entryList: some View {
-        List(vm.matchingEntries) { entry in
+        List(vm.matchingEntries) { match in
             Button {
-                onSelect(entry.username, entry.password)
+                onSelect(match.entry.username, match.entry.password)
             } label: {
                 VStack(alignment: .leading) {
-                    Text(entry.title).font(.body.weight(.medium))
-                    if !entry.username.isEmpty {
-                        Text(entry.username).font(.caption).foregroundStyle(.secondary)
+                    Text(match.entry.title).font(.body.weight(.medium))
+                    let sottotitolo = [match.entry.username, match.projectName]
+                        .filter { !$0.isEmpty }.joined(separator: " · ")
+                    if !sottotitolo.isEmpty {
+                        Text(sottotitolo).font(.caption).foregroundStyle(.secondary)
                     }
                 }
             }

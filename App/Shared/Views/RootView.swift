@@ -16,6 +16,12 @@ public struct RootView: View {
     @State private var licensed = License.isLicensed
     @State private var trialLeft = License.trialDaysLeft
     @State private var openSettings = false
+    /// Nome dell'app all'avvio: parte centrato e scivola nella posizione
+    /// del titolo del primo passo dell'onboarding (misurata dal vivo), poi
+    /// lo splash sparisce e resta il titolo vero, identico al pixel.
+    @State private var showSplash = true
+    @State private var splashInMovimento = false
+    @State private var hushTarget: CGRect = .zero
     /// Stessa chiave di Preferences.vistaClassica: @AppStorage la osserva
     /// dal vivo, così lo switch nelle impostazioni cambia schermata subito.
     @AppStorage("scrigno.pref.vistaClassica") private var vistaClassica = false
@@ -60,7 +66,7 @@ public struct RootView: View {
                     trialLeft = License.trialDaysLeft
                 }
             } else if !configured {
-                OnboardingView {
+                OnboardingView(titoloNascosto: showSplash) {
                     // niente dissolvenza qui: la porta deve comparire già
                     // chiusa e opaca, non in fade — altrimenti sotto si
                     // intravedono i cassetti per una frazione di secondo
@@ -189,9 +195,13 @@ public struct RootView: View {
                         sync.pronto(files: files, per: peer)
                     }
                 }
+                // l'estensione Safari compila le password parlando in loopback
+                // con questo bridge: sbloccato Hush, sblocca anche lui.
+                LocalBridgeServer.shared.start()
             } else {
                 // richiuso Hush: l'ascolto si ferma comunque, di sicuro
                 sync.ferma()
+                LocalBridgeServer.shared.stop()
             }
         }
         .alert(sync.richiestaDaAccettare ?? "", isPresented: Binding(
@@ -204,6 +214,49 @@ public struct RootView: View {
             Text("vuole ricevere i tuoi cassetti via WiFi. accetta solo se sei tu.")
         }
         #endif
+        .onPreferenceChange(HushTitleFrameKey.self) { hushTarget = $0 }
+        .overlay {
+            // il fondo si dissolve mentre "HUSH" scivola dal centro alla
+            // posizione vera del titolo (misurata dall'onboarding stesso):
+            // a fine corsa lo splash sparisce e resta il titolo, identico
+            if showSplash {
+                GeometryReader { g in
+                    let frame = g.frame(in: .global)
+                    let centro = CGPoint(x: g.size.width / 2, y: g.size.height / 2)
+                    // dal frame globale del titolo alle coordinate locali
+                    let destinazione = hushTarget == .zero ? centro : CGPoint(
+                        x: hushTarget.midX - frame.minX,
+                        y: hushTarget.midY - frame.minY
+                    )
+                    ZStack {
+                        Theme.paper.ignoresSafeArea()
+                            .opacity(splashInMovimento ? 0 : 1)
+                        Text("HUSH")
+                            .font(Theme.display(48))
+                            .kerning(-1)
+                            .foregroundStyle(Theme.ink)
+                            // senza onboarding (porta già configurata) non
+                            // c'è nessun titolo su cui atterrare: la scritta
+                            // si dissolve col fondo invece di restare appesa
+                            .opacity(hushTarget == .zero && splashInMovimento ? 0 : 1)
+                            .position(splashInMovimento ? destinazione : centro)
+                    }
+                }
+                .allowsHitTesting(!splashInMovimento)
+            }
+        }
+        .task {
+            // un attimo per farsi vedere, poi la scritta scivola al suo
+            // posto nel primo passo mentre il fondo si dissolve
+            try? await Task.sleep(for: .seconds(1.3))
+            withAnimation(.easeInOut(duration: 0.7)) { splashInMovimento = true }
+            try? await Task.sleep(for: .seconds(0.72))
+            // scambio invisibile: la scritta dello splash è ferma esattamente
+            // sopra il titolo vero, che da qui in poi fa da sé
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { showSplash = false }
+        }
         .overlay(alignment: .bottom) {
             if let toast = vm.toast {
                 Text(toast.lowercased())

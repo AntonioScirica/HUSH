@@ -16,6 +16,16 @@ struct ScrollBottomKey: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
+/// Dove sta il titolo "HUSH" del primo passo dell'onboarding, in coordinate
+/// globali: lo splash lo legge per far atterrare la sua scritta lì sopra.
+struct HushTitleFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
+    }
+}
+
 /// Linguaggio visivo "schedario": carta avorio, inchiostro quasi-nero,
 /// tab a cartellina numerati, tipografia monospace, chip d'accento gialla.
 /// (Ispirato alle reference: index-card dividers / folder tabs.)

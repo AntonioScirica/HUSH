@@ -12,6 +12,10 @@ import UIKit
 /// se la macchina ce l'ha — si attiva il dito. Stessa carta, stesso
 /// inchiostro, stessi divider numerati del resto dell'app.
 struct OnboardingView: View {
+    /// Vero finché lo splash sta ancora animando il suo "HUSH" verso questa
+    /// posizione: qui il titolo resta invisibile (ma misurato), e compare
+    /// solo quando la scritta dello splash gli è atterrata sopra.
+    var titoloNascosto: Bool = false
     let onDone: () -> Void
 
     private enum Step: Int, CaseIterable {
@@ -208,6 +212,10 @@ struct OnboardingView: View {
                 .font(Theme.display(48))
                 .kerning(-1)
                 .foregroundStyle(Theme.ink)
+                .opacity(titoloNascosto ? 0 : 1)
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: HushTitleFrameKey.self, value: g.frame(in: .global))
+                })
 
             VStack(alignment: .leading, spacing: 14) {
                 bullet("Un caveau, non un servizio",

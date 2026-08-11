@@ -31,6 +31,19 @@ final class VaultFileManager {
     private let defaultsKey = "vaultFilePath"
     private let projectsKey = "vaultProjects"
 
+    /// Su iOS l'elenco progetti va letto/scritto nel gruppo condiviso: app e
+    /// estensione AutoFill sono processi separati, ciascuno con un proprio
+    /// `UserDefaults.standard` — senza il suite del gruppo l'estensione
+    /// vedrebbe sempre zero progetti. Su macOS non c'è App Group (il target
+    /// non è in sandbox), quindi resta `.standard` come sempre.
+    private var defaults: UserDefaults {
+        #if os(iOS)
+        UserDefaults(suiteName: SharedGroup.id) ?? .standard
+        #else
+        .standard
+        #endif
+    }
+
     struct Project: Codable, Identifiable, Equatable {
         let name: String
         let path: String
@@ -48,7 +61,7 @@ final class VaultFileManager {
 
     /// Progetti (vault separati) conosciuti — elenco per la home a "scatola".
     var projects: [Project] {
-        guard let data = UserDefaults.standard.data(forKey: projectsKey),
+        guard let data = defaults.data(forKey: projectsKey),
               let list = try? JSONDecoder().decode([Project].self, from: data) else { return [] }
         return list
     }
@@ -59,7 +72,7 @@ final class VaultFileManager {
         if !list.contains(where: { $0.path == url.path }) {
             list.append(Project(name: name, path: url.path, icon: icon, noteColor: noteColor))
             if let data = try? JSONEncoder().encode(list) {
-                UserDefaults.standard.set(data, forKey: projectsKey)
+                defaults.set(data, forKey: projectsKey)
             }
         }
         try rememberVaultLocation(url)
@@ -71,7 +84,7 @@ final class VaultFileManager {
         guard let i = list.firstIndex(where: { $0.id == id }) else { return }
         list[i] = Project(name: name, path: list[i].path, icon: icon, noteColor: noteColor)
         if let data = try? JSONEncoder().encode(list) {
-            UserDefaults.standard.set(data, forKey: projectsKey)
+            defaults.set(data, forKey: projectsKey)
         }
     }
 
@@ -82,11 +95,11 @@ final class VaultFileManager {
         let path = list[i].path
         list.remove(at: i)
         if let data = try? JSONEncoder().encode(list) {
-            UserDefaults.standard.set(data, forKey: projectsKey)
+            defaults.set(data, forKey: projectsKey)
         }
         try? FileManager.default.removeItem(at: URL(fileURLWithPath: path))
-        if UserDefaults.standard.string(forKey: defaultsKey) == path {
-            UserDefaults.standard.removeObject(forKey: defaultsKey)
+        if defaults.string(forKey: defaultsKey) == path {
+            defaults.removeObject(forKey: defaultsKey)
         }
     }
 
@@ -122,7 +135,7 @@ final class VaultFileManager {
     /// nessuno. Se la cartella sparisce (disco staccato, servizio scollegato)
     /// si torna a quella predefinita invece di piantarsi.
     var cartellaScelta: URL? {
-        guard let path = UserDefaults.standard.string(forKey: cartellaKey) else { return nil }
+        guard let path = defaults.string(forKey: cartellaKey) else { return nil }
         var cartella = ObjCBool(false)
         guard FileManager.default.fileExists(atPath: path, isDirectory: &cartella), cartella.boolValue
         else { return nil }
@@ -147,14 +160,14 @@ final class VaultFileManager {
             try fm.moveItem(at: file, to: destinazione)
         }
 
-        UserDefaults.standard.set(nuova.path, forKey: cartellaKey)
+        defaults.set(nuova.path, forKey: cartellaKey)
         riscriviPercorsi(da: vecchia, a: nuova)
     }
 
     /// I progetti salvano il percorso completo del loro file: spostata la
     /// cartella, senza questo passaggio punterebbero nel vuoto.
     private func riscriviPercorsi(da vecchia: URL, a nuova: URL) {
-        let d = UserDefaults.standard
+        let d = defaults
         func aggiorna(_ path: String) -> String {
             let file = URL(fileURLWithPath: path)
             guard file.deletingLastPathComponent().standardizedFileURL == vecchia.standardizedFileURL
@@ -211,19 +224,19 @@ final class VaultFileManager {
 
     /// Percorso del vault "corrente" (l'ultimo selezionato).
     var currentPath: String? {
-        UserDefaults.standard.string(forKey: defaultsKey)
+        defaults.string(forKey: defaultsKey)
     }
 
     var hasVault: Bool {
-        UserDefaults.standard.string(forKey: defaultsKey) != nil
+        defaults.string(forKey: defaultsKey) != nil
     }
 
     func rememberVaultLocation(_ url: URL) throws {
-        UserDefaults.standard.set(url.path, forKey: defaultsKey)
+        defaults.set(url.path, forKey: defaultsKey)
     }
 
     private func resolveURL() throws -> URL {
-        guard let path = UserDefaults.standard.string(forKey: defaultsKey) else {
+        guard let path = defaults.string(forKey: defaultsKey) else {
             throw VaultFileError.noFileChosen
         }
         return URL(fileURLWithPath: path)

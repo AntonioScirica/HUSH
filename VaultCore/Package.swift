@@ -38,5 +38,12 @@ let package = Package(
             dependencies: ["VaultCore"],
             path: "Tests/VaultCoreTests"
         ),
+        // Popola Hush con progetti finti per demo/video: `swift run SeedDemo`.
+        // Non fa parte dell'app.
+        .executableTarget(
+            name: "SeedDemo",
+            dependencies: ["VaultCore"],
+            path: "Sources/SeedDemo"
+        ),
     ]
 )

@@ -60,6 +60,19 @@ Questi due punti sono ciò che permette all'estensione AutoFill di leggere lo
 stesso vault e la stessa master password (protetta da Face ID) dell'app
 principale.
 
+Infine, solo su **Scrigno-macOS** e **ScrignoSafariExtension** (l'estensione
+Safari, vedi punto 5 sotto — devono condividere lo stesso identificatore):
+
+5. **+ Capability → Keychain Sharing** → aggiungi
+   `com.antonioscirica.hush.bridge` (stesso nome su entrambi i target).
+6. Solo su `ScrignoSafariExtension`: **+ Capability → App Sandbox** (se non è
+   già lì da sé) → sotto "Network" spunta **Outgoing Connections (Client)**.
+7. La prima volta che compili `ScrignoSafariExtension` con firma automatica,
+   Xcode potrebbe dirti che il tuo Mac non è registrato nel tuo account
+   sviluppatore: clicca "Register Device" nel pannello che propone, oppure
+   fallo da [developer.apple.com](https://developer.apple.com/account) →
+   Certificates, IDs & Profiles → Devices.
+
 ## 3. Primo avvio
 
 - **Mac**: seleziona lo schema `Scrigno-macOS`, Cmd+R. Crea un nuovo vault o
@@ -80,6 +93,21 @@ delle app, comparirà il tasto per usare Scrigno: la prima volta ti chiede la
 master password con l'opzione "Ricorda con Face ID", dopodiché sarà sempre
 Face ID.
 
+## 5. Attivare l'estensione Safari sul Mac
+
+Safari → Impostazioni → Estensioni → attiva **Hush**. Da quel momento, in
+qualunque pagina con un campo password compare un piccolo tasto 🔒: cliccalo
+per scegliere quale voce compilare (utente e password insieme).
+
+Come funziona, in breve: mentre Hush.app è aperto e sbloccato, tiene in
+ascolto sulla porta 51823 di *questo* Mac soltanto (127.0.0.1, non la rete —
+il telefono NON può raggiungerla). L'estensione Safari — sandboxata, non
+tocca mai un file `.kdbx` — le chiede lì le voci che combaciano col sito
+aperto, autenticandosi con un token generato la prima volta e condiviso via
+Keychain (`com.antonioscirica.hush.bridge`) solo fra Hush.app e l'estensione.
+Chiudi o blocchi Hush e il bridge si ferma: l'estensione lo trova muto, come
+deve essere. Vedi `App/macOS/LocalBridge.swift` per i dettagli.
+
 ## Cosa NON fa (ancora), onestamente
 
 - **Cronologia e campi personalizzati**: se apri con Scrigno un vault creato
@@ -99,6 +127,14 @@ Face ID.
   entrambi i dispositivi: se lo modifichi su un dispositivo mentre è aperto
   anche sull'altro, vince l'ultimo salvataggio (come con qualunque file
   locale su iCloud Drive — nessun merge intelligente).
+- **Autofill solo su Mac (Safari) e iPhone/iPad (di sistema)**: non c'è
+  un'estensione Chrome/Firefox — su Mac serve Safari. Su iPhone l'autofill
+  funziona ovunque il sistema lo supporta (Safari e le app), non solo dentro
+  Safari.
+- **Bridge locale senza autenticazione forte**: il token che l'estensione
+  Safari usa per parlare con Hush.app gira in chiaro su HTTP in loopback (mai
+  fuori da questo Mac). Sufficiente per l'uso normale, ma non è pensato per
+  un Mac con altri utenti che hanno una sessione attiva in parallelo.
 
 ## Struttura del progetto
 
@@ -110,6 +146,9 @@ ScrignoApp/
   App/macOS/           Punto d'ingresso app Mac
   App/iOS/             Punto d'ingresso app iPhone
   AutoFillExtension/    Estensione AutoFill (Credential Provider) per iPhone
+  SafariExtension/
+    Native/             Ponte Swift sandboxato (JS <-> bridge locale)
+    Resources/           manifest.json, content/background/popup JS
   project.yml          Specifica XcodeGen (genera il .xcodeproj)
 ```
 
