@@ -85,6 +85,9 @@ struct ProjectsHomeView: View {
     var chromeVisible = true
     /// Aperto da fuori (dalla striscia della prova).
     var showSettingsSignal: Binding<Bool>? = nil
+    /// Chi tiene lo stato della licenza (RootView) non vede da sé se in
+    /// Impostazioni ne è stata appena attivata una: glielo si dice qui.
+    var onSettingsClosed: () -> Void = {}
 
     @EnvironmentObject var vm: VaultViewModel
 
@@ -895,6 +898,7 @@ struct ProjectsHomeView: View {
         .sheet(isPresented: $showSettings, onDismiss: {
             projects = VaultFileManager.shared.projects
             Task { await library.preload(projects) }
+            onSettingsClosed()
         }) {
             SettingsView(onClose: { showSettings = false },
                          onImport: { consumePendingImport() })

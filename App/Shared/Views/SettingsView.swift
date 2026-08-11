@@ -45,6 +45,7 @@ struct SettingsView: View {
     /// scadono ogni 7 giorni — inutile mostrarla finché non è pubblicata.
     static let mostraBackupDrive = false
     @State private var estensioneSafariAttiva = false
+    @State private var erroreSafariManuale = false
     @State private var driveConnesso = GoogleDriveAuth.shared.isConnected
     @State private var driveBackupInCorso = false
     @State private var driveErrore: String?
@@ -300,13 +301,24 @@ struct SettingsView: View {
                         Button {
                             SFSafariApplication.showPreferencesForExtension(
                                 withIdentifier: "com.antonioscirica.hush.safariextension",
-                                completionHandler: { _ in }
+                                completionHandler: { error in
+                                    guard error != nil else { return }
+                                    DispatchQueue.main.async { erroreSafariManuale = true }
+                                }
                             )
                         } label: {
                             Text("Attiva in Safari")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(OutlineButtonStyle())
+
+                        if erroreSafariManuale {
+                            Text("Non riesco ad aprirlo da qui: vai a mano su Safari → Impostazioni → Estensioni → attiva Hush.")
+                                .font(Theme.mono(10))
+                                .foregroundStyle(Theme.danger)
+                                .lineSpacing(3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
 
                     // Nascosta finché l'app OAuth non è pubblicata su Google

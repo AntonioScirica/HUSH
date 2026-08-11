@@ -113,7 +113,11 @@ public struct RootView: View {
                     ProjectsHomeView(
                         onLock: { lockUp() },
                         chromeVisible: unlocked,
-                        showSettingsSignal: $openSettings
+                        showSettingsSignal: $openSettings,
+                        onSettingsClosed: {
+                            licensed = License.isLicensed
+                            trialLeft = License.trialDaysLeft
+                        }
                     )
                     .environmentObject(vm)
                     // a scrigno chiuso si guarda soltanto: niente click che
