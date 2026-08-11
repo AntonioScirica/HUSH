@@ -40,6 +40,10 @@ struct SettingsView: View {
     @State private var leggendo = false
     @State private var importando = false
     #if os(macOS)
+    /// Il pannello di consenso OAuth su Google è ancora in "Testing": solo
+    /// gli utenti di test aggiunti a mano possono collegarsi, e i token
+    /// scadono ogni 7 giorni — inutile mostrarla finché non è pubblicata.
+    static let mostraBackupDrive = false
     @State private var estensioneSafariAttiva = false
     @State private var driveConnesso = GoogleDriveAuth.shared.isConnected
     @State private var driveBackupInCorso = false
@@ -305,6 +309,11 @@ struct SettingsView: View {
                         .buttonStyle(OutlineButtonStyle())
                     }
 
+                    // Nascosta finché l'app OAuth non è pubblicata su Google
+                    // (oggi solo utenti di test possono collegarsi, e i
+                    // token scadrebbero ogni 7 giorni): il codice c'è già,
+                    // pronto per quando ha senso mostrarla davvero.
+                    if Self.mostraBackupDrive {
                     divider
                     section("Backup su Google Drive")
                     if driveConnesso {
@@ -363,6 +372,7 @@ struct SettingsView: View {
                         }
                         .buttonStyle(OutlineButtonStyle())
                     }
+                    } // mostraBackupDrive
 
                     divider
                     section("Manda al telefono")
