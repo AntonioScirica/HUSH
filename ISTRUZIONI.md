@@ -133,9 +133,11 @@ in `project.yml`) — per pubblicarne una:
    ```
    sign_update build/Hush.dmg
    ```
-5. Aggiungi una voce in `build/appcast.xml` con la firma ottenuta, poi carica
-   sia `hush.dmg` che `appcast.xml` nel bucket Supabase `assets` (stesso
-   posto del video demo), sovrascrivendo quelli che ci sono.
+5. Aggiungi una voce in `build/appcast.xml` con la firma ottenuta — inclusa
+   `<description>` (HTML, dentro `CDATA`): è il changelog che la gente vede
+   nel pannello di aggiornamento, senza non capisce cosa sta per installare.
+   Poi carica sia `hush.dmg` che `appcast.xml` nel bucket Supabase `assets`
+   (stesso posto del video demo), sovrascrivendo quelli che ci sono.
 
 Chi ha già Hush aperto lo trova da solo entro un giorno (o subito, da
 **Hush → Verifica aggiornamenti…**).
