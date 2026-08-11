@@ -144,8 +144,7 @@ final class LocalBridgeServer {
             var found: [[String: String]] = []
             for project in VaultFileManager.shared.projects {
                 for entry in VaultLibrary.shared.entries(of: project) {
-                    guard let entryHost = URL(string: entry.url)?.host?.lowercased(), !entryHost.isEmpty else { continue }
-                    guard host.isEmpty || entryHost.contains(host) || host.contains(entryHost) else { continue }
+                    guard host.isEmpty || HostMatch.matches(entryURL: entry.url, entryTitle: entry.title, host: host) else { continue }
                     found.append([
                         "title": entry.title,
                         "username": entry.username,

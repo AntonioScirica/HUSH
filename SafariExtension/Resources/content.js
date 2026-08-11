@@ -117,6 +117,13 @@
       const usernameField = usernameFieldFor(passwordField)
       showDropdown(button, passwordField, usernameField)
     })
+
+    // Compare da sé al focus, come i suggerimenti nativi del browser —
+    // niente bisogno di cliccare il lucchetto ogni volta.
+    passwordField.addEventListener("focus", () => {
+      const usernameField = usernameFieldFor(passwordField)
+      showDropdown(button, passwordField, usernameField)
+    })
   }
 
   function scan() {

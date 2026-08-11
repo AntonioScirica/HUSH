@@ -38,8 +38,7 @@ final class AutoFillViewModel: ObservableObject {
         guard !hosts.isEmpty else { return all.sorted { $0.entry.title < $1.entry.title } }
 
         let matched = all.filter { match in
-            guard let host = URL(string: match.entry.url)?.host?.lowercased(), !host.isEmpty else { return false }
-            return hosts.contains { ident in ident.contains(host) || host.contains(ident) }
+            hosts.contains { host in HostMatch.matches(entryURL: match.entry.url, entryTitle: match.entry.title, host: host) }
         }
         return (matched.isEmpty ? all : matched).sorted { $0.entry.title < $1.entry.title }
     }
