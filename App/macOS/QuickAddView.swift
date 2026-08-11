@@ -14,9 +14,6 @@ struct QuickAddView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider().overlay(Theme.line)
-
             switch passo {
             case .sblocco:
                 SbloccoRapido {
@@ -40,26 +37,6 @@ struct QuickAddView: View {
         .background(Theme.paper)
         .onExitCommand { onDone() } // Esc chiude
     }
-
-    private var header: some View {
-        HStack {
-            Text("HUSH").font(Theme.display(15)).kerning(-0.5)
-            Spacer()
-            Text(titolo)
-                .font(Theme.mono(10))
-                .foregroundStyle(Theme.inkSoft)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
-    private var titolo: String {
-        switch passo {
-        case .sblocco: "sblocca"
-        case .progetto: "scegli il progetto"
-        case .modulo: "nuova voce"
-        }
-    }
 }
 
 // MARK: - Passo 1: sblocco
@@ -69,44 +46,44 @@ private struct SbloccoRapido: View {
 
     @State private var password = ""
     @State private var errore: String?
-    @State private var tentatoTouchID = false
+    @State private var provandoTouchID = true
 
     var body: some View {
-        VStack(spacing: 14) {
+        Group {
             if MasterKey.isUnlocked {
                 // la sessione principale è già aperta: niente da chiedere
                 Color.clear.frame(height: 1)
                     .onAppear { onSbloccato() }
+            } else if provandoTouchID {
+                // niente da vedere qui apposta: il pannello di Touch ID di
+                // sistema è già il feedback, un altro sopra sarebbe di troppo
+                Color.clear.frame(height: 1)
             } else {
-                SecureField("Master password", text: $password)
-                    .textFieldStyle(PaperFieldStyle())
-                    .onSubmit(prova)
+                VStack(spacing: 14) {
+                    SecureField("Master password", text: $password)
+                        .textFieldStyle(PaperFieldStyle())
+                        .onSubmit(prova)
 
-                if let errore {
-                    Text(errore).font(Theme.mono(10)).foregroundStyle(Theme.danger)
-                }
-
-                Button("Sblocca") { prova() }
-                    .buttonStyle(InkButtonStyle(prominent: true))
-                    .disabled(password.isEmpty)
-                    .opacity(password.isEmpty ? 0.4 : 1)
-
-                if MasterKey.biometryUsable {
-                    Button {
-                        proviamoTouchID()
-                    } label: {
-                        Label("Usa Touch ID", systemImage: "touchid")
-                            .frame(maxWidth: .infinity)
+                    if let errore {
+                        Text(errore).font(Theme.mono(10)).foregroundStyle(Theme.danger)
                     }
-                    .buttonStyle(OutlineButtonStyle())
+
+                    Button("Sblocca") { prova() }
+                        .buttonStyle(InkButtonStyle(prominent: true))
+                        .disabled(password.isEmpty)
+                        .opacity(password.isEmpty ? 0.4 : 1)
                 }
+                .padding(16)
             }
         }
-        .padding(16)
         .task {
-            guard !tentatoTouchID, MasterKey.biometryUsable else { return }
-            tentatoTouchID = true
-            proviamoTouchID()
+            MasterKey.unlockWithBiometry { ok in
+                if ok {
+                    onSbloccato()
+                } else {
+                    provandoTouchID = false // niente touch id (o rifiutato): si passa alla password
+                }
+            }
         }
     }
 
@@ -116,12 +93,6 @@ private struct SbloccoRapido: View {
         } else {
             errore = "Password sbagliata."
             password = ""
-        }
-    }
-
-    private func proviamoTouchID() {
-        MasterKey.unlockWithBiometry { ok in
-            if ok { onSbloccato() }
         }
     }
 }
