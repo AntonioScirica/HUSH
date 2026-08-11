@@ -108,6 +108,19 @@ Keychain (`com.antonioscirica.hush.bridge`) solo fra Hush.app e l'estensione.
 Chiudi o blocchi Hush e il bridge si ferma: l'estensione lo trova muto, come
 deve essere. Vedi `App/macOS/LocalBridge.swift` per i dettagli.
 
+## 5bis. Attivare il riempimento automatico di sistema sul Mac
+
+Diverso dall'estensione Safari sopra: questo è il riempimento automatico
+*di sistema* (macOS 14+), lo stesso meccanismo di 1Password — compare nel
+menu "chiave" dei campi password, anche fuori da Safari.
+
+Impostazioni di Sistema → Password (o Generali → Login automatico e
+password, secondo la versione di macOS) → Opzioni di riempimento
+automatico → attiva **Hush**. Estensione a sé (`MacAutoFillExtension/`),
+stesso codice della schermata AutoFill dell'iPhone (`AutoFillExtension/`,
+condiviso — vedi `ScrignoMacAutoFill` in `project.yml`): sblocco con
+password o Touch ID, poi la voce da compilare.
+
 ## 6. Pubblicare una nuova versione (aggiornamenti automatici)
 
 Hush controlla da solo se c'è una versione nuova (Sparkle, vedi `SUFeedURL`

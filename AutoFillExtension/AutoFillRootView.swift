@@ -27,7 +27,9 @@ struct AutoFillRootView: View {
                 }
             }
             .navigationTitle("Scrigno")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annulla") { onCancel() }

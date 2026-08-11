@@ -34,11 +34,19 @@ final class VaultFileManager {
     /// Su iOS l'elenco progetti va letto/scritto nel gruppo condiviso: app e
     /// estensione AutoFill sono processi separati, ciascuno con un proprio
     /// `UserDefaults.standard` — senza il suite del gruppo l'estensione
-    /// vedrebbe sempre zero progetti. Su macOS non c'è App Group (il target
-    /// non è in sandbox), quindi resta `.standard` come sempre.
+    /// vedrebbe sempre zero progetti.
+    ///
+    /// Su macOS l'app principale resta su `.standard` (mai cambiato: è già
+    /// il dominio giusto per chi ha Hush installato, cambiarlo vorrebbe dire
+    /// "perdere" i progetti già registrati). L'estensione AutoFill di
+    /// sistema per Mac (MacAutoFillExtension, bundle id diverso) è un
+    /// processo a sé — anche lei, non essendo in sandbox, punta dritta al
+    /// dominio dell'app principale invece di uno suo che sarebbe vuoto.
     private var defaults: UserDefaults {
         #if os(iOS)
         UserDefaults(suiteName: SharedGroup.id) ?? .standard
+        #elseif MAC_AUTOFILL_EXTENSION
+        UserDefaults(suiteName: "com.antonioscirica.hush") ?? .standard
         #else
         .standard
         #endif

@@ -46,6 +46,8 @@ targets:
         product: Sparkle
       - target: ScrignoSafariExtension
         embed: true
+      - target: ScrignoMacAutoFill
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush
@@ -233,12 +235,48 @@ targets:
         keychain-access-groups:
           - 69SHH7M6DY.com.antonioscirica.hush.bridge
 
+  ScrignoMacAutoFill:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: MacAutoFillExtension
+      - path: AutoFillExtension/AutoFillViewModel.swift
+      - path: AutoFillExtension/AutoFillRootView.swift
+      - path: App/Shared/Persistence
+    dependencies:
+      - package: VaultCore
+        product: VaultCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush.autofill
+        PRODUCT_NAME: "Hush AutoFill"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 69SHH7M6DY
+        SKIP_INSTALL: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        # Legge/scrive nel dominio UserDefaults dell'app principale invece
+        # che nel proprio (vuoto) — vedi VaultFileManager.swift.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: MAC_AUTOFILL_EXTENSION
+    info:
+      path: MacAutoFillExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Hush
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.authentication-services-credential-provider-ui
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).CredentialProviderViewController
+        NSFaceIDUsageDescription: "Hush usa Touch ID per sbloccare rapidamente il tuo vault."
+    # Niente sandbox, come l'app principale: legge gli stessi file .kdbx
+    # dallo stesso posto, senza bisogno di App Group.
+
 schemes:
   Scrigno-macOS:
     build:
       targets:
         Scrigno-macOS: all
         ScrignoSafariExtension: all
+        ScrignoMacAutoFill: all
     run:
       config: Debug
   Scrigno-iOS:

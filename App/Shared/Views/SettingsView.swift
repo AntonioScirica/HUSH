@@ -39,6 +39,9 @@ struct SettingsView: View {
     @State private var importJob: ImportJob?
     @State private var leggendo = false
     @State private var importando = false
+    #if os(macOS)
+    @State private var estensioneSafariAttiva = false
+    #endif
 
     #if os(macOS)
     /// Stessa istanza di RootView: qui se ne mostra solo lo stato.
@@ -278,16 +281,26 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.inkSoft)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button {
-                        SFSafariApplication.showPreferencesForExtension(
-                            withIdentifier: "com.antonioscirica.hush.safariextension",
-                            completionHandler: { _ in }
-                        )
-                    } label: {
-                        Label("Attiva in Safari", systemImage: "safari")
+                    if estensioneSafariAttiva {
+                        Label("Attivata", systemImage: "checkmark.circle.fill")
+                            .font(Theme.mono(11, .semibold))
+                            .foregroundStyle(Theme.ink)
                             .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Theme.yellow.opacity(0.5))
+                            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                    } else {
+                        Button {
+                            SFSafariApplication.showPreferencesForExtension(
+                                withIdentifier: "com.antonioscirica.hush.safariextension",
+                                completionHandler: { _ in }
+                            )
+                        } label: {
+                            Label("Attiva in Safari", systemImage: "safari")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
                     }
-                    .buttonStyle(OutlineButtonStyle())
 
                     divider
                     section("Manda al telefono")
@@ -369,7 +382,25 @@ struct SettingsView: View {
         }
         // l'ascolto e l'avviso da accettare li gestisce RootView, che c'è
         // sempre: qui in Impostazioni si vede solo lo stato condiviso
+        #if os(macOS)
+        .task { aggiornaStatoEstensioneSafari() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            // si torna qui da Impostazioni di Sistema dopo averla attivata:
+            // niente da ricaricare a mano, si vede da sé
+            aggiornaStatoEstensioneSafari()
+        }
+        #endif
     }
+
+    #if os(macOS)
+    private func aggiornaStatoEstensioneSafari() {
+        SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: "com.antonioscirica.hush.safariextension") { state, _ in
+            DispatchQueue.main.async {
+                estensioneSafariAttiva = state?.isEnabled ?? false
+            }
+        }
+    }
+    #endif
 
     // MARK: - Pezzi
 
