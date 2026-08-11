@@ -303,7 +303,7 @@ struct SettingsView: View {
                                 completionHandler: { _ in }
                             )
                         } label: {
-                            Label("Attiva in Safari", systemImage: "safari")
+                            Text("Attiva in Safari")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(OutlineButtonStyle())
