@@ -75,6 +75,7 @@ struct ImportPreviewView: View {
                      : "Questo cassetto è cifrato con un'altra password.\nScrivila: verrà riscritto con quella di Hush.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 SecureField("Password del file", text: $foreignPassword)

@@ -244,6 +244,7 @@ struct VaultDoorView: View {
             Text("Quella generata al primo avvio. Si può scrivere\nanche senza trattini.")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
             TextField("XXXXX-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX", text: $recoveryKey)

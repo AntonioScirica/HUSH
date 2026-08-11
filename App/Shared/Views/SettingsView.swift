@@ -18,7 +18,6 @@ struct SettingsView: View {
     @State private var autolock = Preferences.autolockMinutes
     @State private var clipboard = Preferences.clipboardSeconds
     @State private var length = Preferences.passwordLength
-    @State private var symbols = Preferences.passwordSymbols
     @State private var typeAgain = Preferences.typeAgainDays
     @State private var vistaClassica = Preferences.vistaClassica
     @State private var showImporter = false
@@ -54,7 +53,7 @@ struct SettingsView: View {
             .padding(.bottom, 18)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 24) {
                     section("Licenza")
 
                     if let info = License.active {
@@ -68,6 +67,7 @@ struct SettingsView: View {
                         Text("Vale per un computer. Per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
+                            .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button { confirmDetach = true } label: {
@@ -88,11 +88,12 @@ struct SettingsView: View {
                         Text("Passati i 7 giorni Hush si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre portartelo via, e lo riapri anche senza Hush.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
+                            .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
 
                         TextField("Incolla qui la licenza", text: $licenseText, axis: .vertical)
                             .textFieldStyle(PaperFieldStyle())
-                            .lineLimit(2...4)
+                            .lineLimit(1...4)
 
                         Button {
                             if License.register(licenseText) != nil {
@@ -123,8 +124,8 @@ struct SettingsView: View {
 
                     row("Riscrivi la password ogni",
                         MasterKey.tipoBiometria == .volto
-                        ? "Col volto soltanto la si dimentica, e qui non c'è nessun recupero."
-                        : "Col dito soltanto la si dimentica, e qui non c'è nessun recupero.") {
+                        ? "Ogni tanto te la richiede comunque, anche col volto attivo: così non la dimentichi."
+                        : "Ogni tanto te la richiede comunque, anche col dito attivo: così non la dimentichi.") {
                         Picker("", selection: $typeAgain) {
                             Text("3 giorni").tag(3)
                             Text("7 giorni").tag(7)
@@ -169,7 +170,7 @@ struct SettingsView: View {
                     }
 
                     row("Svuota gli appunti dopo",
-                        "Una password copiata la legge qualunque cosa incolli dopo.") {
+                        "Cancella la password copiata, così non resta lì in giro.") {
                         Picker("", selection: $clipboard) {
                             Text("15 s").tag(15)
                             Text("30 s").tag(30)
@@ -191,13 +192,6 @@ struct SettingsView: View {
                         .onChange(of: length) { _, v in Preferences.passwordLength = v }
                     }
 
-                    row("Con simboli", "Alcuni siti non li accettano: qui li togli.") {
-                        Toggle("", isOn: $symbols)
-                            .labelsHidden()
-                            .toggleStyle(.switch)
-                            .onChange(of: symbols) { _, v in Preferences.passwordSymbols = v }
-                    }
-
                     divider
                     section("Chiave di recupero")
 
@@ -206,6 +200,7 @@ struct SettingsView: View {
                          : "Non ce n'è nessuna: senza, una master password dimenticata vuol dire vault persi.")
                         .font(Theme.mono(10))
                         .foregroundStyle(RecoveryKit.exists ? Theme.inkSoft : Theme.danger)
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let newRecovery {
@@ -280,6 +275,7 @@ struct SettingsView: View {
                     Text("Via WiFi, senza passare da nessun server. Resta acceso solo quanto ti serve: fuori casa il Mac non deve annunciarsi in giro.")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                     macSyncBox
                     #endif
@@ -438,6 +434,7 @@ struct SettingsView: View {
                 Text(detail)
                     .font(Theme.mono(10))
                     .foregroundStyle(Theme.inkSoft)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)

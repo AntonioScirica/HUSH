@@ -120,6 +120,7 @@ struct ProjectsHomeView: View {
     @State private var isEditingProject = false
     @State private var editingProjectID: String?
     @State private var showDeleteConfirm = false
+    @State private var showDeleteEntryConfirm = false
     /// Zoom ravvicinato sul post-it, per icona e colore.
     @State private var focusNote = false
     @State private var noteRect: CGRect?
@@ -165,6 +166,19 @@ struct ProjectsHomeView: View {
 
     @State private var localError: String?
     @State private var showSettings = false
+    /// Tour guidato sulla parete vuota: nasce già "done" se l'hai già visto.
+    @State private var tourStep: TourStep = Preferences.vistoAiutoParete ? .done : .creaCassetto
+    /// L'ultima tappa vera vista, per poterla ancora disegnare mentre si
+    /// dissolve dopo che tourStep è già passato a .done.
+    @State private var tourDisplayStep: TourStep = Preferences.vistoAiutoParete ? .done : .creaCassetto
+    @State private var creaButtonRect: CGRect = .zero
+    @State private var iconButtonRect: CGRect = .zero
+    @State private var salvaIconaRect: CGRect = .zero
+    @State private var creaProgettoRect: CGRect = .zero
+    /// La primissima volta (tour attivo) la chrome compare più svelta: con
+    /// la dissolvenza lunga normale c'era il tempo di cliccare qualcosa
+    /// prima ancora che il fumetto arrivasse a spiegare cosa fare.
+    private var chromeAppearDuration: Double { tourStep != .done ? 0.5 : 1.6 }
 
     // ponytail: voci finte solo per prototipare l'apertura del cassetto —
     // da sostituire con vm.store.allEntries quando il vault reale è collegato qui.
@@ -191,6 +205,8 @@ struct ProjectsHomeView: View {
     @State private var newEntryFields: [CustomField] = []
     @State private var newEntryNotes = ""
     @State private var revealNewEntryPassword = false
+    @State private var newEntryScrolled = false
+    @State private var newEntryAtBottom = true
     /// Col campo password a fuoco, il dado si accende.
     @FocusState private var newEntryPasswordFocused: Bool
     // campi delle voci "carta di credito" e "identità" — mostrati solo per
@@ -341,6 +357,12 @@ struct ProjectsHomeView: View {
         library.update(updated, in: project)
     }
 
+    private func deleteSelectedEntry() {
+        guard let project = openProjectEntry, let entry = selectedEntry else { return }
+        library.delete(id: entry.id, from: project)
+        selectedFolder = nil
+    }
+
     /// La voce attualmente estratta al centro.
     private var selectedEntry: VaultEntry? {
         guard let folder = selectedFolder, folder >= 1 else { return nil }
@@ -475,7 +497,7 @@ struct ProjectsHomeView: View {
             .ignoresSafeArea()
             .allowsHitTesting(false)
             .opacity(chromeVisible ? 1 : 0)
-            .animation(.easeOut(duration: 0.45), value: chromeVisible)
+            .animation(.easeInOut(duration: chromeAppearDuration), value: chromeVisible)
             .animation(.easeOut(duration: 0.25), value: drawerOpen)
 
             VStack {
@@ -534,6 +556,10 @@ struct ProjectsHomeView: View {
                             }
                             .buttonStyle(.plain)
                             .help("Nuovo progetto")
+                            .background(GeometryReader { g in
+                                Color.clear.preference(key: TourRectKey.self, value: g.frame(in: .named("muro")))
+                            })
+                            .onPreferenceChange(TourRectKey.self) { creaButtonRect = $0 }
 
                             Button {
                                 tapNewPassword()
@@ -553,7 +579,7 @@ struct ProjectsHomeView: View {
                 }
             }
             .opacity(chromeVisible ? 1 : 0)
-            .animation(.easeOut(duration: 0.45), value: chromeVisible)
+            .animation(.easeInOut(duration: chromeAppearDuration), value: chromeVisible)
             .animation(.easeOut(duration: 0.25), value: drawerOpen)
             // la creazione può essere annullata anche dalla scena (click fuori):
             // qualunque sia la via d'uscita, l'interfaccia della bozza
@@ -588,7 +614,7 @@ struct ProjectsHomeView: View {
                 .padding(.horizontal, 22)
                 .padding(.bottom, 22)
                 .opacity(chromeVisible ? 1 : 0)
-            .animation(.easeOut(duration: 0.45), value: chromeVisible)
+            .animation(.easeInOut(duration: chromeAppearDuration), value: chromeVisible)
             }
 
             // creazione: campo nome sovrapposto alla targhetta del cassetto
@@ -624,6 +650,10 @@ struct ProjectsHomeView: View {
                                     isEditingProject ? saveEditedProject() : confirmCreationName()
                                 }
                                 .buttonStyle(InkButtonStyle(prominent: true))
+                                .background(GeometryReader { g in
+                                    Color.clear.preference(key: TourRectKey.self, value: g.frame(in: .named("muro")))
+                                })
+                                .onPreferenceChange(TourRectKey.self) { creaProgettoRect = $0 }
 
                                 if isEditingProject {
                                     Button("Elimina progetto") { showDeleteConfirm = true }
@@ -643,6 +673,11 @@ struct ProjectsHomeView: View {
                 // se non c'è ancora un'icona, altrimenti quella scelta —
                 // il tap zooma sul post-it (colori + libreria icone)
                 if let note = noteRect {
+                    // in creazione (non in modifica) l'icona si sceglie DOPO
+                    // il titolo: prima il post-it resta spento, così l'ordine
+                    // si capisce anche senza il tour ad accompagnarlo
+                    let titoloVuoto = !isEditingProject
+                        && createName.trimmingCharacters(in: .whitespaces).isEmpty
                     Button {
                         if newIcon == nil { newIcon = iconLibrary.randomElement() }
                         // subito a nil, non al prossimo giro: altrimenti per
@@ -675,6 +710,9 @@ struct ProjectsHomeView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .disabled(titoloVuoto)
+                    .opacity(titoloVuoto ? 0.3 : 1)
+                    .animation(.easeOut(duration: 0.2), value: titoloVuoto)
                     .frame(width: note.width, height: note.height)
                     .rotationEffect(draftNoteAngle)
                     .position(x: note.midX, y: note.midY)
@@ -710,6 +748,10 @@ struct ProjectsHomeView: View {
                         showIconLibrary = true
                     }
                     .buttonStyle(OutlineButtonStyle())
+                    .background(GeometryReader { g in
+                        Color.clear.preference(key: TourRectKey.self, value: g.frame(in: .named("muro")))
+                    })
+                    .onPreferenceChange(TourRectKey.self) { iconButtonRect = $0 }
 
                     HStack(spacing: 10) {
                         Button("Annulla") {
@@ -720,6 +762,10 @@ struct ProjectsHomeView: View {
 
                         Button("Fatto") { focusNote = false }
                             .buttonStyle(InkButtonStyle(prominent: true))
+                            .background(GeometryReader { g in
+                                Color.clear.preference(key: TourRectKey.self, value: g.frame(in: .named("muro")))
+                            })
+                            .onPreferenceChange(TourRectKey.self) { salvaIconaRect = $0 }
                     }
                 }
                 .frame(width: 230)
@@ -747,7 +793,8 @@ struct ProjectsHomeView: View {
                                       user: u, password: p, url: r, notes: n,
                                       extras: extras)
                         },
-                        onClose: { selectedFolder = nil }
+                        onClose: { selectedFolder = nil },
+                        onDelete: { showDeleteEntryConfirm = true }
                     )
                     // margini veri dentro il corpo della cartella: prima il
                     // contenuto arrivava a filo dei bordi e sembrava stare
@@ -768,7 +815,8 @@ struct ProjectsHomeView: View {
                         onSave: { rows in
                             saveEdits(to: entry, kind: entryKind, extras: rows)
                         },
-                        onClose: { selectedFolder = nil }
+                        onClose: { selectedFolder = nil },
+                        onDelete: { showDeleteEntryConfirm = true }
                     )
                     // margini veri dentro il corpo della cartella: prima il
                     // contenuto arrivava a filo dei bordi e sembrava stare
@@ -778,7 +826,44 @@ struct ProjectsHomeView: View {
                     .id(folder)
                 }
             }
+
+            // parete vuota, appena entrati: tour in tre tappe, si avanza
+            // toccando i bersagli veri, si spegne da solo per sempre.
+            // Stessa dissolvenza di tutto il resto della chrome alla PRIMA
+            // apparizione (non uno scatto secco appena la porta si apre);
+            // i cambi di tappa dopo hanno la loro, più veloce.
+            // sempre nell'albero (mai un `if` che la fa sparire di scatto):
+            // così l'ultima tappa si dissolve invece di sparire secca
+            // quando tourStep passa a .done
+            tourOverlay
+                .opacity(tourVisible ? (chromeVisible ? 1 : 0) : 0)
+                // parte solo quando il resto della chrome ha già finito
+                // la sua dissolvenza (1.6s), non insieme
+                .animation(.easeInOut(duration: 0.25).delay(chromeVisible && tourVisible ? chromeAppearDuration : 0), value: chromeVisible)
+                .animation(.easeInOut(duration: 0.35), value: tourVisible)
+                .allowsHitTesting(tourVisible)
+
+            // sempre in basso a sinistra: chi non vuole seguire il tour se
+            // ne libera in un tap, in ogni tappa
+            VStack {
+                Spacer()
+                HStack {
+                    Button("Salta") {
+                        tourStep = .done
+                        Preferences.vistoAiutoParete = true
+                    }
+                    .buttonStyle(OutlineButtonStyle())
+                    .fixedSize()
+                    Spacer()
+                }
+            }
+            .padding(22)
+            .opacity(tourVisible ? (chromeVisible ? 1 : 0) : 0)
+            .animation(.easeInOut(duration: 0.25).delay(chromeVisible && tourVisible ? chromeAppearDuration : 0), value: chromeVisible)
+            .animation(.easeInOut(duration: 0.35), value: tourVisible)
+            .allowsHitTesting(tourVisible)
         }
+        .coordinateSpace(name: "muro")
         // stesso sistema di coordinate della SCNView (che ignora il safe area):
         // senza, il rect proiettato della cartella risulta spostato in basso
         .ignoresSafeArea()
@@ -819,6 +904,9 @@ struct ProjectsHomeView: View {
             IconLibrarySheet(selected: newIcon, search: $iconSearch, library: iconLibrary) { picked in
                 newIcon = (newIcon == picked ? nil : picked)
                 showIconLibrary = false
+                // qui, non al dismiss della sheet: è il momento esatto in
+                // cui l'icona è stata davvero scelta
+                if tourStep == .scegliIconaLib { tourStep = .scegliColore }
             }
             .sheetPaper()
         }
@@ -829,11 +917,48 @@ struct ProjectsHomeView: View {
             Button("Annulla", role: .cancel) {}
             Button("Elimina", role: .destructive) { deleteEditedProject() }
         }, message: { Text("Il cassetto e tutto quello che contiene vengono cancellati. Non si può annullare.") })
+        .alert("Eliminare questa voce?", isPresented: $showDeleteEntryConfirm, actions: {
+            Button("Annulla", role: .cancel) {}
+            Button("Elimina", role: .destructive) { deleteSelectedEntry() }
+        }, message: { Text("Non si può annullare.") })
         .onChange(of: showSettingsSignal?.wrappedValue ?? false) { _, wants in
             if wants { showSettings = true; showSettingsSignal?.wrappedValue = false }
         }
+        // il tour avanza da solo seguendo quello che l'utente fa davvero,
+        // non un bottone "avanti" a parte
+        .onChange(of: creatingCell) { _, cell in
+            if tourStep == .creaCassetto, cell != nil { tourStep = .scriviTitolo }
+            // creazione annullata prima di finire: si torna al "+", o il
+            // tour resterebbe appeso a una targhetta o un post-it che non
+            // ci sono più
+            let inCreazione: Set<TourStep> = [.scriviTitolo, .tapPostIt, .scegliIconaLib, .scegliColore, .premiSalva, .creaProgetto]
+            if inCreazione.contains(tourStep), cell == nil, !showEntryFlow {
+                tourStep = .creaCassetto
+            }
+        }
+        .onChange(of: focusNote) { _, zoomato in
+            // lo zoom sul post-it è finito: si passa dal "toccalo" a
+            // "scegli l'icona", stesso rettangolo, tappa diversa
+            if tourStep == .tapPostIt, zoomato { tourStep = .scegliIconaLib }
+            // "Fatto" sul post-it: si torna alla targhetta, tocca al
+            // bottone Crea progetto
+            if tourStep == .premiSalva, !zoomato { tourStep = .creaProgetto }
+        }
+        .onChange(of: showIconLibrary) { _, aperta in
+            // libreria icone chiusa (scelta o no): tocca al colore adesso
+            if tourStep == .scegliIconaLib, !aperta { tourStep = .scegliColore }
+        }
+        .onChange(of: newNoteColor) { _, _ in
+            if tourStep == .scegliColore { tourStep = .premiSalva }
+        }
+        .onChange(of: tourStep) { _, nuovo in
+            // resta sull'ultima tappa vera finché la dissolvenza non ha
+            // finito: EmptyView() subito farebbe sparire tutto di scatto
+            if nuovo != .done { tourDisplayStep = nuovo }
+        }
         .onAppear {
             projects = VaultFileManager.shared.projects
+            if !projects.isEmpty { tourStep = .done }
             consumePendingImport()
             // i vault si aprono in anticipo, in sottofondo: così cliccando un
             // cassetto le cartelle ci sono già invece di comparire dopo
@@ -973,6 +1098,7 @@ struct ProjectsHomeView: View {
                                 .lineLimit(2)
                                 // va a capo invece di stringersi fino a
                                 // toccare i bordi (es. "carta di credito")
+                                .lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.horizontal, 8)
                         }
@@ -1004,8 +1130,13 @@ struct ProjectsHomeView: View {
             IndexLabel(number: (currentNewEntryProject.map { library.entries(of: $0).count } ?? 0) + 1, text: "nuovo · \(newEntryKind.label)")
                 .padding(.bottom, 6)
 
+            GeometryReader { outer in
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    GeometryReader { g in
+                        Color.clear.preference(key: ScrollOffsetKey.self, value: g.frame(in: .named("scrollNewEntry")).minY)
+                    }
+                    .frame(height: 0)
                     // progetto: scelto prima di entrare qui, ma cambiabile
                     // senza uscire. Menu a tendina di sistema, come quelli
                     // delle impostazioni: prima era un finto menu disegnato
@@ -1080,6 +1211,7 @@ struct ProjectsHomeView: View {
                             }
                             }
                             .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
                             .frame(maxHeight: 132)
                             .background(Theme.paper)
                             .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
@@ -1114,12 +1246,23 @@ struct ProjectsHomeView: View {
                     if newEntryKind != .secureNote {
                         TextField("Note", text: $newEntryNotes, axis: .vertical)
                             .textFieldStyle(PaperFieldStyle())
-                            .lineLimit(3...5)
+                            .lineLimit(1...5)
                     }
+
+                    GeometryReader { g in
+                        Color.clear.preference(key: ScrollBottomKey.self, value: g.frame(in: .named("scrollNewEntry")).maxY)
+                    }
+                    .frame(height: 0)
                 }
                 .padding(.trailing, 4)   // spazio per la scrollbar
             }
+            .coordinateSpace(name: "scrollNewEntry")
+            .onPreferenceChange(ScrollOffsetKey.self) { y in newEntryScrolled = y < -4 }
+            .onPreferenceChange(ScrollBottomKey.self) { y in newEntryAtBottom = y <= outer.size.height + 4 }
+            .scrollIndicators(.hidden)
             .frame(maxHeight: .infinity)
+            .scrollFade(top: newEntryScrolled, bottom: !newEntryAtBottom)
+            }
 
             if !newEntryName.trimmingCharacters(in: .whitespaces).isEmpty && !newEntryHasContent {
                 Text("Serve almeno un dato oltre al titolo")
@@ -1158,10 +1301,6 @@ struct ProjectsHomeView: View {
             }
             .textFieldStyle(.plain)
             .font(Theme.mono(13))
-            // SecureField e TextField hanno metriche interne
-            // leggermente diverse: senza altezza fissa il campo
-            // "respira" un pelo passando dall'una all'altra
-            .frame(height: 18)
             .focused($newEntryPasswordFocused)
 
             Button { revealNewEntryPassword.toggle() } label: {
@@ -1196,7 +1335,8 @@ struct ProjectsHomeView: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: newEntryPasswordFocused)
-        .padding(10)
+        .frame(height: Theme.fieldHeight)
+        .padding(.horizontal, 10)
         .background(Theme.paperRaised)
         .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
@@ -1324,7 +1464,7 @@ struct ProjectsHomeView: View {
                     }
                     TextField("Testo", text: $note.value, axis: .vertical)
                         .textFieldStyle(PaperFieldStyle())
-                        .lineLimit(3...6)
+                        .lineLimit(1...6)
                 }
             }
             Button { newSecureNotes.append(CustomField()) } label: {
@@ -1446,7 +1586,7 @@ struct ProjectsHomeView: View {
             entry = EntryMapping.credentialEntry(
                 kind: newEntryKind.rawValue, title: name,
                 user: newEntryUser,
-                password: newEntryPassword.isEmpty ? Self.randomPassword() : newEntryPassword,
+                password: newEntryPassword,
                 url: newEntryURLs.first?.value ?? "",
                 notes: newEntryNotes,
                 extras: extras
@@ -1620,6 +1760,160 @@ struct ProjectsHomeView: View {
         newNoteColor = ProjectsHomeView.noteColors.first
     }
 
+    /// Tre tappe, una alla volta: si avanza toccando il bersaglio vero (il
+    /// + , poi il post-it), non un bottone "avanti" separato — così chi
+    /// segue il fumetto sta anche davvero facendo la cosa. Si chiude una
+    /// volta sola per sempre (Preferences.vistoAiutoParete).
+    private enum TourStep {
+        case creaCassetto, scriviTitolo, tapPostIt, scegliIconaLib, scegliColore, premiSalva, creaProgetto, done
+    }
+
+    /// Rettangolo del "+", per bucare la velatura esattamente lì sopra.
+    private struct TourRectKey: PreferenceKey {
+        static var defaultValue: CGRect = .zero
+        static func reduce(value: inout CGRect, nextValue: () -> CGRect) { value = nextValue() }
+    }
+
+    /// Vera finché il tour non è chiuso per sempre: guida sia l'opacità
+    /// (fade, non scatto) sia l'hit-testing del velo.
+    private var tourVisible: Bool { tourStep != .done }
+
+    @ViewBuilder
+    private var tourOverlay: some View {
+        // resta sull'ultima tappa vera anche a tourStep == .done: così la
+        // dissolvenza mostra ancora il contenuto mentre sparisce, invece
+        // di lasciare vuoto da subito
+        switch tourStep == .done ? tourDisplayStep : tourStep {
+        case .creaCassetto:
+            if creaButtonRect != .zero {
+                spotlight(creaButtonRect, testo: "Premi qui per creare il primo progetto.")
+            }
+        case .scriviTitolo:
+            if let targhetta = plateRect {
+                let nomeScritto = !createName.trimmingCharacters(in: .whitespaces).isEmpty
+                spotlight(targhetta, testo: "Scrivi un titolo per il cassetto.",
+                          ctaLabel: nomeScritto ? "Fatto" : nil,
+                          cta: nomeScritto ? { tourStep = .tapPostIt } : nil)
+            }
+        case .tapPostIt:
+            // il post-it stesso resta il bersaglio anche mentre la scena
+            // fa lo zoom: è lo stesso rettangolo (noteRect), la camera lo
+            // muove ma non lo fa mai sparire — niente buco che sfarfalla
+            if let nota = noteRect {
+                spotlight(nota, testo: "Tocca il post-it per dargli un'icona e un colore.", angolo: draftNoteAngle)
+            }
+        case .scegliIconaLib:
+            // durante lo zoom della camera noteRect è nil e i bottoni non
+            // sono ancora a schermo: velo pieno senza buco, così l'overlay
+            // resta lì invece di sparire e riapparire (il glitch)
+            if focusNote, let nota = noteRect, iconButtonRect != .zero {
+                spotlight(iconButtonRect, testo: "Scegli un'icona per il cassetto.", anche: nota, ancheAngolo: draftNoteAngle)
+            } else {
+                velo("Scegli un'icona per il cassetto.")
+            }
+        case .scegliColore:
+            // niente GeometryReader qui: la colonna sta in un punto noto
+            // rispetto al post-it (maxX + 44, centrata in verticale), il
+            // rettangolo si calcola e basta — misurarla via preference si
+            // era rivelato inaffidabile con la sheet delle icone di mezzo
+            if let nota = noteRect {
+                let n = CGFloat(Self.noteColors.count)
+                let altezza = n * 32 + (n - 1) * 6
+                let rect = CGRect(x: nota.maxX + 44 - 16, y: nota.midY - altezza / 2,
+                                  width: 32, height: altezza)
+                spotlight(rect, testo: "Ora un colore per il post-it.", anche: nota, ancheAngolo: draftNoteAngle)
+            }
+        case .premiSalva:
+            if focusNote, let nota = noteRect, salvaIconaRect != .zero {
+                spotlight(salvaIconaRect, testo: "Premi Fatto per confermare.", anche: nota, ancheAngolo: draftNoteAngle)
+            } else {
+                velo("Premi Fatto per confermare.")
+            }
+        case .creaProgetto:
+            // misurato sul bottone vero, non derivato dalla targhetta: così
+            // il buco lo segue anche mentre la camera torna dall'icona
+            if !focusNote, creaProgettoRect != .zero {
+                spotlight(creaProgettoRect, testo: "Premi Crea progetto: il cassetto è pronto.")
+            } else {
+                velo("Premi Crea progetto: il cassetto è pronto.")
+            }
+        case .done:
+            EmptyView()
+        }
+    }
+
+    /// Velo pieno, senza buco: per i momenti in cui il bersaglio non ha
+    /// ancora un rettangolo (camera in movimento, UI non ancora a schermo).
+    /// Tiene l'overlay a schermo invece di farlo lampeggiare.
+    private func velo(_ testo: String) -> some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            tourBubble(testo)
+                .padding(.top, 60)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .transition(.opacity)
+    }
+
+    /// Velatura bucata sul bersaglio: si vede scuro tutt'intorno, chiaro
+    /// solo lì. Niente blocco dei tap: il bersaglio resta cliccabile
+    /// esattamente come senza il fumetto sopra.
+    private func spotlight(_ rect: CGRect, testo: String, ctaLabel: String? = nil, cta: (() -> Void)? = nil,
+                            angolo: Angle = .zero, anche: CGRect? = nil, ancheAngolo: Angle = .zero) -> some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .frame(width: rect.width + 16, height: rect.height + 16)
+                        .rotationEffect(angolo)
+                        .position(x: rect.midX, y: rect.midY)
+                        .blendMode(.destinationOut)
+                )
+                .overlay {
+                    // secondo buco facoltativo: il post-it resta acceso
+                    // insieme al bersaglio vero, così si vede sempre di
+                    // cosa si sta parlando (icona/colore/salva) — ruotato
+                    // come il post-it stesso, prima dello zoom
+                    if let anche {
+                        RoundedRectangle(cornerRadius: 10)
+                            .frame(width: anche.width + 16, height: anche.height + 16)
+                            .rotationEffect(ancheAngolo)
+                            .position(x: anche.midX, y: anche.midY)
+                            .blendMode(.destinationOut)
+                    }
+                }
+                .compositingGroup()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
+            tourBubble(testo)
+                .position(x: rect.midX, y: max(90, rect.minY - 46))
+
+            if let ctaLabel, let cta {
+                Button(ctaLabel, action: cta)
+                    .buttonStyle(InkButtonStyle(prominent: true))
+                    .fixedSize()
+                    .position(x: rect.midX, y: rect.maxY + 34)
+            }
+        }
+        .transition(.opacity)
+    }
+
+
+    private func tourBubble(_ testo: String) -> some View {
+        Text(testo)
+            .font(Theme.mono(11))
+            .lineSpacing(3)
+            .foregroundStyle(Theme.paper)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: 240)
+            .padding(14)
+            .background(Theme.ink)
+    }
+
     private func startCreation() {
         guard let cell = nextFreeCell else { return }
         createName = ""
@@ -1684,7 +1978,22 @@ struct ProjectsHomeView: View {
                     openCell = cellIndex(for: created)
                     newEntryProjectID = created.id
                     entryStep = .pickType
-                    showEntryFlow = true
+                    // progetto creato, cassetto che si apre: il tour finisce
+                    // QUI, prima che creatingCell venga azzerato più sotto —
+                    // aspettare il popup non andava: l'azzeramento faceva
+                    // scattare il fallback "creazione annullata" e il tour
+                    // ripartiva dal passo uno
+                    if tourStep == .creaProgetto {
+                        tourStep = .done
+                        Preferences.vistoAiutoParete = true
+                    }
+                    // il cassetto si apre e si vede per un attimo prima che
+                    // arrivi il popup delle categorie sopra: altrimenti il
+                    // popup copre subito tutto e l'apertura non si vede mai
+                    Task {
+                        try? await Task.sleep(for: .seconds(0.6))
+                        showEntryFlow = true
+                    }
                 }
             } catch {
                 localError = "Salvataggio non riuscito: \(error.localizedDescription)"
@@ -1765,21 +2074,45 @@ struct GenericEntryCard: View {
     @State var rows: [ProjectsHomeView.CustomField]
     let onSave: ([ProjectsHomeView.CustomField]) -> Void
     let onClose: () -> Void
+    let onDelete: () -> Void
+
+    /// "Annulla" in modifica torna a questi, senza chiudere la cartella.
+    private let originalRows: [ProjectsHomeView.CustomField]
+
+    init(number: Int, name: String, icon: String, rows: [ProjectsHomeView.CustomField],
+         onSave: @escaping ([ProjectsHomeView.CustomField]) -> Void,
+         onClose: @escaping () -> Void, onDelete: @escaping () -> Void) {
+        self.number = number
+        self.name = name
+        self.icon = icon
+        _rows = State(initialValue: rows)
+        self.onSave = onSave
+        self.onClose = onClose
+        self.onDelete = onDelete
+        originalRows = rows
+    }
 
     @State private var editing = false
     @State private var shown = false
+    @State private var scrolled = false
+    @State private var atBottom = true
 
     var body: some View {
         VStack(spacing: 18) {
-            if rows.isEmpty && !editing {
+            if rows.allSatisfy({ $0.value.isEmpty }) && !editing {
                 Text("Nessun dato")
                     .font(Theme.mono(12))
                     .foregroundStyle(Theme.inkSoft)
                     .frame(maxHeight: .infinity)
             } else {
                 // la cartella cresce fin dove può; oltre quel punto si scrolla
+                GeometryReader { outer in
                 ScrollView {
                     VStack(spacing: 12) {
+                        GeometryReader { g in
+                            Color.clear.preference(key: ScrollOffsetKey.self, value: g.frame(in: .named("scrollGeneric")).minY)
+                        }
+                        .frame(height: 0)
                         ForEach($rows) { $field in
                             if editing {
                                 HStack(spacing: 8) {
@@ -1801,7 +2134,7 @@ struct GenericEntryCard: View {
                                     .buttonStyle(.plain)
                                 }
                                 .themedRow()
-                            } else {
+                            } else if !field.value.isEmpty {
                                 HStack(alignment: .firstTextBaseline) {
                                     Text(field.label)
                                         .font(Theme.mono(11))
@@ -1826,18 +2159,29 @@ struct GenericEntryCard: View {
                             .font(Theme.mono(11))
                             .foregroundStyle(Theme.inkSoft)
                         }
+
+                        GeometryReader { g in
+                            Color.clear.preference(key: ScrollBottomKey.self, value: g.frame(in: .named("scrollGeneric")).maxY)
+                        }
+                        .frame(height: 0)
                     }
                 }
+                .coordinateSpace(name: "scrollGeneric")
+                .onPreferenceChange(ScrollOffsetKey.self) { y in scrolled = y < -4 }
+                .onPreferenceChange(ScrollBottomKey.self) { y in atBottom = y <= outer.size.height + 4 }
                 .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
                 .frame(maxHeight: .infinity)
+                .scrollFade(top: scrolled, bottom: !atBottom)
+                }
             }
 
             // in modifica il tasto che conta è "salva": va a destra, in
             // evidenza, dove prima stava "chiudi"
             HStack(spacing: 10) {
                 if editing {
-                    Button("Chiudi") { onClose() }
-                        .buttonStyle(OutlineButtonStyle())
+                    Button("Elimina") { onDelete() }
+                        .buttonStyle(OutlineButtonStyle(danger: true))
 
                     Button("Salva") {
                         rows = rows.filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -1896,36 +2240,80 @@ struct EntryCard: View {
     @State var extras: [ProjectsHomeView.CustomField]
     let onSave: (String, String, String, String, [ProjectsHomeView.CustomField]) -> Void
     let onClose: () -> Void
+    let onDelete: () -> Void
+
+    /// Copie intatte: "Annulla" in modifica deve tornare a questi valori,
+    /// non chiudere la cartella — si resta dentro, solo senza le modifiche.
+    private let originalUser: String
+    private let originalPassword: String
+    private let originalUrl: String
+    private let originalNotes: String
+    private let originalExtras: [ProjectsHomeView.CustomField]
+
+    init(number: Int, name: String, user: String, password: String, url: String, notes: String,
+         extras: [ProjectsHomeView.CustomField],
+         onSave: @escaping (String, String, String, String, [ProjectsHomeView.CustomField]) -> Void,
+         onClose: @escaping () -> Void, onDelete: @escaping () -> Void) {
+        self.number = number
+        self.name = name
+        _user = State(initialValue: user)
+        _password = State(initialValue: password)
+        _url = State(initialValue: url)
+        _notes = State(initialValue: notes)
+        _extras = State(initialValue: extras)
+        self.onSave = onSave
+        self.onClose = onClose
+        self.onDelete = onDelete
+        originalUser = user
+        originalPassword = password
+        originalUrl = url
+        originalNotes = notes
+        originalExtras = extras
+    }
 
     @State private var editing = false
     @State private var revealPassword = false
+    @State private var copiedPassword = false
+    @State private var scrolled = false
+    @State private var atBottom = true
     @State private var shown = false
 
     var body: some View {
         // Nessuno sfondo: la "scheda" È la cartella 3D estratta al centro —
         // qui appaiono solo i dati, dentro il corpo della cartella.
         VStack(spacing: 18) {
+            GeometryReader { outer in
             ScrollView {
                 VStack(spacing: 12) {
-                    fieldRow("Utente", value: $user)
-                    passwordRow
-                    fieldRow("Url", value: $url)
+                    GeometryReader { g in
+                        Color.clear.preference(key: ScrollOffsetKey.self, value: g.frame(in: .named("scrollEntry")).minY)
+                    }
+                    .frame(height: 0)
+                    if editing || !user.isEmpty {
+                        fieldRow("Utente", value: $user)
+                    }
+                    if editing || !password.isEmpty {
+                        passwordRow
+                    }
+                    if editing || !url.isEmpty {
+                        fieldRow("Url", value: $url)
+                    }
 
                     ForEach($extras) { $field in
                         if editing {
                             HStack(spacing: 8) {
-                                TextField("Etichetta", text: $field.label)
-                                    .textFieldStyle(.plain)
-                                    .font(Theme.mono(11))
-                                    .foregroundStyle(Theme.inkSoft)
-                                    .frame(width: 90, alignment: .leading)
-                                TextField("Valore", text: $field.value)
-                                    .textFieldStyle(.plain)
-                                    .font(Theme.mono(12, .semibold))
-                                    .foregroundStyle(Theme.ink)
-                                    .padding(6)
-                                    .background(Theme.paperRaised)
-                                    .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                                HStack(spacing: 8) {
+                                    TextField("Etichetta", text: $field.label)
+                                        .textFieldStyle(.plain)
+                                        .font(Theme.mono(11))
+                                        .foregroundStyle(Theme.inkSoft)
+                                        .frame(width: 90, alignment: .leading)
+                                    TextField("Valore", text: $field.value)
+                                        .textFieldStyle(.plain)
+                                        .font(Theme.mono(12, .semibold))
+                                        .foregroundStyle(Theme.ink)
+                                }
+                                .themedRow()
                                 Button {
                                     extras.removeAll { $0.id == field.id }
                                 } label: {
@@ -1946,6 +2334,7 @@ struct EntryCard: View {
                                 Spacer(minLength: 0)
                                 CopyButton(text: field.value)
                             }
+                            .themedRow()
                         }
                     }
 
@@ -1961,9 +2350,20 @@ struct EntryCard: View {
                         .font(Theme.mono(11))
                         .foregroundStyle(Theme.inkSoft)
                     }
+
+                    GeometryReader { g in
+                        Color.clear.preference(key: ScrollBottomKey.self, value: g.frame(in: .named("scrollEntry")).maxY)
+                    }
+                    .frame(height: 0)
                 }
             }
+            .coordinateSpace(name: "scrollEntry")
+            .onPreferenceChange(ScrollOffsetKey.self) { y in scrolled = y < -4 }
+            .onPreferenceChange(ScrollBottomKey.self) { y in atBottom = y <= outer.size.height + 4 }
             .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+            .scrollFade(top: scrolled, bottom: !atBottom)
+            }
             // niente Spacer qui: sarebbe flessibile quanto la ScrollView e si
             // spartirebbero lo spazio a metà — è per questo che l'area dei
             // campi restava piccola pur avendo tutta la cartella a disposizione.
@@ -1972,8 +2372,8 @@ struct EntryCard: View {
             // in modifica il tasto che conta è "salva": va a destra, in evidenza
             HStack(spacing: 10) {
                 if editing {
-                    Button("Chiudi") { onClose() }
-                        .buttonStyle(OutlineButtonStyle())
+                    Button("Elimina") { onDelete() }
+                        .buttonStyle(OutlineButtonStyle(danger: true))
 
                     Button("Salva") {
                         onSave(user, password, url, notes,
@@ -1985,11 +2385,20 @@ struct EntryCard: View {
                     Button("Modifica") { editing = true }
                         .buttonStyle(OutlineButtonStyle())
 
-                    Button("Copia password") {
-                        copyToClipboard(password)
-                        onClose()
+                    if password.isEmpty {
+                        Button("Chiudi") { onClose() }
+                            .buttonStyle(InkButtonStyle(prominent: true))
+                    } else {
+                        Button(copiedPassword ? "Copiata" : "Copia password") {
+                            copyToClipboard(password)
+                            copiedPassword = true
+                            // il feedback si vede un attimo prima che la
+                            // cartella si richiuda, non sparisce col resto
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { onClose() }
+                        }
+                        .buttonStyle(InkButtonStyle(prominent: true))
+                        .disabled(copiedPassword)
                     }
-                    .buttonStyle(InkButtonStyle(prominent: true))
                 }
             }
         }
@@ -2024,6 +2433,7 @@ struct EntryCard: View {
                 CopyButton(text: value.wrappedValue)
             }
         }
+        .themedRow()
     }
 
     private var passwordRow: some View {
@@ -2041,7 +2451,7 @@ struct EntryCard: View {
                     .background(Theme.paperRaised)
                     .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
             } else {
-                Text(revealPassword ? password : String(repeating: "•", count: max(password.count, 8)))
+                Text(revealPassword ? password : String(repeating: "•", count: password.count))
                     .font(Theme.mono(12, .semibold))
                     .foregroundStyle(Theme.ink)
                     .textSelection(.enabled)
@@ -2058,6 +2468,7 @@ struct EntryCard: View {
                 CopyButton(text: password)
             }
         }
+        .themedRow()
     }
 }
 

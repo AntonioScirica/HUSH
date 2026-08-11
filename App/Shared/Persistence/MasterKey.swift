@@ -193,7 +193,7 @@ enum MasterKey {
         let context = LAContext()
         context.localizedCancelTitle = "Annulla"
         context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
-                               localizedReason: "sbloccare Hush") { ok, _ in
+                               localizedReason: "aprire i tuoi cassetti") { ok, _ in
             guard ok, let password = try? SharedKeychain.retrieve(prompt: "Sblocca Hush") else {
                 DispatchQueue.main.async { completion(false) }
                 return

@@ -12,6 +12,7 @@ enum Preferences {
         static let passwordSymbols = "scrigno.pref.passwordSymbols"
         static let typeAgainDays = "scrigno.pref.typeAgainDays"
         static let vistaClassica = "scrigno.pref.vistaClassica"
+        static let vistoAiutoParete = "scrigno.pref.vistoAiutoParete"
     }
 
     /// Registra i valori di partenza: senza, `integer(forKey:)` risponde 0 su
@@ -60,5 +61,13 @@ enum Preferences {
     static var typeAgainDays: Int {
         get { max(0, d.integer(forKey: Key.typeAgainDays)) }
         set { d.set(newValue, forKey: Key.typeAgainDays) }
+    }
+
+    /// Il fumetto che spiega come creare il primo cassetto, l'icona e la
+    /// prima voce: si vede solo finché la parete è vuota E non l'hai già
+    /// chiuso — dopo, anche svuotando tutto, non deve ripresentarsi da solo.
+    static var vistoAiutoParete: Bool {
+        get { d.bool(forKey: Key.vistoAiutoParete) }
+        set { d.set(newValue, forKey: Key.vistoAiutoParete) }
     }
 }

@@ -61,15 +61,17 @@ public struct RootView: View {
                 }
             } else if !configured {
                 OnboardingView {
-                    configured = true
-                    // l'onboarding lascia già la sessione aperta
-                    unlocked = MasterKey.isUnlocked
-                    if unlocked {
-                        idle.onIdle = { lockUp() }
-                        idle.start()
-                    }
+                    // niente dissolvenza qui: la porta deve comparire già
+                    // chiusa e opaca, non in fade — altrimenti sotto si
+                    // intravedono i cassetti per una frazione di secondo
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t) { configured = true }
+                    // l'onboarding lascia già la sessione aperta, ma
+                    // "unlocked" resta false: così sotto compare la porta e
+                    // si vede l'apertura, invece di finire già dentro
                 }
-                .transition(.opacity)
+                .transition(.identity)
             } else {
                 // La home sta SEMPRE lì sotto, anche a scrigno chiuso: è la
                 // stessa vista che si vede attraverso il vano della porta e

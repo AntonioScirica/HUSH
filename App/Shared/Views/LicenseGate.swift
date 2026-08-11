@@ -60,11 +60,12 @@ struct LicenseWall: View {
                 Text("I sette giorni sono passati. Per continuare a usare\nHush serve una licenza.")
                     .font(Theme.mono(11))
                     .foregroundStyle(Theme.inkSoft)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 TextField("Incolla qui la licenza", text: $licenseText, axis: .vertical)
                     .textFieldStyle(PaperFieldStyle())
-                    .lineLimit(2...4)
+                    .lineLimit(1...4)
 
                 if let error {
                     Text(error).font(Theme.mono(11)).foregroundStyle(Theme.danger)
@@ -95,6 +96,7 @@ struct LicenseWall: View {
                     Text("Puoi portarli via anche adesso: restano chiusi con la tua password, e li riapri dove vuoi.")
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
+                        .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
 
                     #if os(macOS)

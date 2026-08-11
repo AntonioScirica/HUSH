@@ -623,16 +623,20 @@ struct DrawerWall3D: NSViewRepresentable {
                     self.setFolderBodyHeight(idx, h: bodyH)
                     SCNTransaction.begin()
                     SCNTransaction.animationDuration = 0.55
-                    SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                    // curva con un filo di overshoot: la cartella arriva,
+                    // supera appena il punto e si assesta — l'easeInEaseOut
+                    // secco sembrava un movimento da montacarichi
+                    SCNTransaction.animationTimingFunction = CAMediaTimingFunction(controlPoints: 0.3, 1.15, 0.45, 1.0)
                     // davanti alla camera, centrata sullo schermo (origine del
                     // nodo = base della cartella, quindi mezzo corpo più in basso)
                     node.position = SCNVector3(0, Self.extractedBaseY(bodyH: bodyH), 0.03)
                     node.eulerAngles.x = self.openCameraPitch
                     SCNTransaction.commit()
 
-                    // a fine corsa si centra per davvero e poi si proietta il
-                    // rettangolo del corpo per l'overlay SwiftUI
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                    // la correzione di centratura parte sulla coda della
+                    // corsa, non dopo una pausa: prima si vedevano due
+                    // movimenti staccati, arrivo + scatto di aggiustamento
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) { [weak self] in
                         guard let self, self.selectedFolderIdx == idx else { return }
                         self.centerExtractedFolder(idx)
                         self.folderExtracted = true
@@ -730,11 +734,16 @@ struct DrawerWall3D: NSViewRepresentable {
             SCNTransaction.commit()
         }
 
-        func applyFolderScroll() {
+        /// `flat`: tutte le cartelle abbassate a filo del cassetto — serve
+        /// mentre il cassetto rientra (o prima che esca), perché la "+"
+        /// alzata sbatterebbe contro la parete sopra l'imboccatura.
+        func applyFolderScroll(flat: Bool = false) {
             for (i, pivot) in folderPivots.enumerated() {
                 pivot.position.z = Self.conveyorZ(index: i, focus: folderFocus)
 
-                if i == 0 {
+                if flat {
+                    pivot.position.y = folderBaseY
+                } else if i == 0 {
                     // sempre alzata quanto basta per leggere il "+", ferma
                     pivot.position.y = folderBaseY + 0.30
                 } else {
@@ -955,7 +964,16 @@ struct DrawerWall3D: NSViewRepresentable {
             folderBodyH = DrawerWall3D.folderBaseBodyH
             scrollUnderflow = 0
             folderPivots.forEach { $0.eulerAngles.x = 0; $0.position.x = 0; $0.opacity = 1 }
-            applyFolderScroll()
+            // partono abbassate (il cassetto è ancora chiuso nella parete):
+            // si alzano DENTRO la transazione qui sotto, insieme alla
+            // trazione — prima si alzavano di scatto ancora al chiuso.
+            // Fuori da una transazione esplicita, SceneKit anima comunque
+            // con una durata implicita di default: senza disableActions si
+            // vedeva un piccolo scatto prima ancora che l'apertura iniziasse.
+            SCNTransaction.begin()
+            SCNTransaction.disableActions = true
+            applyFolderScroll(flat: true)
+            SCNTransaction.commit()
 
             isAnimatingDrawer = true
             updateClosedPose()
@@ -972,6 +990,8 @@ struct DrawerWall3D: NSViewRepresentable {
                 self?.applyCameraPose(animated: true)
             }
             node.position.z = DrawerWall3D.pullDistance
+            // le cartelle si alzano insieme alla trazione, non prima
+            applyFolderScroll()
             SCNTransaction.commit()
             moveCamera(to: targetCamPos, pitch: openCameraPitch)
         }
@@ -1002,7 +1022,9 @@ struct DrawerWall3D: NSViewRepresentable {
             folderExtracted = false
             folderFocus = 0
             revealedFolderIdx = nil
-            applyFolderScroll()
+            // tutte giù mentre il cassetto rientra: la "+" alzata
+            // sbatteva contro la parete sopra l'imboccatura
+            applyFolderScroll(flat: true)
             SCNTransaction.commit()
 
             // salva lo stato (ora resettato) delle cartelle di questo cassetto

@@ -1,5 +1,21 @@
 import SwiftUI
 
+/// Offset di scroll, per sapere se si è già scrollato (mostrare la sfumatura
+/// sopra solo allora). `onScrollGeometryChange` vorrebbe macOS 15: qui il
+/// target è 14, quindi si legge a mano con GeometryReader + coordinateSpace.
+struct ScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+/// Bordo inferiore del contenuto, stesso spazio di coordinate del
+/// ScrollOffsetKey: confrontato con l'altezza del contenitore dice se si è
+/// arrivati davvero in fondo (sfumatura sotto solo se resta altro da vedere).
+struct ScrollBottomKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 /// Linguaggio visivo "schedario": carta avorio, inchiostro quasi-nero,
 /// tab a cartellina numerati, tipografia monospace, chip d'accento gialla.
 /// (Ispirato alle reference: index-card dividers / folder tabs.)
@@ -12,6 +28,9 @@ enum Theme {
     static let line = Color(red: 0.135, green: 0.135, blue: 0.125).opacity(0.75)
     static let yellow = Color(red: 0.96, green: 0.72, blue: 0.08)     // chip accento
     static let danger = Color(red: 0.72, green: 0.25, blue: 0.20)
+
+    // Input: stessa altezza ovunque, o i campi "respirano" diversi da riga a riga
+    static let fieldHeight: CGFloat = 38
 
     // Metallo dei cassetti (home progetti)
     static let metal = Color(red: 0.60, green: 0.62, blue: 0.66)
@@ -101,8 +120,11 @@ struct InkButtonStyle: ButtonStyle {
     }
 }
 
-/// Bottone contorno: solo bordo inchiostro su carta.
+/// Bottone contorno: solo bordo inchiostro su carta. `danger: true` per le
+/// azioni distruttive (elimina), bordo e testo rossi invece che inchiostro.
 struct OutlineButtonStyle: ButtonStyle {
+    var danger = false
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Theme.mono(12, .semibold))
@@ -111,9 +133,9 @@ struct OutlineButtonStyle: ButtonStyle {
             .padding(.horizontal, 16)
             .padding(.vertical, 11)
             .frame(maxWidth: .infinity)
-            .foregroundStyle(Theme.ink)
+            .foregroundStyle(danger ? Theme.danger : Theme.ink)
             .background(Theme.paperRaised)
-            .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+            .overlay(Rectangle().strokeBorder(danger ? Theme.danger : Theme.line, lineWidth: 1))
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Rectangle())
     }
@@ -125,7 +147,11 @@ struct PaperFieldStyle: TextFieldStyle {
         configuration
             .textFieldStyle(.plain)
             .font(Theme.mono(13))
-            .padding(10)
+            // minHeight, non height fissa: i campi a una riga restano tutti
+            // alti uguale, ma quelli multilinea (axis: .vertical, es. Note)
+            // possono ancora crescere invece di restare schiacciati
+            .frame(minHeight: Theme.fieldHeight)
+            .padding(.horizontal, 10)
             .background(Theme.paperRaised)
             .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
     }
@@ -134,6 +160,27 @@ struct PaperFieldStyle: TextFieldStyle {
 extension View {
     func paperBackground() -> some View {
         background(Theme.paper.ignoresSafeArea())
+    }
+
+    /// Sfuma i bordi di uno scroll: si vede che continua, senza un taglio
+    /// secco sull'ultima riga mezza tagliata. Sopra solo se si è già
+    /// scrollato (in cima non c'è niente da anticipare); sotto sempre,
+    /// quando c'è altro sotto.
+    func scrollFade(top: Bool = false, bottom: Bool = true, height: CGFloat = 18) -> some View {
+        overlay(alignment: .top) {
+            if top {
+                LinearGradient(colors: [Theme.paper, Theme.paper.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: height)
+                    .allowsHitTesting(false)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if bottom {
+                LinearGradient(colors: [Theme.paper.opacity(0), Theme.paper], startPoint: .top, endPoint: .bottom)
+                    .frame(height: height)
+                    .allowsHitTesting(false)
+            }
+        }
     }
 }
 

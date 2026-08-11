@@ -26,6 +26,9 @@ struct EntryEditorView: View {
     @State private var url = ""
     @State private var notes = ""
     @State private var campi: [Campo] = []
+    /// Campi extra per accesso/password: secondi url, note aggiuntive,
+    /// qualunque etichetta libera — la stessa cosa che offre la parete 3D.
+    @State private var extras: [Campo] = []
     @State private var showPassword = false
     @State private var showDeleteConfirm = false
     /// Col campo password a fuoco, il dado si accende: capita facilmente
@@ -91,10 +94,6 @@ struct EntryEditorView: View {
                         }
                         .textFieldStyle(.plain)
                         .font(Theme.mono(13))
-                        // SecureField e TextField hanno metriche interne
-                        // leggermente diverse: senza altezza fissa il campo
-                        // "respira" un pelo passando dall'una all'altra
-                        .frame(height: 18)
                         .focused($passwordFocused)
 
                         Button { showPassword.toggle() } label: {
@@ -129,7 +128,8 @@ struct EntryEditorView: View {
                         }
                     }
                     .animation(.easeOut(duration: 0.15), value: passwordFocused)
-                    .padding(10)
+                    .frame(height: Theme.fieldHeight)
+                    .padding(.horizontal, 10)
                     .background(Theme.paperRaised)
                     .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
 
@@ -156,8 +156,41 @@ struct EntryEditorView: View {
                             #endif
                     }
                     TextField("Note", text: $notes, axis: .vertical)
-                        .lineLimit(3...6)
+                        .lineLimit(1...6)
                         .textFieldStyle(PaperFieldStyle())
+
+                    ForEach($extras) { $campo in
+                        HStack(spacing: 8) {
+                            TextField("Etichetta", text: $campo.label)
+                                .textFieldStyle(.plain)
+                                .font(Theme.mono(11))
+                                .foregroundStyle(Theme.inkSoft)
+                                .frame(width: 90, alignment: .leading)
+                            TextField("Valore", text: $campo.value)
+                                .textFieldStyle(.plain)
+                                .font(Theme.mono(12, .semibold))
+                                .foregroundStyle(Theme.ink)
+                        }
+                        .padding(10)
+                        .background(Theme.paperRaised)
+                        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                        .overlay(alignment: .trailing) {
+                            Button {
+                                extras.removeAll { $0.id == campo.id }
+                            } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Theme.danger)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.trailing, 10)
+                        }
+                    }
+
+                    Button { extras.append(Campo(label: "", value: "")) } label: {
+                        Label("Aggiungi un campo", systemImage: "plus")
+                    }
+                    .buttonStyle(.plain)
+                    .font(Theme.mono(11))
+                    .foregroundStyle(Theme.inkSoft)
                 } else {
                     // nota, carta, identità (e documento esistente): campi
                     // liberi con la loro etichetta, come sulla parete
@@ -169,7 +202,7 @@ struct EntryEditorView: View {
                                 .foregroundStyle(Theme.inkSoft)
                             if campo.multiline {
                                 TextField("", text: $campo.value, axis: .vertical)
-                                    .lineLimit(3...8)
+                                    .lineLimit(1...8)
                                     .textFieldStyle(PaperFieldStyle())
                             } else {
                                 TextField("", text: $campo.value)
@@ -237,6 +270,7 @@ struct EntryEditorView: View {
         if conCredenziali {
             username = entry.username; password = entry.password
             url = entry.url; notes = entry.notes
+            extras = EntryMapping.details(of: entry).map { Campo(label: $0.label, value: $0.value) }
         } else {
             campi = EntryMapping.details(of: entry).map {
                 Campo(label: $0.label, value: $0.value,
@@ -288,17 +322,17 @@ struct EntryEditorView: View {
     private func save() {
         var e: VaultEntry
         if conCredenziali {
-            // in modifica si tocca solo il canonico: i campi extra (secondi
-            // url, campi personalizzati) restano come sono
-            e = entry ?? EntryMapping.credentialEntry(
-                kind: kind.rawValue, title: title, user: username,
-                password: password, url: url, notes: notes, extras: []
+            let compilatiExtra = extras
+                .filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
+                .map { (label: $0.label.isEmpty ? "campo" : $0.label, value: $0.value) }
+            e = EntryMapping.credentialEntry(
+                id: entry?.id ?? UUID(), kind: kind.rawValue, title: title, user: username,
+                password: password, url: url, notes: notes, extras: compilatiExtra
             )
-            e.title = title
-            e.username = username
-            e.password = password.isEmpty && entry == nil ? PasswordGenerator.generate(.init()) : password
-            e.url = url
-            e.notes = notes
+            // i campi di servizio (allegato e sua chiave) non compaiono qui:
+            // vanno riattaccati a mano, o modificando una voce si
+            // perderebbe il documento allegato
+            if let entry { e.customFields += EntryMapping.hiddenFields(of: entry); e.created = entry.created }
         } else {
             let compilati = campi
                 .filter { !$0.value.trimmingCharacters(in: .whitespaces).isEmpty }
