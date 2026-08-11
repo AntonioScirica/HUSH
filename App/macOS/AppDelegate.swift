@@ -15,5 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard MasterKey.isConfigured else { return } // niente onboarding fatto, niente popup
             QuickAddPanelController.shared.toggle()
         }
+
+        // Se è passata una settimana dall'ultimo backup su Drive, parte da
+        // sé — non costa niente controllare se non è ancora il momento.
+        Task { await GoogleDriveBackup.backupIfDue() }
     }
 }

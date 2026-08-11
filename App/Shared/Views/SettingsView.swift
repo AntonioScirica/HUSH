@@ -41,6 +41,9 @@ struct SettingsView: View {
     @State private var importando = false
     #if os(macOS)
     @State private var estensioneSafariAttiva = false
+    @State private var driveConnesso = GoogleDriveAuth.shared.isConnected
+    @State private var driveBackupInCorso = false
+    @State private var driveErrore: String?
     #endif
 
     #if os(macOS)
@@ -303,6 +306,65 @@ struct SettingsView: View {
                     }
 
                     divider
+                    section("Backup su Google Drive")
+                    if driveConnesso {
+                        Text("Collegato con \(GoogleTokenStore.email ?? "il tuo account"). Un backup dei cassetti parte da sé ogni sette giorni, in una cartella «Hush Backup» sul tuo Drive.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(Theme.inkSoft)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(ultimoBackupTesto)
+                            .font(Theme.mono(10, .semibold))
+                            .foregroundStyle(Theme.ink)
+
+                        Button {
+                            driveBackupInCorso = true
+                            Task {
+                                await GoogleDriveBackup.backupAll()
+                                driveBackupInCorso = false
+                            }
+                        } label: {
+                            Label(driveBackupInCorso ? "Carico…" : "Backup ora", systemImage: "arrow.up.circle")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                        .disabled(driveBackupInCorso)
+
+                        Button {
+                            GoogleDriveAuth.shared.disconnect()
+                            driveConnesso = false
+                        } label: {
+                            Text("Scollega").frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                    } else {
+                        Text("Un backup automatico dei tuoi cassetti (già cifrati) su Google Drive, una volta collegato l'account. Se il Mac si rompe, li ritrovi lì.")
+                            .font(Theme.mono(10))
+                            .foregroundStyle(Theme.inkSoft)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let driveErrore {
+                            Text(driveErrore).font(Theme.mono(10)).foregroundStyle(Theme.danger)
+                        }
+                        Button {
+                            driveErrore = nil
+                            GoogleDriveAuth.shared.connect { result in
+                                switch result {
+                                case .success:
+                                    driveConnesso = true
+                                    Task { await GoogleDriveBackup.backupAll() } // il primo, subito
+                                case .failure(let error):
+                                    driveErrore = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            Label("Connetti Google Drive", systemImage: "icloud.and.arrow.up")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(OutlineButtonStyle())
+                    }
+
+                    divider
                     section("Manda al telefono")
                     Text("Via WiFi, senza passare da nessun server. Resta acceso solo quanto ti serve: fuori casa il Mac non deve annunciarsi in giro.")
                         .font(Theme.mono(10))
@@ -393,6 +455,14 @@ struct SettingsView: View {
     }
 
     #if os(macOS)
+    private var ultimoBackupTesto: String {
+        guard let data = GoogleTokenStore.lastBackup else { return "Nessun backup ancora." }
+        let giorni = Int(Date().timeIntervalSince(data) / 86_400)
+        if giorni <= 0 { return "Ultimo backup: oggi." }
+        if giorni == 1 { return "Ultimo backup: ieri." }
+        return "Ultimo backup: \(giorni) giorni fa."
+    }
+
     private func aggiornaStatoEstensioneSafari() {
         SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: "com.antonioscirica.hush.safariextension") { state, _ in
             DispatchQueue.main.async {
