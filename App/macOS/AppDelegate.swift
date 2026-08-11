@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 
 /// Registra la scorciatoia globale qui, non come stored property della App:
 /// a quel punto (init della struct, prima ancora che l'app sia avviata per
@@ -8,7 +9,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var scorciatoiaRapida: GlobalHotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        scorciatoiaRapida = GlobalHotKey {
+        // ⌘P: a scelta di chi usa l'app, sapendo che intercetta la Stampa
+        // di sistema in ogni altra app finché Hush resta aperto.
+        scorciatoiaRapida = GlobalHotKey(keyCode: UInt32(kVK_ANSI_P), modifiers: UInt32(cmdKey)) {
             guard MasterKey.isConfigured else { return } // niente onboarding fatto, niente popup
             QuickAddPanelController.shared.toggle()
         }
