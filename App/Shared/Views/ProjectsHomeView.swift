@@ -52,15 +52,23 @@ private struct AutoFocusField: View {
     }
 }
 
+/// Copia e accende `copied` per 1.1s: usata sia dal bottoncino sia dal tap
+/// su tutto il rigo, così il feedback (l'iconcina che diventa spunta) è lo
+/// stesso qualunque punto del rigo si tocchi.
+private func copiaConFeedback(_ text: String, _ copied: Binding<Bool>) {
+    guard !text.isEmpty else { return }
+    copyToClipboard(text)
+    copied.wrappedValue = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { copied.wrappedValue = false }
+}
+
 private struct CopyButton: View {
     let text: String
-    @State private var copied = false
+    @Binding var copied: Bool
 
     var body: some View {
         Button {
-            copyToClipboard(text)
-            copied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { copied = false }
+            copiaConFeedback(text, $copied)
         } label: {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .font(.system(size: 11))
@@ -968,6 +976,13 @@ struct ProjectsHomeView: View {
             // cassetto le cartelle ci sono già invece di comparire dopo
             Task { await library.preload(projects) }
         }
+        // Un cassetto può nascere fuori da qui — dal popup rapido ⌃⌘P, per
+        // esempio: senza questo la parete restava vecchia finché non si
+        // riapriva l'app, perché `projects` è una copia locale letta solo
+        // all'onAppear.
+        .onReceive(NotificationCenter.default.publisher(for: .progettiCambiati)) { _ in
+            projects = VaultFileManager.shared.projects
+        }
     }
 
     /// Le voci scelte in onboarding finiscono in un cassetto loro. Va fatto
@@ -1025,41 +1040,58 @@ struct ProjectsHomeView: View {
         // solo fra i vault già aperti: cercare ovunque vorrebbe dire
         // decifrare ogni progetto a ogni lettera digitata
         return projects.filter { library.isLoaded($0) }.flatMap { p -> [(project: VaultFileManager.Project, folder: Int, name: String)] in
-            library.entries(of: p).map(\.title).enumerated()
-                .filter { $0.element.lowercased().contains(q) }
-                .map { (project: p, folder: $0.offset + 1, name: $0.element) }
+            library.entries(of: p).enumerated()
+                // Non solo il titolo: utente, url, note e campi personalizzati
+                // sono spesso l'unico indizio che ci si ricorda. La password
+                // resta fuori apposta — cercarla vorrebbe dire scriverla in
+                // chiaro nel campo di ricerca.
+                .filter { i, entry in
+                    if entry.title.lowercased().contains(q)
+                        || entry.username.lowercased().contains(q)
+                        || entry.url.lowercased().contains(q)
+                        || entry.notes.lowercased().contains(q) { return true }
+                    return entry.customFields.contains { $0.key.lowercased().contains(q) || $0.value.lowercased().contains(q) }
+                }
+                .map { (project: p, folder: $0.offset + 1, name: $0.element.title) }
         }
-        .prefix(6)
+        .prefix(20)
         .map { $0 }
     }
 
     private var suggestionsList: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(searchSuggestions.enumerated()), id: \.offset) { i, s in
-                Button {
-                    searchText = ""
-                    openEntry(project: s.project, folder: s.folder)
-                } label: {
-                    HStack {
-                        Text(s.name.lowercased())
-                            .font(Theme.mono(12, .semibold))
-                            .foregroundStyle(Theme.ink)
-                        Spacer()
-                        Text(s.project.name.lowercased())
-                            .font(Theme.mono(11))
-                            .foregroundStyle(Theme.inkSoft)
+        // ScrollView: con la ricerca allargata a tutti i campi (non solo il
+        // titolo) i risultati possono essere più delle 6 righe che ci
+        // stavano comode — senza scorrimento, prima, il resto spariva e
+        // basta, non c'era verso di raggiungerlo.
+        ScrollView {
+            VStack(spacing: 0) {
+                ForEach(Array(searchSuggestions.enumerated()), id: \.offset) { i, s in
+                    Button {
+                        searchText = ""
+                        openEntry(project: s.project, folder: s.folder)
+                    } label: {
+                        HStack {
+                            Text(s.name.lowercased())
+                                .font(Theme.mono(12, .semibold))
+                                .foregroundStyle(Theme.ink)
+                            Spacer()
+                            Text(s.project.name)
+                                .font(Theme.mono(11))
+                                .foregroundStyle(Theme.inkSoft)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(.plain)
 
-                if i != searchSuggestions.count - 1 {
-                    Rectangle().fill(Theme.line).frame(height: 1)
+                    if i != searchSuggestions.count - 1 {
+                        Rectangle().fill(Theme.line).frame(height: 1)
+                    }
                 }
             }
         }
+        .frame(maxHeight: 6 * 38)
         .background(Theme.paper)
         .overlay(Rectangle().strokeBorder(Theme.ink, lineWidth: 1.2))
     }
@@ -1159,7 +1191,7 @@ struct ProjectsHomeView: View {
                             }
                         } label: {
                             HStack(spacing: 8) {
-                                Text((currentNewEntryProject?.name ?? "progetto").lowercased())
+                                Text(currentNewEntryProject?.name ?? "progetto")
                                     .font(Theme.mono(13))
                                     .foregroundStyle(Theme.ink)
                                 Spacer(minLength: 0)
@@ -1193,7 +1225,7 @@ struct ProjectsHomeView: View {
                                             Image(systemName: p.icon ?? "folder")
                                                 .font(.system(size: 12))
                                                 .frame(width: 16)
-                                            Text(p.name.lowercased())
+                                            Text(p.name)
                                                 .font(Theme.mono(12, .semibold))
                                             Spacer(minLength: 0)
                                             if p.id == currentNewEntryProject?.id {
@@ -1286,6 +1318,7 @@ struct ProjectsHomeView: View {
         }
         .padding(26)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .avoidsKeyboard()
         .fileImporter(isPresented: $showDocumentImporter, allowedContentTypes: [.item]) { result in
             if case .success(let url) = result { pendingDocumentURL = url }
         }
@@ -1680,7 +1713,7 @@ struct ProjectsHomeView: View {
                             .font(.system(size: 13))
                             .foregroundStyle(Theme.ink)
                             .frame(width: 18)
-                        Text(p.name.lowercased())
+                        Text(p.name)
                             .font(Theme.mono(12, .semibold))
                             .foregroundStyle(Theme.ink)
                         Spacer()
@@ -2100,6 +2133,17 @@ struct GenericEntryCard: View {
     @State private var shown = false
     @State private var scrolled = false
     @State private var atBottom = true
+    /// Chi ha appena mostrato la spunta al posto dell'iconcina: tocco sul
+    /// rigo e tocco sull'icona condividono lo stesso stato, o il feedback
+    /// non si vedrebbe copiando dal rigo.
+    @State private var copiati: Set<UUID> = []
+
+    private func copiatoBinding(_ id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { copiati.contains(id) },
+            set: { on in if on { copiati.insert(id) } else { copiati.remove(id) } }
+        )
+    }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -2124,7 +2168,7 @@ struct GenericEntryCard: View {
                                         .textFieldStyle(.plain)
                                         .font(Theme.mono(11))
                                         .foregroundStyle(Theme.inkSoft)
-                                        .frame(width: 90, alignment: .leading)
+                                        .frame(width: 60, alignment: .leading)
                                     TextField("Valore", text: $field.value)
                                         .textFieldStyle(.plain)
                                         .font(Theme.mono(12, .semibold))
@@ -2143,15 +2187,19 @@ struct GenericEntryCard: View {
                                     Text(field.label)
                                         .font(Theme.mono(11))
                                         .foregroundStyle(Theme.inkSoft)
-                                        .frame(width: 90, alignment: .leading)
+                                        .frame(width: 60, alignment: .leading)
                                     Text(field.value)
                                         .font(Theme.mono(12, .semibold))
                                         .foregroundStyle(Theme.ink)
-                                        .textSelection(.enabled)
+                                        .padding(.trailing, 14)
                                     Spacer(minLength: 0)
-                                    CopyButton(text: field.value)
+                                    CopyButton(text: field.value, copied: copiatoBinding(field.id))
                                 }
                                 .themedRow()
+                                // tutto il rigo copia, non solo l'iconcina — via
+                                // .textSelection sopra: competeva col tap.
+                                .contentShape(Rectangle())
+                                .onTapGesture { copiaConFeedback(field.value, copiatoBinding(field.id)) }
                             }
                         }
 
@@ -2281,6 +2329,26 @@ struct EntryCard: View {
     @State private var scrolled = false
     @State private var atBottom = true
     @State private var shown = false
+    /// Feedback del tap-per-copiare sui righi (utente/password/url/note),
+    /// tenuto separato da `copiedPassword` sopra: quello è del bottone in
+    /// fondo, che oltretutto richiude la cartella — qui invece si resta lì.
+    @State private var copiatoCampo: Set<String> = []
+    @State private var copiatiExtra: Set<UUID> = []
+    @State private var copiatoInline = false
+
+    private func copiatoCampoBinding(_ chiave: String) -> Binding<Bool> {
+        Binding(
+            get: { copiatoCampo.contains(chiave) },
+            set: { on in if on { copiatoCampo.insert(chiave) } else { copiatoCampo.remove(chiave) } }
+        )
+    }
+
+    private func copiatoExtraBinding(_ id: UUID) -> Binding<Bool> {
+        Binding(
+            get: { copiatiExtra.contains(id) },
+            set: { on in if on { copiatiExtra.insert(id) } else { copiatiExtra.remove(id) } }
+        )
+    }
 
     var body: some View {
         // Nessuno sfondo: la "scheda" È la cartella 3D estratta al centro —
@@ -2311,7 +2379,7 @@ struct EntryCard: View {
                                         .textFieldStyle(.plain)
                                         .font(Theme.mono(11))
                                         .foregroundStyle(Theme.inkSoft)
-                                        .frame(width: 90, alignment: .leading)
+                                        .frame(width: 60, alignment: .leading)
                                     TextField("Valore", text: $field.value)
                                         .textFieldStyle(.plain)
                                         .font(Theme.mono(12, .semibold))
@@ -2330,15 +2398,17 @@ struct EntryCard: View {
                                 Text(field.label)
                                     .font(Theme.mono(11))
                                     .foregroundStyle(Theme.inkSoft)
-                                    .frame(width: 90, alignment: .leading)
+                                    .frame(width: 60, alignment: .leading)
                                 Text(field.value)
                                     .font(Theme.mono(12, .semibold))
                                     .foregroundStyle(Theme.ink)
-                                    .textSelection(.enabled)
+                                    .padding(.trailing, 14)
                                 Spacer(minLength: 0)
-                                CopyButton(text: field.value)
+                                CopyButton(text: field.value, copied: copiatoExtraBinding(field.id))
                             }
                             .themedRow()
+                            .contentShape(Rectangle())
+                            .onTapGesture { copiaConFeedback(field.value, copiatoExtraBinding(field.id)) }
                         }
                     }
 
@@ -2419,7 +2489,7 @@ struct EntryCard: View {
             Text(label)
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
-                .frame(width: 90, alignment: .leading)
+                .frame(width: 60, alignment: .leading)
             if editing {
                 TextField("", text: value)
                     .textFieldStyle(.plain)
@@ -2432,12 +2502,14 @@ struct EntryCard: View {
                 Text(value.wrappedValue)
                     .font(Theme.mono(12, .semibold))
                     .foregroundStyle(Theme.ink)
-                    .textSelection(.enabled)
+                    .padding(.trailing, 14)
                 Spacer(minLength: 0)
-                CopyButton(text: value.wrappedValue)
+                CopyButton(text: value.wrappedValue, copied: copiatoCampoBinding(label))
             }
         }
         .themedRow()
+        .contentShape(Rectangle())
+        .onTapGesture { if !editing { copiaConFeedback(value.wrappedValue, copiatoCampoBinding(label)) } }
     }
 
     private var passwordRow: some View {
@@ -2445,7 +2517,7 @@ struct EntryCard: View {
             Text("Password")
                 .font(Theme.mono(11))
                 .foregroundStyle(Theme.inkSoft)
-                .frame(width: 90, alignment: .leading)
+                .frame(width: 60, alignment: .leading)
             if editing {
                 TextField("", text: $password)
                     .textFieldStyle(.plain)
@@ -2458,7 +2530,7 @@ struct EntryCard: View {
                 Text(revealPassword ? password : String(repeating: "•", count: password.count))
                     .font(Theme.mono(12, .semibold))
                     .foregroundStyle(Theme.ink)
-                    .textSelection(.enabled)
+                    .padding(.trailing, 14)
                 Spacer(minLength: 0)
                 Button {
                     revealPassword.toggle()
@@ -2469,10 +2541,12 @@ struct EntryCard: View {
                         .frame(width: 16, height: 16)
                 }
                 .buttonStyle(.plain)
-                CopyButton(text: password)
+                CopyButton(text: password, copied: $copiatoInline)
             }
         }
         .themedRow()
+        .contentShape(Rectangle())
+        .onTapGesture { if !editing { copiaConFeedback(password, $copiatoInline) } }
     }
 }
 

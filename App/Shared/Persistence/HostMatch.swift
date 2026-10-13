@@ -19,12 +19,14 @@ enum HostMatch {
         return entryTitle.lowercased().contains(sito)
     }
 
-    /// "www.netflix.com" -> "netflix". Il pezzo prima del primo punto, tolto
-    /// l'eventuale "www.": è il nome che quasi sempre finisce nel titolo
-    /// della voce.
+    /// "accounts.google.com" -> "google", "www.netflix.com" -> "netflix":
+    /// il penultimo pezzo (il dominio vero e proprio, non il sottodominio
+    /// né il TLD) è quasi sempre il nome che finisce nel titolo della voce.
     private static func siteName(fromHost host: String) -> String {
         var h = host
         if h.hasPrefix("www.") { h = String(h.dropFirst(4)) }
-        return h.components(separatedBy: ".").first ?? h
+        let parts = h.components(separatedBy: ".")
+        guard parts.count >= 2 else { return h }
+        return parts[parts.count - 2]
     }
 }

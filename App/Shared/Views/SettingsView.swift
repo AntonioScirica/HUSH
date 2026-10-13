@@ -2,6 +2,7 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 import SafariServices
+import ServiceManagement
 #else
 import UIKit
 #endif
@@ -50,12 +51,23 @@ struct SettingsView: View {
     @State private var driveConnesso = GoogleDriveAuth.shared.isConnected
     @State private var driveBackupInCorso = false
     @State private var driveErrore: String?
+    @State private var avviaAlLogin = SMAppService.mainApp.status == .enabled
+    @State private var mostraDock = Preferences.mostraDock
+    @State private var scorciatoiaRapida = Preferences.quickAddHotKey
+    @State private var scorciatoiaRicerca = Preferences.searchHotKey
     #endif
 
-    #if os(macOS)
-    /// Stessa istanza di RootView: qui se ne mostra solo lo stato.
+    /// Stessa istanza di RootView (Mac) e del sync bidirezionale (iPhone).
     @ObservedObject private var sync = LocalSync.shared
-    #endif
+
+    /// "2.1 (13)": versione più il numero di build, per capire al volo se
+    /// quella installata è davvero l'ultima uscita.
+    private var versione: String {
+        let info = Bundle.main.infoDictionary
+        let v = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let b = info?["CFBundleVersion"] as? String ?? "?"
+        return "Hush \(v) (\(b))"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -67,6 +79,10 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    // Solo Mac: la licenza si compra e si attiva lì. Il
+                    // telefono non funziona da solo comunque (l'onboarding
+                    // pretende i cassetti del Mac), quindi non ha un suo
+                    // conto alla rovescia — vedi RootView.
                     section("Licenza")
 
                     if let info = License.active {
@@ -77,14 +93,14 @@ struct SettingsView: View {
                         }
                         .foregroundStyle(Theme.ink)
 
-                        Text("Vale per un computer. Per spostarla su un altro Mac staccala da qui, poi esporta i cassetti e riattivala di là.")
+                        Text("Vale per un dispositivo. Per spostarla su un altro staccala da qui, poi esporta i cassetti e riattivala di là.")
                             .font(Theme.mono(10))
                             .foregroundStyle(Theme.inkSoft)
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
 
                         Button { confirmDetach = true } label: {
-                            Label("Stacca da questo computer", systemImage: "rectangle.portrait.and.arrow.right")
+                            Label("Stacca da questo dispositivo", systemImage: "rectangle.portrait.and.arrow.right")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(OutlineButtonStyle())
@@ -154,6 +170,7 @@ struct SettingsView: View {
                         .font(Theme.mono(10))
                         .foregroundStyle(Theme.inkSoft)
 
+                    #if os(macOS)
                     divider
                     section("Aspetto")
 
@@ -166,6 +183,47 @@ struct SettingsView: View {
                                 Preferences.vistaClassica = on
                             }
                     }
+
+                    row("Avvia al login",
+                        "Hush parte da sé nella menu bar: l'estensione funziona subito, senza doverlo riaprire ogni volta.") {
+                        Toggle("", isOn: $avviaAlLogin)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: avviaAlLogin) { _, on in
+                                try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+                            }
+                    }
+
+                    row("Mostra nel Dock",
+                        "Spegnilo se ti basta l'icona nella menu bar: niente più icona nel Dock.") {
+                        Toggle("", isOn: $mostraDock)
+                            .labelsHidden()
+                            .toggleStyle(.switch)
+                            .onChange(of: mostraDock) { _, on in
+                                Preferences.mostraDock = on
+                                NSApp.setActivationPolicy(on ? .regular : .accessory)
+                            }
+                    }
+
+                    divider
+                    section("Scorciatoie")
+
+                    row("Aggiungi voce", "Apre il popup rapido per una nuova password, da qualunque app.") {
+                        HotKeyRecorder(combo: $scorciatoiaRapida) {
+                            Preferences.quickAddHotKey = scorciatoiaRapida
+                            NotificationCenter.default.post(name: .scorciatoieHushCambiate, object: nil)
+                        }
+                        .frame(width: 180)
+                    }
+
+                    row("Cerca password", "Apre il popup di ricerca, per copiare una password senza aprire Hush.") {
+                        HotKeyRecorder(combo: $scorciatoiaRicerca) {
+                            Preferences.searchHotKey = scorciatoiaRicerca
+                            NotificationCenter.default.post(name: .scorciatoieHushCambiate, object: nil)
+                        }
+                        .frame(width: 180)
+                    }
+                    #endif
 
                     divider
                     section("Da sé")
@@ -205,6 +263,11 @@ struct SettingsView: View {
                         .onChange(of: length) { _, v in Preferences.passwordLength = v }
                     }
 
+                    // Chiave di recupero e importazione dati: solo Mac. Sul
+                    // telefono la chiave è già quella fatta di là (o niente,
+                    // se i cassetti non sono ancora arrivati) — mostrarne
+                    // una seconda qui confonderebbe soltanto.
+                    #if os(macOS)
                     divider
                     section("Chiave di recupero")
 
@@ -240,7 +303,6 @@ struct SettingsView: View {
                     divider
                     section("Dati")
 
-#if os(macOS)
                     // Un comando solo: a capire cosa gli hai dato (cassetti
                     // esportati, .kdbx, .csv, archivi .1pux) ci pensa lui.
                     Button {
@@ -416,6 +478,22 @@ struct SettingsView: View {
                     macSyncBox
                     #endif
 
+                    #if os(iOS)
+                    divider
+                    section("Sincronizza col Mac")
+                    Text("Via WiFi, senza server. Le voci nuove e modificate viaggiano nei due sensi: quello che aggiungi qui finisce sul Mac, e viceversa.")
+                        .font(Theme.mono(10))
+                        .foregroundStyle(Theme.inkSoft)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    iphoneSyncBox
+                    #endif
+
+                    divider
+                    Link("Norme sulla privacy", destination: URL(string: "https://hush-topaz.vercel.app/privacy")!)
+                        .font(Theme.mono(11))
+                        .foregroundStyle(Theme.inkSoft)
+
                     if importando {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
@@ -429,6 +507,11 @@ struct SettingsView: View {
                     if let error {
                         Text(error).font(Theme.mono(11)).foregroundStyle(Theme.danger)
                     }
+
+                    divider
+                    Text(versione)
+                        .font(Theme.mono(9))
+                        .foregroundStyle(Theme.inkSoft)
                 }
                 .padding(.trailing, 4)
             }
@@ -575,6 +658,98 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.paperRaised)
         .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+    }
+    #endif
+
+    #if os(iOS)
+    /// Sync bidirezionale col Mac, dal telefono: cerca, ricevi, fondi,
+    /// rimanda indietro il risultato. Il Mac (sbloccato) è già in ascolto.
+    @ViewBuilder
+    private var iphoneSyncBox: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch sync.stato {
+            case .fermo, .inAttesa:
+                Button("Cerca il Mac sulla rete") { preparaMergeDiRitorno(); sync.avviaRicerca() }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+
+            case .inCerca:
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(sync.trovati.isEmpty ? "Cerco un Mac con Hush aperto sulla stessa rete…" : "Trovati:")
+                        .font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.inkSoft)
+                ForEach(sync.trovati, id: \.self) { peer in
+                    Button(peer.displayName) { sync.collegati(a: peer) }
+                        .buttonStyle(OutlineButtonStyle())
+                        .frame(maxWidth: .infinity)
+                }
+
+            case .collegato(let nome):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Collegato a \(nome)…").font(Theme.mono(11))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .trasferendo(let fatti, let totale):
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Sincronizzo… \(fatti)/\(totale)").font(Theme.mono(11, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .fatto:
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark")
+                    Text("Sincronizzato").font(Theme.mono(12, .semibold))
+                }
+                .foregroundStyle(Theme.ink)
+
+            case .errore(let messaggio):
+                Text(messaggio).font(Theme.mono(11)).foregroundStyle(Theme.danger)
+                Button("Riprova") { preparaMergeDiRitorno(); sync.avviaRicerca() }
+                    .buttonStyle(OutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.paperRaised)
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+        .onDisappear { sync.ferma() }
+    }
+
+    /// Alla ricezione dei cassetti del Mac: fusione voce per voce, poi il
+    /// risultato riparte verso il Mac perché fonda a specchio. La cartella
+    /// d'atterraggio va spostata subito (LocalSync la cancella appena il
+    /// callback ritorna) e il lavoro pesante sta fuori dal main thread.
+    private func preparaMergeDiRitorno() {
+        sync.alCompletamento = { cartella in
+            guard let chiave = MasterKey.session else { return }
+            let lavoro = FileManager.default.temporaryDirectory
+                .appendingPathComponent("hush-merge-\(UUID().uuidString)", isDirectory: true)
+            try? FileManager.default.moveItem(at: cartella, to: lavoro)
+            Task.detached(priority: .userInitiated) {
+                _ = try? VaultMerge.mergeAll(from: lavoro, key: chiave)
+                try? FileManager.default.removeItem(at: lavoro)
+                await MainActor.run {
+                    AutoFillIdentities.sync()
+                    // viaggio di ritorno: il risultato fuso torna al Mac
+                    guard let peer = LocalSync.shared.peerConnesso else { return }
+                    Task {
+                        guard let (_, folder) = try? await VaultTransfer.exportAsync(
+                            to: FileManager.default.temporaryDirectory
+                        ) else { return }
+                        let files = (try? FileManager.default.contentsOfDirectory(
+                            at: folder, includingPropertiesForKeys: nil
+                        )) ?? []
+                        LocalSync.shared.pronto(files: files, per: peer)
+                    }
+                }
+            }
+        }
     }
     #endif
 

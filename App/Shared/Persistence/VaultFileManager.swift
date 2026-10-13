@@ -21,6 +21,15 @@ enum SharedGroup {
     static let id = "group.com.antonioscirica.scrigno"
 }
 
+extension Notification.Name {
+    /// Un progetto è stato aggiunto/rinominato/rimosso: chi tiene una copia
+    /// locale di `VaultFileManager.shared.projects` (la parete, l'elenco) la
+    /// deve rileggere. Serve perché un cassetto può nascere fuori dalla
+    /// finestra principale — dal popup rapido ⌃⌘P, per esempio — e lì
+    /// nessun `onAppear` della parete scatta da solo.
+    static let progettiCambiati = Notification.Name("hush.progettiCambiati")
+}
+
 /// L'accesso ai file è diretto: su macOS l'app non è in sandbox, su iOS i
 /// vault vivono nel contenitore dell'app (condiviso con l'estensione
 /// AutoFill), quindi in entrambi i casi basta ricordarsi il percorso.
@@ -52,7 +61,7 @@ final class VaultFileManager {
         #endif
     }
 
-    struct Project: Codable, Identifiable, Equatable {
+    struct Project: Codable, Identifiable, Equatable, Hashable {
         let name: String
         let path: String
         var icon: String?        // nome SF Symbol; nil = nessun post-it
@@ -84,6 +93,7 @@ final class VaultFileManager {
             }
         }
         try rememberVaultLocation(url)
+        NotificationCenter.default.post(name: .progettiCambiati, object: nil)
     }
 
     /// Aggiorna nome, icona e colore del post-it di un progetto già esistente.
@@ -94,6 +104,7 @@ final class VaultFileManager {
         if let data = try? JSONEncoder().encode(list) {
             defaults.set(data, forKey: projectsKey)
         }
+        NotificationCenter.default.post(name: .progettiCambiati, object: nil)
     }
 
     /// Rimuove il progetto dall'elenco e cancella il suo file .kdbx dal disco.
@@ -109,6 +120,7 @@ final class VaultFileManager {
         if defaults.string(forKey: defaultsKey) == path {
             defaults.removeObject(forKey: defaultsKey)
         }
+        NotificationCenter.default.post(name: .progettiCambiati, object: nil)
     }
 
     /// Cartella dell'app per i vault creati da qui — niente dialog di

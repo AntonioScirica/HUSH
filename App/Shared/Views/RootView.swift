@@ -13,6 +13,10 @@ public struct RootView: View {
     /// Richiude Hush lasciato lì aperto.
     @StateObject private var idle = IdleWatcher()
     /// Prova finita e nessuna licenza: si passa dal muro, non dai cassetti.
+    /// Vale anche su iOS ora: da quando l'onboarding permette di creare il
+    /// vault direttamente sul telefono (senza Mac), la licenza è l'unica
+    /// cosa che distingue prova da acquisto — stessa licenza, stessa
+    /// chiave pubblica, vale su entrambe le piattaforme.
     @State private var licensed = License.isLicensed
     @State private var trialLeft = License.trialDaysLeft
     @State private var openSettings = false
@@ -94,7 +98,8 @@ public struct RootView: View {
                     #if os(iOS)
                     // su iPhone la casa è la vista a elenco: la parete 3D
                     // con la camera e la rotellina è pensata per il Mac
-                    ClassicHomeView(onLock: { lockUp() }, attiva: unlocked || aperturaInCorso)
+                    ClassicHomeView(onLock: { lockUp() }, attiva: unlocked || aperturaInCorso,
+                                     showSettingsSignal: $openSettings)
                         .environmentObject(vm)
                         .allowsHitTesting(unlocked)
                     #else
@@ -128,29 +133,24 @@ public struct RootView: View {
 
                     // promemoria della prova nell'angolo, fuori dai piedi:
                     // in alto sulla parete, in basso nella vista a elenco
-                    // (lì sopra c'è la barra laterale coi progetti)
+                    // (lì sopra c'è la barra laterale coi progetti) — su
+                    // iOS conta come vista a elenco, stesso posizionamento.
+                    #if os(macOS)
+                    let vistaAElenco = vistaClassica
+                    #else
+                    let vistaAElenco = true
+                    #endif
                     if !licensed && unlocked {
                         VStack {
-                            #if os(iOS)
-                            Spacer()
-                            #else
-                            if vistaClassica { Spacer() }
-                            #endif
+                            if vistaAElenco { Spacer() }
                             HStack {
                                 // vista a elenco: in basso a destra, fuori
                                 // dalla sidebar. Parete: in alto a sinistra.
-                                #if os(macOS)
-                                if vistaClassica { Spacer() }
+                                if vistaAElenco { Spacer() }
                                 TrialBanner { openSettings = true }
-                                if !vistaClassica { Spacer() }
-                                #else
-                                TrialBanner { openSettings = true }
-                                Spacer()
-                                #endif
+                                if !vistaAElenco { Spacer() }
                             }
-                            #if os(macOS)
-                            if !vistaClassica { Spacer() }
-                            #endif
+                            if !vistaAElenco { Spacer() }
                         }
                         .padding(20)
                     }
@@ -165,6 +165,12 @@ public struct RootView: View {
                             // non c'era niente di aperto da richiudere
                             idle.onIdle = { lockUp() }
                             idle.start()
+                            #if os(iOS)
+                            // Safari/Chrome devono suggerire le voci da soli,
+                            // come 1Password: registra tutto presso iOS ora
+                            // che il vault è aperto e leggibile.
+                            AutoFillIdentities.sync()
+                            #endif
                         }
                     }
                 }
@@ -180,14 +186,15 @@ public struct RootView: View {
             // parete rilegge da disco e non restano due copie in memoria
             if !classica { vm.lock() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: License.changed)) { _ in
+            licensed = License.isLicensed
+            trialLeft = License.trialDaysLeft
+        }
         #if os(macOS)
         .onChange(of: unlocked) { _, on in
             if on {
                 // il telefono che si collega non sa già cosa mandargli:
-                // lo prepariamo al volo solo quando serve davvero. L'ascolto
-                // vero e proprio invece parte solo col bottone nelle
-                // impostazioni: da sbloccato e basta, il Mac trasmetterebbe
-                // "sono qui" su qualunque rete, anche fuori casa.
+                // lo prepariamo al volo solo quando serve davvero.
                 sync.quandoConnesso = { peer in
                     Task {
                         guard let (_, folder) = try? await VaultTransfer.exportAsync(
@@ -199,6 +206,27 @@ public struct RootView: View {
                         sync.pronto(files: files, per: peer)
                     }
                 }
+                // Il telefono, dopo aver fuso i cassetti del Mac coi suoi,
+                // rimanda indietro il risultato: qui si fonde a specchio,
+                // così le voci aggiunte o modificate di là arrivano di qua.
+                // La cartella d'atterraggio viene cancellata da LocalSync
+                // appena questo callback ritorna: si sposta subito, e il
+                // lavoro pesante (un Argon2id per cassetto) va in coda fuori
+                // dal thread principale.
+                sync.alCompletamento = { cartella in
+                    guard let chiave = MasterKey.session else { return }
+                    let lavoro = FileManager.default.temporaryDirectory
+                        .appendingPathComponent("hush-merge-\(UUID().uuidString)", isDirectory: true)
+                    try? FileManager.default.moveItem(at: cartella, to: lavoro)
+                    Task.detached(priority: .userInitiated) {
+                        _ = try? VaultMerge.mergeAll(from: lavoro, key: chiave)
+                        try? FileManager.default.removeItem(at: lavoro)
+                    }
+                }
+                // Sbloccato Hush, l'ascolto parte da sé: il telefono deve
+                // trovare il Mac senza passare prima da Impostazioni ad
+                // accenderlo a mano.
+                sync.avviaAscolto()
                 // l'estensione Safari compila le password parlando in loopback
                 // con questo bridge: sbloccato Hush, sblocca anche lui.
                 LocalBridgeServer.shared.start()

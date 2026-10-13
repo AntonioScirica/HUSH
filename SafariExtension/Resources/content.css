@@ -1,46 +1,96 @@
-.hush-button {
-  all: initial;
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  background: #f5b815;
-  border: 1px solid #222220;
-  cursor: pointer;
-  z-index: 2147483647;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  line-height: 1;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-
 .hush-dropdown {
   all: initial;
   position: absolute;
   z-index: 2147483647;
-  min-width: 220px;
-  max-width: 320px;
-  max-height: 260px;
+  box-sizing: border-box;
+  /* ~3 voci, poi si scorre */
+  max-height: 158px;
   overflow-y: auto;
   background: #f4f2eb;
-  border: 1.2px solid #222220;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  font-family: -apple-system, sans-serif;
+  border: 1.5px solid #222220;
+  border-radius: 0;
+  padding: 4px;
+  box-shadow: 0 6px 16px rgba(34, 34, 32, 0.18);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
+
+.hush-dropdown .hush-search {
+  all: initial;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  color: #222220;
+  background: #fff;
+  border: 1.2px solid #22222033;
+  border-radius: 0;
+  padding: 6px 8px;
+  margin-bottom: 4px;
+}
+.hush-dropdown .hush-search:focus { outline: none; border-color: #222220; }
 
 .hush-dropdown .hush-row {
   all: initial;
   display: block;
-  font-family: -apple-system, sans-serif;
-  padding: 9px 12px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 8px 10px;
   cursor: pointer;
-  border-bottom: 1px solid rgba(34, 34, 32, 0.15);
+  border-radius: 0;
   color: #222220;
 }
-.hush-dropdown .hush-row:last-child { border-bottom: none; }
-.hush-dropdown .hush-row:hover { background: rgba(245, 184, 21, 0.35); }
-.hush-dropdown .hush-row .hush-title { display: block; font-size: 13px; font-weight: 600; }
-.hush-dropdown .hush-row .hush-sub { display: block; font-size: 11px; opacity: 0.65; margin-top: 2px; }
-.hush-dropdown .hush-empty { all: initial; display: block; padding: 12px; font-size: 12px; color: #222220; opacity: 0.6; font-family: -apple-system, sans-serif; }
+.hush-dropdown .hush-row:hover { background: #f5b815; }
+.hush-dropdown .hush-row .hush-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+}
+.hush-dropdown .hush-row .hush-sub {
+  display: block;
+  font-size: 11px;
+  opacity: 0.6;
+  margin-top: 1px;
+}
+.hush-dropdown .hush-empty {
+  all: initial;
+  display: block;
+  box-sizing: border-box;
+  padding: 10px;
+  font-size: 12px;
+  color: #222220;
+  opacity: 0.65;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.hush-dropdown .hush-altrove {
+  all: initial;
+  display: block;
+  box-sizing: border-box;
+  border-top: 1.2px dashed #22222033;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.hush-dropdown .hush-altrove-label {
+  all: initial;
+  display: block;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #222220;
+  opacity: 0.5;
+  padding: 4px 10px 2px;
+}
+
+.hush-dropdown::-webkit-scrollbar { width: 6px; }
+.hush-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(34, 34, 32, 0.3);
+  border-radius: 0;
+}
+.hush-dropdown::-webkit-scrollbar-track { background: transparent; }

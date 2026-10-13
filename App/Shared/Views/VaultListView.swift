@@ -120,9 +120,13 @@ struct VaultListView: View {
                 try? VaultFileManager.shared.rememberVaultLocation(url)
             }
         }
-        .alert("Errore", isPresented: .constant(localError != nil), actions: {
-            Button("OK") { localError = nil }
-        }, message: { Text(localError ?? "") })
+        .customAlert(
+            isPresented: Binding(get: { localError != nil }, set: { if !$0 { localError = nil } }),
+            title: "Errore",
+            message: localError ?? "",
+            cancelLabel: nil,
+            onConfirm: {}
+        )
         .onAppear { vm.resetAutolockTimer() }
     }
 
@@ -225,6 +229,9 @@ struct ClassicHomeView: View {
     /// aperto: a porta chiusa quei tasti sarebbero visibili E cliccabili
     /// sopra la porta, perché la barra vive nel livello del titolo.
     var chromeVisibile: Bool = true
+    /// Apre le Impostazioni da fuori (es. il promemoria della prova in
+    /// RootView, che non ha accesso allo stato interno di questa vista).
+    var showSettingsSignal: Binding<Bool>? = nil
 
     @State private var progetti = VaultFileManager.shared.projects
     @State private var correnteID: String?
@@ -267,6 +274,11 @@ struct ClassicHomeView: View {
         .preferredColorScheme(.light)
         .onAppear { if attiva { carica() } }
         .onChange(of: attiva) { _, on in if on { carica() } }
+        // Un cassetto nato altrove (es. dal popup rapido ⌃⌘P) non compare
+        // qui finché non si rilegge la lista: `progetti` è una copia locale.
+        .onReceive(NotificationCenter.default.publisher(for: .progettiCambiati)) { _ in
+            progetti = VaultFileManager.shared.projects
+        }
         .sheet(item: $editor) { bersaglio in
             EntryEditorView(entry: bersaglio.entry) { saved in
                 if bersaglio.entry != nil {
@@ -277,6 +289,11 @@ struct ClassicHomeView: View {
                 apertaID = saved.id
                 salva()
             }
+        }
+        .onChange(of: showSettingsSignal?.wrappedValue) { _, aprire in
+            guard aprire == true else { return }
+            showSettings = true
+            showSettingsSignal?.wrappedValue = false
         }
         .sheet(isPresented: $showSettings, onDismiss: {
             progetti = VaultFileManager.shared.projects
@@ -339,12 +356,16 @@ struct ClassicHomeView: View {
     private var colonnaProgetti: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 6) {
-                // il cerca vive qui, sopra il primo progetto: filtra le
-                // voci del progetto aperto, mostrate nella colonna accanto
+                // il cerca vive qui, sopra il primo progetto: cerca in
+                // TUTTI i cassetti, non solo filtra i nomi dei progetti —
+                // gli stessi risultati che si vedrebbero aprendone uno.
                 TextField("Cerca…", text: $vm.searchText)
                     .textFieldStyle(PaperFieldStyle())
                     .padding(.bottom, 8)
 
+                if !vm.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    risultatiGlobaliBlock
+                } else {
                 ForEach(progetti) { p in
                     let scelto = p.id == correnteID
                     VStack(alignment: .leading, spacing: 0) {
@@ -358,14 +379,22 @@ struct ClassicHomeView: View {
                                 Image(systemName: p.icon ?? "archivebox")
                                     .font(.system(size: 12))
                                     .frame(width: 16)
-                                Text(p.name.lowercased())
+                                Text(p.name)
+                                    #if os(iOS)
+                                    .font(Theme.mono(15, scelto ? .bold : .regular))
+                                    #else
                                     .font(Theme.mono(12, scelto ? .bold : .regular))
+                                    #endif
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
                             }
                             .foregroundStyle(scelto ? Theme.paper : Theme.ink)
                             .padding(.horizontal, 10)
+                            #if os(iOS)
+                            .padding(.vertical, 11)
+                            #else
                             .padding(.vertical, 7)
+                            #endif
                             .background(scelto ? Theme.ink : .clear)
                             .contentShape(Rectangle())
                         }
@@ -398,11 +427,20 @@ struct ClassicHomeView: View {
                     }
                     .animation(.easeOut(duration: 0.12), value: progettoMenuID)
                 }
+                }
             }
             .padding(8)
             #if os(macOS)
             .padding(.top, 34)
             #endif
+        }
+        // al primo carattere si aprono anche gli altri cassetti (una volta
+        // sola: poi restano in memoria per la sessione) — così cercare qui,
+        // prima ancora di entrare in un progetto, trova tutto lo stesso
+        .onChange(of: vm.searchText) { _, q in
+            guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            let daCaricare = progetti
+            Task { await VaultLibrary.shared.preload(daCaricare) }
         }
         #if os(macOS)
         // i nomi dei progetti che scorrono in cima si dissolvono invece
@@ -456,35 +494,34 @@ struct ClassicHomeView: View {
             }
         }
         #endif
-        .alert("Eliminare «\(daEliminare?.title ?? "")»?",
-               isPresented: Binding(get: { daEliminare != nil },
-                                    set: { if !$0 { daEliminare = nil } })) {
-            Button("Annulla", role: .cancel) { daEliminare = nil }
-            Button("Elimina", role: .destructive) {
-                if let voce = daEliminare { eliminaDavvero(voce) }
-                daEliminare = nil
-            }
-        } message: {
-            Text("Non si può annullare.")
-        }
-        .alert("Nuovo progetto", isPresented: $nuovoProgetto) {
-            TextField("Nome", text: $nomeProgetto)
-            Button("Crea") { creaProgetto() }
-            Button("Annulla", role: .cancel) {}
-        } message: {
-            Text("Un cassetto nuovo, chiuso con la tua master password.")
-        }
-        .alert("Eliminare «\(progettoDaEliminare?.name ?? "")»?",
-               isPresented: Binding(get: { progettoDaEliminare != nil },
-                                    set: { if !$0 { progettoDaEliminare = nil } })) {
-            Button("Annulla", role: .cancel) { progettoDaEliminare = nil }
-            Button("Elimina", role: .destructive) {
-                if let p = progettoDaEliminare { eliminaProgetto(p) }
-                progettoDaEliminare = nil
-            }
-        } message: {
-            Text("Il cassetto e tutto quello che contiene vengono cancellati. Non si può annullare.")
-        }
+        .customAlert(
+            isPresented: Binding(get: { daEliminare != nil }, set: { if !$0 { daEliminare = nil } }),
+            title: "Eliminare «\(daEliminare?.title ?? "")»?",
+            message: "Non si può annullare.",
+            confirmLabel: "Elimina",
+            destructive: true,
+            onConfirm: { if let voce = daEliminare { eliminaDavvero(voce) } },
+            onCancel: {}
+        )
+        .customAlert(
+            isPresented: $nuovoProgetto,
+            title: "Nuovo progetto",
+            message: "Un cassetto nuovo, chiuso con la tua master password.",
+            textBinding: $nomeProgetto,
+            placeholder: "Nome",
+            confirmLabel: "Crea",
+            onConfirm: { creaProgetto() },
+            onCancel: {}
+        )
+        .customAlert(
+            isPresented: Binding(get: { progettoDaEliminare != nil }, set: { if !$0 { progettoDaEliminare = nil } }),
+            title: "Eliminare «\(progettoDaEliminare?.name ?? "")»?",
+            message: "Il cassetto e tutto quello che contiene vengono cancellati. Non si può annullare.",
+            confirmLabel: "Elimina",
+            destructive: true,
+            onConfirm: { if let p = progettoDaEliminare { eliminaProgetto(p) } },
+            onCancel: {}
+        )
     }
 
     /// Chiude il vault se era quello aperto, cancella il file e aggiorna
@@ -551,59 +588,7 @@ struct ClassicHomeView: View {
                     .padding(.bottom, 18)
 
                 if !vm.searchText.trimmingCharacters(in: .whitespaces).isEmpty {
-                    // ricerca su tutti i cassetti, non solo su quello aperto
-                    let gruppi = risultatiGlobali
-                    if progetti.contains(where: { !VaultLibrary.shared.isLoaded($0) && $0.id != correnteID }) {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text("Apro anche gli altri cassetti…")
-                                .font(Theme.mono(10))
-                        }
-                        .foregroundStyle(Theme.inkSoft)
-                        .padding(.bottom, 12)
-                    }
-                    if gruppi.isEmpty {
-                        Text("Nessun risultato")
-                            .font(Theme.mono(12))
-                            .foregroundStyle(Theme.inkSoft)
-                            .padding(.top, 20)
-                    }
-                    ForEach(gruppi, id: \.progetto.id) { gruppo in
-                        HStack(spacing: 8) {
-                            Image(systemName: gruppo.progetto.icon ?? "archivebox")
-                                .font(.system(size: 10))
-                            Text(gruppo.progetto.name.lowercased())
-                                .font(Theme.mono(10, .semibold))
-                                .tracking(1.5)
-                        }
-                        .foregroundStyle(Theme.inkSoft)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, 8)
-
-                        ForEach(Array(gruppo.voci.enumerated()), id: \.element.id) { i, r in
-                            Button {
-                                apriRisultato(r)
-                            } label: {
-                                HStack {
-                                    Text(r.titolo.isEmpty ? "senza titolo" : r.titolo.lowercased())
-                                        .font(Theme.mono(12, .semibold))
-                                        .foregroundStyle(Theme.ink)
-                                    Spacer()
-                                    Image(systemName: "arrow.right")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(Theme.inkSoft)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 9)
-                                .background(Theme.paperRaised)
-                                .overlay(Rectangle().strokeBorder(Theme.line.opacity(0.5), lineWidth: 1))
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .padding(.bottom, 6)
-                        }
-                        Color.clear.frame(height: 10)
-                    }
+                    risultatiGlobaliBlock
                 } else {
                 ForEach(Array(vm.filteredEntries.enumerated()), id: \.element.id) { index, entry in
                     let aperta = apertaID == entry.id
@@ -720,6 +705,11 @@ struct ClassicHomeView: View {
             if let corrente = progetti.first(where: { $0.id == correnteID }) {
                 VaultLibrary.shared.invalida(corrente)
             }
+            #if os(iOS)
+            // aggiunta/modifica/eliminata una voce: il suggerimento sopra
+            // la tastiera deve rispecchiarlo, non restare quello di prima
+            AutoFillIdentities.sync()
+            #endif
         }
     }
 
@@ -748,6 +738,67 @@ struct ClassicHomeView: View {
                 }
                 .map { RisultatoGlobale(id: $0.id, progetto: p, titolo: $0.title) }
             return voci.isEmpty ? nil : (progetto: p, voci: voci)
+        }
+    }
+
+    /// L'elenco dei risultati della ricerca globale, riusato sia sopra la
+    /// lista progetti sia dentro un progetto già aperto: cercare deve dare
+    /// lo stesso risultato ovunque lo si faccia, non solo scendendo prima
+    /// in un cassetto specifico.
+    @ViewBuilder
+    private var risultatiGlobaliBlock: some View {
+        // ricerca su tutti i cassetti, non solo su quello aperto
+        let gruppi = risultatiGlobali
+        if progetti.contains(where: { !VaultLibrary.shared.isLoaded($0) && $0.id != correnteID }) {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Apro anche gli altri cassetti…")
+                    .font(Theme.mono(10))
+            }
+            .foregroundStyle(Theme.inkSoft)
+            .padding(.bottom, 12)
+        }
+        if gruppi.isEmpty {
+            Text("Nessun risultato")
+                .font(Theme.mono(12))
+                .foregroundStyle(Theme.inkSoft)
+                .padding(.top, 20)
+        }
+        ForEach(gruppi, id: \.progetto.id) { gruppo in
+            HStack(spacing: 8) {
+                Image(systemName: gruppo.progetto.icon ?? "archivebox")
+                    .font(.system(size: 10))
+                Text(gruppo.progetto.name)
+                    .font(Theme.mono(10, .semibold))
+                    .tracking(1.5)
+            }
+            .foregroundStyle(Theme.inkSoft)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 8)
+
+            ForEach(Array(gruppo.voci.enumerated()), id: \.element.id) { i, r in
+                Button {
+                    apriRisultato(r)
+                } label: {
+                    HStack {
+                        Text(r.titolo.isEmpty ? "senza titolo" : r.titolo.lowercased())
+                            .font(Theme.mono(12, .semibold))
+                            .foregroundStyle(Theme.ink)
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.inkSoft)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(Theme.paperRaised)
+                    .overlay(Rectangle().strokeBorder(Theme.line.opacity(0.5), lineWidth: 1))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 6)
+            }
+            Color.clear.frame(height: 10)
         }
     }
 

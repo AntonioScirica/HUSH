@@ -34,6 +34,10 @@ final class LocalSync: NSObject, ObservableObject {
 
     @Published private(set) var stato: Stato = .fermo
     @Published private(set) var trovati: [MCPeerID] = []
+    /// L'altro capo della sessione, finché resta collegato: serve a chi
+    /// riceve per rimandare indietro i propri cassetti (il viaggio di
+    /// ritorno del merge bidirezionale).
+    private(set) var peerConnesso: MCPeerID?
     /// Nome di chi sta chiedendo di collegarsi: comparire vuol dire che va
     /// mostrato un conferma/rifiuta, non che si è già collegati.
     @Published private(set) var richiestaDaAccettare: String?
@@ -161,6 +165,7 @@ final class LocalSync: NSObject, ObservableObject {
         session.disconnect()
         stato = .fermo
         trovati = []
+        peerConnesso = nil
         cartellaRicezione = nil
         totaleAtteso = nil
         arrivati = 0
@@ -180,6 +185,7 @@ extension LocalSync: MCSessionDelegate {
         Task { @MainActor in
             switch state {
             case .connected:
+                self.peerConnesso = peerID
                 self.stato = .collegato(peerID.displayName)
                 if !self.fileDaMandare.isEmpty {
                     self.mandaTutti(a: peerID)
@@ -189,6 +195,7 @@ extension LocalSync: MCSessionDelegate {
             case .connecting:
                 break
             case .notConnected:
+                self.peerConnesso = nil
                 if case .collegato = self.stato { self.stato = .fermo }
             @unknown default:
                 break

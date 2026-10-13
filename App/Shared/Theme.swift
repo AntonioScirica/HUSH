@@ -167,9 +167,52 @@ struct PaperFieldStyle: TextFieldStyle {
     }
 }
 
+#if os(iOS)
+import Combine
+import UIKit
+
+/// L'altezza vera della tastiera, aggiornata a runtime dalle notifiche di
+/// sistema. Serve solo dove un GeometryReader ha già misurato lo spazio
+/// PRIMA che la tastiera comparisse (per le ombre di scroll, es. i moduli
+/// di creazione voce): quella misura resta congelata, e senza questo
+/// padding esplicito la tastiera copre il campo attivo invece di lasciargli
+/// spazio, perché lo scroll non si restringe mai da solo.
+@MainActor
+final class KeyboardObserver: ObservableObject {
+    static let shared = KeyboardObserver()
+    @Published private(set) var height: CGFloat = 0
+    private var bag = Set<AnyCancellable>()
+
+    private init() {
+        NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)
+            .sink { [weak self] note in
+                guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+                let screenHeight = UIScreen.main.bounds.height
+                self?.height = max(0, screenHeight - frame.origin.y)
+            }
+            .store(in: &bag)
+        NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
+            .sink { [weak self] _ in self?.height = 0 }
+            .store(in: &bag)
+    }
+}
+#endif
+
 extension View {
     func paperBackground() -> some View {
         background(Theme.paper.ignoresSafeArea())
+    }
+
+    /// Spazio in fondo pari all'altezza vera della tastiera: da mettere sui
+    /// moduli con GeometryReader dentro (vedi KeyboardObserver), dove lo
+    /// scroll automatico di sistema non si accorge da sé della tastiera.
+    @ViewBuilder
+    func avoidsKeyboard() -> some View {
+        #if os(iOS)
+        modifier(KeyboardAvoidingModifier())
+        #else
+        self
+        #endif
     }
 
     /// Sfuma i bordi di uno scroll: si vede che continua, senza un taglio
@@ -193,6 +236,15 @@ extension View {
         }
     }
 }
+
+#if os(iOS)
+private struct KeyboardAvoidingModifier: ViewModifier {
+    @ObservedObject private var keyboard = KeyboardObserver.shared
+    func body(content: Content) -> some View {
+        content.padding(.bottom, keyboard.height)
+    }
+}
+#endif
 
 extension Color {
     /// Colore da stringa esadecimale "#RRGGBB" (grigio se non valida).

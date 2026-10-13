@@ -161,7 +161,7 @@ struct ImportPreviewView: View {
                         .overlay(Rectangle().strokeBorder(Theme.line.opacity(0.5), lineWidth: 1))
                 }
 
-                Text(p.name.lowercased())
+                Text(p.name)
                     .font(Theme.mono(12, .semibold))
                     .foregroundStyle(p.isReadable ? Theme.ink : Theme.inkSoft)
 

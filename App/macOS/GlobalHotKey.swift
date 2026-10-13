@@ -11,22 +11,34 @@ final class GlobalHotKey {
     private var hotKeyRef: EventHotKeyRef?
     private var handler: EventHandlerRef?
     private let onPress: () -> Void
+    /// Con più scorciatoie attive i handler Carbon si mettono in coda
+    /// sull'app intera, e l'ultimo installato riceve OGNI pressione: senza
+    /// un id univoco da confrontare, ⌘P finiva nel handler di ⌃⌘P (che
+    /// rispondeva "gestito" e apriva la ricerca al posto del QuickAdd).
+    private let hotKeyID: EventHotKeyID
+    private static var prossimoID: UInt32 = 1
 
-    /// ⌃⌥H — improbabile che collida con scorciatoie di sistema o di terze parti.
     init(keyCode: UInt32 = UInt32(kVK_ANSI_H),
          modifiers: UInt32 = UInt32(controlKey | optionKey),
          onPress: @escaping () -> Void) {
         self.onPress = onPress
+        self.hotKeyID = EventHotKeyID(signature: OSType(0x48555348), id: Self.prossimoID) // 'HUSH'
+        Self.prossimoID += 1
         register(keyCode: keyCode, modifiers: modifiers)
     }
 
     private func register(keyCode: UInt32, modifiers: UInt32) {
-        var hotKeyID = EventHotKeyID(signature: OSType(0x48555348), id: 1) // 'HUSH'
-
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: OSType(kEventHotKeyPressed))
         InstallEventHandler(GetApplicationEventTarget(), { _, event, userData in
-            guard let userData else { return noErr }
+            guard let userData, let event else { return OSStatus(eventNotHandledErr) }
+            // Di chi è questa pressione? Se non è la NOSTRA combinazione,
+            // si passa la mano al handler successivo nella coda.
+            var pressed = EventHotKeyID()
+            GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                              EventParamType(typeEventHotKeyID), nil,
+                              MemoryLayout<EventHotKeyID>.size, nil, &pressed)
             let owner = Unmanaged<GlobalHotKey>.fromOpaque(userData).takeUnretainedValue()
+            guard pressed.id == owner.hotKeyID.id else { return OSStatus(eventNotHandledErr) }
             DispatchQueue.main.async { owner.onPress() }
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &handler)

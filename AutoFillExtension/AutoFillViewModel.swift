@@ -51,7 +51,13 @@ final class AutoFillViewModel: ObservableObject {
         triedStoredPassword = true
         isBusy = true
         defer { isBusy = false }
-        guard let password = try? SharedKeychain.retrieve(prompt: "Sblocca Hush per compilare la password") else {
+        // Il Portachiavi mostra Face ID e blocca finché non risponde: fuori
+        // dal thread principale (questa classe è @MainActor), o l'estensione
+        // resta con la UI congelata mentre aspetta il dito.
+        let password = await Task.detached {
+            try? SharedKeychain.retrieve(prompt: "Sblocca Hush per compilare la password")
+        }.value
+        guard let password else {
             return // l'utente potrà sempre sbloccare manualmente sotto
         }
         try? await openVaults(password: password)

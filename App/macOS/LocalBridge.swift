@@ -155,6 +155,31 @@ final class LocalBridgeServer {
             }
             return ["entries": found]
 
+        // Ricerca libera su TUTTO il caveau, non filtrata per sito: serve
+        // quando il campo "Cerca" del menu non trova niente tra le voci del
+        // sito corrente — la voce può esistere lo stesso, solo senza un url
+        // che combaci con l'host di questa pagina (salvata senza url, o con
+        // un url di un sito diverso da quello aperto ora).
+        case "/search":
+            guard MasterKey.isUnlocked else { return ["error": "locked"] }
+            let q = (components.queryItems?.first(where: { $0.name == "q" })?.value ?? "")
+                .trimmingCharacters(in: .whitespaces).lowercased()
+            guard !q.isEmpty else { return ["entries": []] }
+            var found: [[String: String]] = []
+            for project in VaultFileManager.shared.projects {
+                for entry in VaultLibrary.shared.entries(of: project) {
+                    let testo = [entry.title, entry.username, project.name].joined(separator: " ").lowercased()
+                    guard testo.contains(q) else { continue }
+                    found.append([
+                        "title": entry.title,
+                        "username": entry.username,
+                        "password": entry.password,
+                        "projectName": project.name,
+                    ])
+                }
+            }
+            return ["entries": Array(found.prefix(8))]
+
         default:
             return ["error": "not_found"]
         }

@@ -217,16 +217,25 @@ private struct FieldRow<Trailing: View>: View {
                     Text(value)
                         .font(Theme.mono(13, monospacedValue ? .semibold : .regular))
                         .foregroundStyle(Theme.ink)
-                        .textSelection(.enabled)
+                    // niente più .textSelection: competeva col click sul
+                    // container per copiare, e con quello vinceva sempre
+                    // lei (partiva la selezione del testo invece della
+                    // copia). Copiare è più utile qui che selezionare.
                 }
                 Spacer()
                 trailing()
                     .foregroundStyle(Theme.ink)
-                Button { onCopy() } label: { Image(systemName: "doc.on.doc") }
-                    .buttonStyle(.borderless)
+                Image(systemName: "doc.on.doc")
                     .foregroundStyle(Theme.ink)
             }
             .padding(12)
+            // Tutto il rigo copia, non solo l'iconcina: il bottone dedicato
+            // era un bersaglio minuscolo. onTapGesture invece di un Button
+            // avvolgente perché dentro c'è già un altro bottone vero (occhio
+            // password) — due Button annidati si accavallano sui click, un
+            // gesto sopra e un bottone dentro invece convivono bene.
+            .contentShape(Rectangle())
+            .onTapGesture { onCopy() }
             Rectangle().fill(Theme.line.opacity(0.5)).frame(height: 1)
         }
     }

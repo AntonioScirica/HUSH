@@ -43,10 +43,12 @@ final class VaultViewModel: ObservableObject {
         }
         guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return all }
         let q = searchText.lowercased()
-        return all.filter {
-            $0.title.lowercased().contains(q) ||
-            $0.username.lowercased().contains(q) ||
-            $0.url.lowercased().contains(q)
+        return all.filter { entry in
+            if entry.title.lowercased().contains(q)
+                || entry.username.lowercased().contains(q)
+                || entry.url.lowercased().contains(q)
+                || entry.notes.lowercased().contains(q) { return true }
+            return entry.customFields.contains { $0.key.lowercased().contains(q) || $0.value.lowercased().contains(q) }
         }
     }
 

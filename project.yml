@@ -21,8 +21,8 @@ settings:
   base:
     DEVELOPMENT_TEAM: "" # <-- inserisci qui il tuo Team ID (Xcode > Signing & Capabilities)
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "1.4"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "2.1.21"
+    CURRENT_PROJECT_VERSION: "34"
 
 packages:
   VaultCore:
@@ -95,6 +95,12 @@ targets:
         LSMinimumSystemVersion: "14.0"
         NSHumanReadableCopyright: "© Antonio Scirica"
         CFBundlePackageType: APPL
+        # Senza questi due, xcodegen non tocca le chiavi già scritte
+        # nell'Info.plist da una generazione precedente: la versione resta
+        # bloccata al primo valore per sempre, a dispetto di ogni bump di
+        # MARKETING_VERSION qui sopra (bug scoperto e corretto stanotte).
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # per mandare i cassetti all'iPhone sulla stessa rete, senza server
         NSLocalNetworkUsageDescription: "Hush cerca il tuo iPhone sulla stessa rete WiFi per mandargli i cassetti, senza passare da nessun server."
         NSBonjourServices:
@@ -135,10 +141,21 @@ targets:
         # firma automatica sul tuo account: serve per installare sul telefono vero
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 69SHH7M6DY
+      configs:
+        Release:
+          # Via get-task-allow: è l'entitlement che lascia agganciare un
+          # debugger. Su un'app che custodisce password è una falla, e iOS
+          # rifiuta di elencare fra i provider AutoFill un'estensione che
+          # ce l'ha — motivo per cui Hush non compariva mai in Impostazioni.
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     info:
       path: App/iOS/Info.plist
       properties:
         CFBundleDisplayName: Hush
+        # stessi segnaposto del Mac: senza, xcodegen lascia la versione
+        # congelata al primo valore mai generato (vedi il commento lassù)
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
@@ -152,6 +169,11 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         NSFaceIDUsageDescription: "Hush usa Face ID per sbloccare rapidamente il tuo vault."
+        # Cifratura solo con algoritmi standard (AES-256 + Argon2id), niente
+        # di proprietario: qualifica per l'esenzione, e senza questa riga
+        # ogni submission chiede a mano la stessa domanda sulla conformità
+        # all'export.
+        ITSAppUsesNonExemptEncryption: false
         # per cercare il Mac sulla stessa rete e ricevere i cassetti, senza server
         NSLocalNetworkUsageDescription: "Hush cerca il tuo Mac sulla stessa rete WiFi per ricevere i cassetti, senza passare da nessun server."
         NSBonjourServices:
@@ -159,6 +181,11 @@ targets:
     entitlements:
       path: App/iOS/Scrigno-iOS.entitlements
       properties:
+        # Apple valida l'upload su App Store Connect anche sull'app
+        # contenitore, non solo sull'estensione: senza questa riga qui
+        # l'archivio passa in locale ma altool rifiuta con "Missing
+        # Entitlement" (codice 90729) sul bundle principale.
+        com.apple.developer.authentication-services.autofill-credential-provider: true
         com.apple.security.application-groups:
           - group.com.antonioscirica.scrigno
         keychain-access-groups:
@@ -176,23 +203,43 @@ targets:
         product: VaultCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush.ios.autofill
+        # Identificatore nuovo di zecca: le prime installazioni di questa
+        # estensione uscirono senza l'entitlement di credential provider, e
+        # iOS tiene in cache l'esito della registrazione di un plugin anche
+        # dopo la disinstallazione dell'app. Cambiare id costringe pluginkit
+        # a registrarlo da capo invece di rileggere il verdetto vecchio.
+        PRODUCT_BUNDLE_IDENTIFIER: com.antonioscirica.hush.ios.pwext
         PRODUCT_NAME: ScrignoAutoFill
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: 69SHH7M6DY
+      configs:
+        Release:
+          # vedi il commento sul target dell'app: niente get-task-allow
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
     info:
       path: AutoFillExtension/Info.plist
       properties:
         CFBundleDisplayName: Hush
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.authentication-services-credential-provider-ui
-          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).CredentialProviderViewController
+          # Storyboard, non PrincipalClass: è la configurazione del template
+          # ufficiale Apple — con la sola PrincipalClass l'estensione non
+          # veniva scoperta dall'agente AutoFill di iOS (verificato nei log
+          # del device: il set scoperto conteneva 1Password ma non Hush).
+          NSExtensionMainStoryboard: MainInterface
+          NSExtensionAttributes:
+            ASCredentialProviderExtensionCapabilities:
+              ProvidesPasswords: true
+              ProvidesPasskeys: false
         NSFaceIDUsageDescription: "Hush usa Face ID per sbloccare rapidamente il tuo vault."
     entitlements:
       path: AutoFillExtension/ScrignoAutoFill.entitlements
       properties:
+        com.apple.developer.authentication-services.autofill-credential-provider: true
         com.apple.security.application-groups:
           - group.com.antonioscirica.scrigno
         keychain-access-groups:

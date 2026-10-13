@@ -2,89 +2,121 @@ import SwiftUI
 import VaultCore
 import LocalAuthentication
 
-/// Il popup della scorciatoia globale (⌃⌥H): sblocco, poi progetto, poi la
-/// voce da salvare. Tre passi, uno schermo alla volta — niente altro sul
-/// tragitto fra "premo il tasto" e "la password è salvata".
+/// Il popup della scorciatoia globale (⌘P): l'editor della parete compare
+/// SUBITO, sotto il pannello Touch ID di sistema — niente schermate di
+/// passaggio che sfarfallano. Finché non sei autenticato l'editor è solo
+/// scenografia (disabilitato); Touch ID rifiutato = il popup si chiude.
+/// Senza Touch ID attivo si passa dalla master password, sopra l'editor.
 struct QuickAddView: View {
     let onDone: () -> Void
 
-    private enum Passo { case sblocco, progetto, modulo }
-    @State private var passo: Passo = .sblocco
     @State private var progettoScelto: VaultFileManager.Project?
+    @State private var autenticato = false
+    @State private var chiediPassword = false
+    /// L'editor la usa solo per il ramo "elimina voce", che qui (voce
+    /// sempre nuova) non si può raggiungere — ma l'environment va riempito.
+    @StateObject private var vm = VaultViewModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            switch passo {
-            case .sblocco:
-                SbloccoRapido {
-                    passo = VaultFileManager.shared.projects.count == 1 ? .modulo : .progetto
-                    if VaultFileManager.shared.projects.count == 1 {
-                        progettoScelto = VaultFileManager.shared.projects.first
-                    }
+        ZStack {
+            VStack(spacing: 0) {
+                // il cassetto si sceglie qui, in testa: sotto c'è
+                // direttamente l'editor con le categorie, senza passi
+                // intermedi. Stessa tendina fatta in casa della parete:
+                // il Menu di sistema stonerebbe con la carta del resto.
+                if VaultFileManager.shared.projects.count > 1 {
+                    TendinaCassetto(scelto: $progettoScelto)
+                        .padding(.horizontal, 26)
+                        .padding(.top, 18)
+                        .padding(.bottom, 4)
+                        // Senza questo la tendina aperta finisce SOTTO
+                        // l'editor: l'overlay vive dentro TendinaCassetto,
+                        // ma il fratello successivo della VStack si disegna
+                        // dopo di lei e la copre — lo zIndex va alzato qui,
+                        // al livello dei fratelli, non dentro la tendina.
+                        .zIndex(1)
                 }
-            case .progetto:
-                SceltaProgetto { progetto in
-                    progettoScelto = progetto
-                    passo = .modulo
-                }
-            case .modulo:
-                if let progettoScelto {
-                    ModuloVoce(progetto: progettoScelto, onSalvato: onDone)
+
+                EntryEditorView(
+                    entry: nil,
+                    onSave: { voce in
+                        guard autenticato else { return }
+                        if let progettoScelto {
+                            VaultLibrary.shared.add(voce, to: progettoScelto)
+                        }
+                        onDone()
+                    },
+                    onCancel: { onDone() }
+                )
+                .environmentObject(vm)
+            }
+            .disabled(!autenticato)
+
+            if chiediPassword {
+                PasswordRapida(
+                    onSbloccato: { autenticato = true; chiediPassword = false },
+                    onAnnulla: { onDone() }
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.paper)
+        .preferredColorScheme(.light) // il pannello non deve seguire il tema scuro: testi neri su carta
+        .onExitCommand { onDone() } // Esc chiude
+        .task {
+            progettoScelto = VaultFileManager.shared.projects.first
+            // Se il caveau è già sbloccato (l'app è aperta e attiva) non ha
+            // senso chiedere di nuovo il dito: Touch ID/password servono
+            // solo a sbloccarlo, non a riconfermare un accesso già in corso.
+            guard !MasterKey.isUnlocked else {
+                autenticato = true
+                return
+            }
+            // Da bloccato invece SEMPRE: il popup si richiama da qualunque
+            // app, e chiunque passi davanti al Mac non deve poter scrivere
+            // nel caveau senza autenticarsi.
+            guard MasterKey.biometryUsable else {
+                chiediPassword = true
+                return
+            }
+            MasterKey.unlockWithBiometry { ok in
+                DispatchQueue.main.async {
+                    if ok { autenticato = true } else { onDone() } // rifiutato: si chiude
                 }
             }
         }
-        .frame(width: 420)
-        .background(Theme.paper)
-        .onExitCommand { onDone() } // Esc chiude
     }
 }
 
-// MARK: - Passo 1: sblocco
+// MARK: - Master password (solo senza Touch ID)
 
-private struct SbloccoRapido: View {
+private struct PasswordRapida: View {
     let onSbloccato: () -> Void
+    let onAnnulla: () -> Void
 
     @State private var password = ""
     @State private var errore: String?
-    @State private var provandoTouchID = true
 
     var body: some View {
-        Group {
-            if MasterKey.isUnlocked {
-                // la sessione principale è già aperta: niente da chiedere
-                Color.clear.frame(height: 1)
-                    .onAppear { onSbloccato() }
-            } else if provandoTouchID {
-                // niente da vedere qui apposta: il pannello di Touch ID di
-                // sistema è già il feedback, un altro sopra sarebbe di troppo
-                Color.clear.frame(height: 1)
-            } else {
-                VStack(spacing: 14) {
-                    SecureField("Master password", text: $password)
-                        .textFieldStyle(PaperFieldStyle())
-                        .onSubmit(prova)
+        VStack(spacing: 14) {
+            Spacer()
+            SecureField("Master password", text: $password)
+                .textFieldStyle(PaperFieldStyle())
+                .onSubmit(prova)
 
-                    if let errore {
-                        Text(errore).font(Theme.mono(10)).foregroundStyle(Theme.danger)
-                    }
+            if let errore {
+                Text(errore).font(Theme.mono(10)).foregroundStyle(Theme.danger)
+            }
 
-                    Button("Sblocca") { prova() }
-                        .buttonStyle(InkButtonStyle(prominent: true))
-                        .disabled(password.isEmpty)
-                        .opacity(password.isEmpty ? 0.4 : 1)
-                }
-                .padding(16)
-            }
+            Button("Sblocca") { prova() }
+                .buttonStyle(InkButtonStyle(prominent: true))
+                .disabled(password.isEmpty)
+                .opacity(password.isEmpty ? 0.4 : 1)
+            Spacer()
         }
-        .task {
-            MasterKey.unlockWithBiometry { ok in
-                if ok {
-                    onSbloccato()
-                } else {
-                    provandoTouchID = false // niente touch id (o rifiutato): si passa alla password
-                }
-            }
-        }
+        .padding(26)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.paper)
     }
 
     private func prova() {
@@ -97,96 +129,197 @@ private struct SbloccoRapido: View {
     }
 }
 
-// MARK: - Passo 2: scelta progetto
+// MARK: - Tendina cassetto (stesso stile della parete)
 
-private struct SceltaProgetto: View {
-    let onScelto: (VaultFileManager.Project) -> Void
+private struct TendinaCassetto: View {
+    @Binding var scelto: VaultFileManager.Project?
+    @State private var aperta = false
+    @State private var creando = false
+    @State private var nomeNuovo = ""
+    @State private var creazioneInCorso = false
+    @State private var creazioneErrore: String?
+    private static let altezzaCampo: CGFloat = 40
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 1) {
-                ForEach(VaultFileManager.shared.projects) { progetto in
-                    Button { onScelto(progetto) } label: {
-                        HStack {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(progetto.noteColor.map { Color(hex: $0) } ?? Theme.yellow)
-                                .frame(width: 10, height: 10)
-                            Text(progetto.name).font(Theme.mono(13))
-                            Spacer()
+        VStack(alignment: .leading, spacing: 6) {
+            Text("CASSETTO")
+                .font(Theme.mono(9, .semibold))
+                .tracking(1.5)
+                .foregroundStyle(Theme.inkSoft)
+
+            Button {
+                withAnimation(.easeOut(duration: 0.15)) { aperta.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Text(scelto?.name ?? "cassetto")
+                        .font(Theme.mono(13))
+                        .foregroundStyle(Theme.ink)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Theme.inkSoft)
+                        .rotationEffect(.degrees(aperta ? 180 : 0))
+                }
+                .padding(.horizontal, 10)
+                .frame(height: Self.altezzaCampo)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.paperRaised)
+                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            // La tendina è agganciata al BOTTONE, fuori dal flusso (non
+            // spinge giù l'editor): overlay allineato in alto e spostato di
+            // un'altezza-campo, così il suo bordo superiore parte 4 punti
+            // sotto il bordo inferiore del campo — un dropdown normale.
+            // Campo ad altezza FISSA apposta: l'offset è un numero certo,
+            // niente GeometryReader né alignmentGuide (provati entrambi:
+            // il primo misurava dalla cima sbagliata, la seconda ancorava
+            // la lista sopra il campo invece che sotto).
+            .overlay(alignment: .topLeading) {
+                if aperta {
+                    listaProgetti.offset(y: Self.altezzaCampo + 4)
+                }
+            }
+        }
+    }
+
+    private var listaProgetti: some View {
+        let progetti = VaultFileManager.shared.projects
+        // Righe ad altezza fissa così l'altezza totale è calcolabile: la
+        // tendina vive in un overlay, che le propone la misura del BOTTONE —
+        // un maxHeight qui collasserebbe la ScrollView a quell'altezza
+        // (succedeva: si vedeva una riga sola, "tagliata"). L'altezza va
+        // quindi imposta noi: tutta la lista se è corta, tetto a 4 righe e
+        // mezza (si capisce che sotto c'è altro da scorrere) se è lunga —
+        // +1 riga sempre, per "nuovo cassetto" in fondo.
+        let altezzaRiga: CGFloat = 40
+        let altezzaLista = min(CGFloat(progetti.count + 1) * (altezzaRiga + 1) - 1, altezzaRiga * 4.5)
+        return ScrollView {
+            VStack(spacing: 0) {
+                ForEach(Array(progetti.enumerated()), id: \.element.id) { i, p in
+                    Button {
+                        scelto = p
+                        withAnimation(.easeOut(duration: 0.15)) { aperta = false }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: p.icon ?? "folder")
+                                .font(.system(size: 12))
+                                .frame(width: 16)
+                            Text(p.name)
+                                .font(Theme.mono(12, .semibold))
+                            Spacer(minLength: 0)
+                            if p.id == scelto?.id {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 12)
+                        .frame(height: altezzaRiga)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    Rectangle().fill(Theme.line).frame(height: 1)
                 }
+                rigaNuovoCassetto(altezza: altezzaRiga)
             }
         }
-        .frame(maxHeight: 280)
+        .frame(height: altezzaLista)
+        .background(Theme.paperRaised)
+        .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
     }
-}
 
-// MARK: - Passo 3: modulo voce
-
-private struct ModuloVoce: View {
-    let progetto: VaultFileManager.Project
-    let onSalvato: () -> Void
-
-    @State private var titolo = ""
-    @State private var utente = ""
-    @State private var password = ""
-    @State private var url = ""
-    @State private var rivelaPassword = false
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Text(progetto.name).font(Theme.mono(10)).foregroundStyle(Theme.inkSoft)
-
-            TextField("Titolo", text: $titolo).textFieldStyle(PaperFieldStyle())
-            TextField("Utente / email", text: $utente).textFieldStyle(PaperFieldStyle())
-
-            HStack(spacing: 8) {
-                Group {
-                    if rivelaPassword {
-                        TextField("Password", text: $password)
+    /// Ultima riga della tendina: "+ nuovo cassetto", che si trasforma in un
+    /// campo di testo sul posto. Un cassetto è un .kdbx a sé cifrato con la
+    /// stessa master password di sessione — niente password extra da
+    /// chiedere, si è già dentro.
+    private func rigaNuovoCassetto(altezza: CGFloat) -> some View {
+        Group {
+            if creando {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12))
+                        .frame(width: 16)
+                        .foregroundStyle(Theme.inkSoft)
+                    TextField("nome cassetto", text: $nomeNuovo)
+                        .textFieldStyle(.plain)
+                        .font(Theme.mono(12, .semibold))
+                        .disabled(creazioneInCorso)
+                        .onSubmit { creaCassetto() }
+                    if creazioneInCorso {
+                        ProgressView().controlSize(.small)
                     } else {
-                        SecureField("Password", text: $password)
+                        Button { creaCassetto() } label: {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(nomeNuovo.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
-                .textFieldStyle(.plain)
-                .font(Theme.mono(13))
-                .padding(.horizontal, 10)
-                .frame(height: Theme.fieldHeight)
-                .background(Theme.paperRaised)
-                .overlay(Rectangle().strokeBorder(Theme.line, lineWidth: 1))
-
-                Button { rivelaPassword.toggle() } label: {
-                    Image(systemName: rivelaPassword ? "eye.slash" : "eye")
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 12)
+                .frame(height: altezza)
+            } else {
+                Button {
+                    creando = true
+                    creazioneErrore = nil
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12))
+                            .frame(width: 16)
+                        Text("nuovo cassetto")
+                            .font(Theme.mono(12, .semibold))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 12)
+                    .frame(height: altezza)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(Theme.inkSoft)
-
-                Button { password = PasswordGenerator.generate(.init(length: 20)) } label: {
-                    Image(systemName: "die.face.5")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Theme.inkSoft)
-                .help("genera una password casuale")
             }
-
-            TextField("URL (facoltativo)", text: $url).textFieldStyle(PaperFieldStyle())
-
-            Button("Salva") { salva() }
-                .buttonStyle(InkButtonStyle(prominent: true))
-                .disabled(titolo.isEmpty)
-                .opacity(titolo.isEmpty ? 0.4 : 1)
+            if let creazioneErrore {
+                Text(creazioneErrore)
+                    .font(Theme.mono(9))
+                    .foregroundStyle(Theme.danger)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 6)
+            }
         }
-        .padding(16)
     }
 
-    private func salva() {
-        let voce = VaultEntry(title: titolo, username: utente, password: password, url: url)
-        VaultLibrary.shared.add(voce, to: progetto)
-        onSalvato()
+    private func creaCassetto() {
+        let nome = nomeNuovo.trimmingCharacters(in: .whitespaces)
+        guard !nome.isEmpty, let key = MasterKey.session else { return }
+        creazioneInCorso = true
+        let nuovaVM = VaultViewModel()
+        nuovaVM.createNew(name: nome, password: key)
+        Task { @MainActor in
+            guard let bytes = await nuovaVM.save() else {
+                creazioneInCorso = false
+                creazioneErrore = "Creazione non riuscita."
+                return
+            }
+            do {
+                let url = VaultFileManager.shared.freeProjectURL(named: nome)
+                try Data(bytes).write(to: url, options: .atomic)
+                try VaultFileManager.shared.addProject(name: nome, url: url)
+                if let creato = VaultFileManager.shared.projects.first(where: { $0.path == url.path }) {
+                    scelto = creato
+                }
+                creando = false
+                nomeNuovo = ""
+                withAnimation(.easeOut(duration: 0.15)) { aperta = false }
+            } catch {
+                creazioneErrore = "Salvataggio non riuscito."
+            }
+            creazioneInCorso = false
+        }
     }
 }
+
+

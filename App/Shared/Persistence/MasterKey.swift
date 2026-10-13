@@ -64,14 +64,14 @@ enum MasterKey {
     /// si riscrive sotto la firma attuale e il pannello smette di comparire.
     private static func rinfrescaPortachiavi(_ password: String) {
         guard UserDefaults.standard.bool(forKey: biometryKey) else { return }
-        guard UserDefaults.standard.string(forKey: firmaKey) != firmaAttuale else { return }
+        // Voce sparita (una vecchia migrazione poteva perderla: cancellava
+        // la copia prima di scrivere la nuova)? Si ricrea qui, al primo
+        // sblocco con password digitata — il dito torna da solo. Il vecchio
+        // confronto sulla "firma" non serve più: nel portachiavi Data
+        // Protection l'accesso dipende dall'entitlement, non dalla firma
+        // della singola build.
+        guard !SharedKeychain.hasStoredPassword else { return }
         try? SharedKeychain.store(password: password)
-        UserDefaults.standard.set(firmaAttuale, forKey: firmaKey)
-    }
-
-    private static let firmaKey = "scrigno.master.keychainOwner"
-    private static var firmaAttuale: String {
-        Bundle.main.bundleIdentifier ?? "?"
     }
 
     /// La password combacia col verificatore salvato?
@@ -146,7 +146,9 @@ enum MasterKey {
     /// fare niente. Il pannello semmai compare a un unlock col dito, ma
     /// nessuno ne aveva ancora provato uno.
     static func enableBiometry(password: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        #if os(macOS)
+        // Su entrambe le piattaforme: il volto/dito si mostra SUBITO, appena
+        // si tocca "Attiva" — non alla prima lettura vera, più avanti
+        // nell'onboarding, dove sembrerebbe chiesto a sproposito.
         let context = LAContext()
         context.localizedCancelTitle = "Annulla"
         context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
@@ -159,16 +161,12 @@ enum MasterKey {
                 salvaNelPortachiavi(password, completion: completion)
             }
         }
-        #else
-        salvaNelPortachiavi(password, completion: completion)
-        #endif
     }
 
     private static func salvaNelPortachiavi(_ password: String, completion: (Result<Void, Error>) -> Void) {
         do {
             try SharedKeychain.store(password: password)
             UserDefaults.standard.set(true, forKey: biometryKey)
-            UserDefaults.standard.set(firmaAttuale, forKey: firmaKey)
             completion(.success(()))
         } catch {
             completion(.failure(error))
@@ -217,16 +215,22 @@ enum MasterKey {
             }
         }
         #else
-        guard let password = try? SharedKeychain.retrieve(prompt: "Sblocca Hush") else {
-            completion(false)
-            return
+        // Il Portachiavi mostra Face ID da sé e blocca finché non risponde:
+        // va fatto fuori dal thread principale, altrimenti se l'app finisce
+        // in background mentre aspetta il dito, il watchdog di sistema la
+        // uccide dopo 10 secondi perché il thread principale non è libero
+        // di gestire il cambio di stato della scena (SIGKILL 0x8BADF00D).
+        DispatchQueue.global(qos: .userInitiated).async {
+            guard let password = try? SharedKeychain.retrieve(prompt: "Sblocca Hush") else {
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
+            let valida = matches(password)
+            DispatchQueue.main.async {
+                if valida { session = password }
+                completion(valida)
+            }
         }
-        guard matches(password) else {
-            completion(false)
-            return
-        }
-        session = password
-        completion(true)
         #endif
     }
 

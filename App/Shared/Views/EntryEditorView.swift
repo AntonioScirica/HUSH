@@ -10,6 +10,10 @@ struct EntryEditorView: View {
 
     let entry: VaultEntry?
     let onSave: (VaultEntry) -> Void
+    /// Presentata dentro un pannello (QuickAdd) invece che come sheet:
+    /// lì `dismiss` non ha nessuna presentazione da chiudere, serve un
+    /// canale esplicito per l'annulla.
+    var onCancel: (() -> Void)? = nil
 
     /// Un campo libero in modifica: etichetta fissa, valore editabile.
     private struct Campo: Identifiable {
@@ -221,7 +225,7 @@ struct EntryEditorView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
                 HStack(spacing: 10) {
-                    Button("Annulla") { dismiss() }
+                    Button("Annulla") { if let onCancel { onCancel() } else { dismiss() } }
                         .buttonStyle(OutlineButtonStyle())
                         .frame(maxWidth: .infinity)
                     Button("Salva") { save() }

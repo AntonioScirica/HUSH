@@ -24,6 +24,10 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             let host = (message["host"] as? String) ?? ""
             let escaped = host.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             call(context, path: "/matches?host=\(escaped)")
+        case "search":
+            let query = (message["query"] as? String) ?? ""
+            let escaped = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+            call(context, path: "/search?q=\(escaped)")
         default:
             complete(context, with: ["error": "unknown_type"])
         }

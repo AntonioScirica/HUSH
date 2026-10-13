@@ -112,6 +112,12 @@ enum License {
 
     // MARK: - Registrazione
 
+    /// Chi tiene una sheet Impostazioni tutta sua (es. `ClassicHomeView` su
+    /// iOS) non passa da `onSettingsClosed`: questo notifica il cambio di
+    /// licenza a chiunque sia in ascolto, indipendentemente da quale vista
+    /// ha presentato il form di attivazione.
+    static let changed = Notification.Name("hush.license.changed")
+
     /// Registra una licenza incollata dall'utente. Ritorna `nil` se la firma
     /// non torna: significa che è stata inventata o modificata.
     @discardableResult
@@ -120,11 +126,13 @@ enum License {
         guard let info = verify(cleaned), !info.isExpired else { return nil }
         UserDefaults.standard.set(cleaned, forKey: licenseKey)
         UserDefaults.standard.set(deviceID, forKey: deviceKey)
+        NotificationCenter.default.post(name: changed, object: nil)
         return info
     }
 
     static func forget() {
         UserDefaults.standard.removeObject(forKey: licenseKey)
+        NotificationCenter.default.post(name: changed, object: nil)
     }
 
     // MARK: - Verifica

@@ -115,7 +115,10 @@ struct VaultDoorView: View {
                 .transition(.opacity)
             }
         }
-        .ignoresSafeArea()
+        // Solo il contenitore (notch, home indicator): MAI la tastiera, o
+        // il campo password sotto non si sposta più quando lei compare —
+        // resta coperta, senza modo di chiuderla né di scrivere.
+        .ignoresSafeArea(.container, edges: .all)
         .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.35), value: askPassword)
         .sheet(isPresented: $showRecovery) {

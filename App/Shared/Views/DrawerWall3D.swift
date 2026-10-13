@@ -391,7 +391,7 @@ struct DrawerWall3D: NSViewRepresentable {
                 let h = DrawerWall3D.cellH - 0.14
                 var caretX: CGFloat = 0   // testo vuoto → cursore al centro della targhetta
                 if !label.isEmpty {
-                    let node = Self.textNode(label.lowercased(), maxWidth: 0.54, maxHeight: 0.16, maxScale: 0.1)
+                    let node = Self.textNode(label, maxWidth: 0.54, maxHeight: 0.16, maxScale: 0.1)
                     node.position = SCNVector3(node.position.x, h * 0.18 + node.position.y, 0.085)
                     drawer.addChildNode(node)
                     draftLabelNode = node
@@ -1295,7 +1295,7 @@ struct DrawerWall3D: NSViewRepresentable {
             plate.position = SCNVector3(0, h * 0.18, 0.06)
             root.addChildNode(plate)
             if let label {
-                let text = Self.textNode(label.lowercased(), maxWidth: 0.54, maxHeight: 0.16, maxScale: 0.1)
+                let text = Self.textNode(label, maxWidth: 0.54, maxHeight: 0.16, maxScale: 0.1)
                 text.name = "plateLabel"
                 text.position = SCNVector3(text.position.x, h * 0.18 + text.position.y, 0.085)
                 root.addChildNode(text)
@@ -1380,7 +1380,7 @@ struct DrawerWall3D: NSViewRepresentable {
             var textMat: SCNMaterial?
             if let title {
                 let (x1, x2) = Self.folderTabX(index: index, width: width)
-                let label = title == "+" ? "+" : String(format: "%03d  %@", index, title.lowercased())
+                let label = title == "+" ? "+" : String(format: "%03d  %@", index, title)
                 let text = Self.textNode(label,
                                          maxWidth: (x2 - x1) - DrawerWall3D.folderTabSlant * 2 - 0.05,
                                          maxHeight: DrawerWall3D.folderTabH * 0.62)
