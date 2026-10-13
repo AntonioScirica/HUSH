@@ -1,0 +1,633 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Hush</title>
+    <link>https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/appcast.xml</link>
+    <description>Aggiornamenti di Hush per Mac</description>
+    <language>it</language>
+    <item>
+      <title>2.1.21</title>
+      <sparkle:version>34</sparkle:version>
+      <sparkle:shortVersionString>2.1.21</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 24 Sep 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Popup di ricerca (⌃⌘P) e barra di ricerca della parete: ora cercano in tutti i campi della voce (utente, url, note, campi personalizzati), non solo nel titolo</li>
+          <li>Entrambe le liste risultati ora scorrono: prima, oltre le prime righe, i risultati in più sparivano senza modo di raggiungerli</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="e2x0Dl/mHOJOr28aTQr424F+KPxZ2TqwcAjlsr4bQTivxQXRpbar4ZjyG6+rQv9sJaFlFhYymdMLwKQXWQbgCQ=="
+        length="3682515"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.20</title>
+      <sparkle:version>33</sparkle:version>
+      <sparkle:shortVersionString>2.1.20</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 16:30:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Estensione (Chrome/Safari): la ricerca nel menu di riempimento ora guarda anche in tutto il resto del caveau, non solo tra le voci di quel sito — utile se una voce non ha un url che combaci con la pagina aperta</li>
+          <li>Riconosciuto in automatico l'account già scelto dal sistema (es. lo switcher di Google) su schermi che chiedono solo la password</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="nEsd/JdKd5NWAIWmDXHcl6AK3jyImmoWDaLCxG0iHSgx0FD4aSM2rU/wIzOu8zpbly9MsIb37vkICAKW3Di0DQ=="
+        length="3680450"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.19</title>
+      <sparkle:version>32</sparkle:version>
+      <sparkle:shortVersionString>2.1.19</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 16:05:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Copiando cliccando sul rigo (non solo sull'iconcina) ora compare la stessa spunta di conferma del bottone dedicato</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="u4P25/ftmxRgOJUe/Ass2YXA4SXHQd+mlsRJyvAu4y/QXnky6qV5TP86PZKoq+kHvs5La/QwSAAD/e5TDyzVDw=="
+        length="3675461"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.18</title>
+      <sparkle:version>31</sparkle:version>
+      <sparkle:shortVersionString>2.1.18</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 15:50:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Nei campi personalizzati (id, secret, ecc.) si copia cliccando su tutto il rigo, non solo sull'iconcina</li>
+          <li>Meno spazio tra etichetta e valore, più spazio tra valore e icona</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="vVi6RklSs4Thr98DLgfiBPUU2RsVLOdp/CkeWqw3krhmCKr+Mlzv2IgAXRXTFs4fTrO4caPIKpiUqgWNUP1XDQ=="
+        length="3664957"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.17</title>
+      <sparkle:version>30</sparkle:version>
+      <sparkle:shortVersionString>2.1.17</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 15:35:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Le maiuscole nei nomi dei cassetti ora restano anche sulla targhetta 3D della parete, non solo negli elenchi — il lowercase forzato era rimasto lì</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="PuyKwm42M12JyuxWvT6jYg8SAUs7N31jZScNtCgyMGajh79mAvmpFi5o8AKSUaJb6EEl1nEojMYDZ1KD90HkCQ=="
+        length="3657457"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.16</title>
+      <sparkle:version>29</sparkle:version>
+      <sparkle:shortVersionString>2.1.16</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 15:20:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Un cassetto creato dal popup rapido (⌃⌘P) ora compare subito nella parete e nell'elenco, senza dover riaprire l'app</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="cO6l6OCflYDwKKena3iqrTn3tH5Ky46nFeAItCoPYs7kEjsJl7SDE8m0MT6fhQ2A8PXx0m/X780j2qbo5duNBw=="
+        length="3657713"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.15</title>
+      <sparkle:version>28</sparkle:version>
+      <sparkle:shortVersionString>2.1.15</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 15:00:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Popup rapido (⌃⌘P): si può creare un cassetto nuovo direttamente dalla tendina, senza passare dalla parete</li>
+          <li>I nomi dei cassetti ora mostrano le maiuscole come scritte, in tutta l'app</li>
+          <li>Nei dettagli di una voce, si copia cliccando su tutto il rigo del campo, non solo sull'iconcina</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="FiCLEc/OY+1hjliXEOzbqVJVAbFU6fwwwG8rkSttrSyxfQNBV+KBO9oLSnHYkgMhDEzViTXtvHfy6lIqoZ2HBA=="
+        length="3652862"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.14</title>
+      <sparkle:version>27</sparkle:version>
+      <sparkle:shortVersionString>2.1.14</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 14:40:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Popup rapido e popup di ricerca (⌃⌘P, ⌘P): se il caveau è già sbloccato non chiedono più Touch ID o password ogni volta</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="XX7SKSQ7IY7lC44eRTb/bMTSMlJuFA1B+wm/zMMUSjqJAp5ofvNFVeM/jgU8O7p4/r00JMoKP3FCEAjl/lj8Bw=="
+        length="3633000"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.13</title>
+      <sparkle:version>26</sparkle:version>
+      <sparkle:shortVersionString>2.1.13</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 14:25:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Scorciatoie invertite: ⌘P ora cerca una voce, ⌃⌘P crea una voce nuova (chi non le ha già cambiate a mano nelle Impostazioni)</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="C6/UXRu63HC88HlzA/jrkPfgeO16q185LJpdpgFZZfpFKZksHSkCHe21wjhh7OKjTac+GhZYe+KG33OcloPJBQ=="
+        length="3632734"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.12</title>
+      <sparkle:version>25</sparkle:version>
+      <sparkle:shortVersionString>2.1.12</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 14:10:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Popup di ricerca (⌃⌘P): scegliendo una voce ora si sceglie anche cosa copiare — utente, password, url, note o campi personalizzati, non più solo la password</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="dWPAbK6w5XpEqOuPPGh8ybrvC8/xXji5mq4j/078HfQit/vU/TTbM8XQ42eSy7gpXr40+o4bahB1El7g9wDWAQ=="
+        length="3632725"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.11</title>
+      <sparkle:version>24</sparkle:version>
+      <sparkle:shortVersionString>2.1.11</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 13:45:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Popup rapido (⌘P): la tendina del cassetto si apre come un dropdown normale sotto il campo, ad altezza fissa e scorrevole, senza tagli né sovrapposizioni</li>
+          <li>Popup di ricerca (⌃⌘P): la barra è centrata esattamente al centro dello schermo, in orizzontale e in verticale</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="hgEz2isvNVBTlWve8lCUJQKR1isyDe3/JL7amMRJ2Ass/pgJRNhsrZzU3WSxnp9hP0tKu2mqy2rVGJ42S+DVAQ=="
+        length="3597013"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.10</title>
+      <sparkle:version>23</sparkle:version>
+      <sparkle:shortVersionString>2.1.10</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 13:35:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Popup rapido (⌘P): la tendina del cassetto non viene più tagliata dall'editor sottostante</li>
+          <li>Popup di ricerca (⌃⌘P): la barra ora è centrata davvero al centro dello schermo</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="2wUxU/jDV8x8foP6CJsj4BlpnOzKBYZDjg+n+yWGwMsi8Q+uInoaPA+DEn34VmyE4Nvew92AAEezb90oT1beCg=="
+        length="3595502"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.9</title>
+      <sparkle:version>22</sparkle:version>
+      <sparkle:shortVersionString>2.1.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 13:15:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Popup rapido (⌘P): il menu del cassetto ora è una tendina flottante sopra l'editor, non spinge più giù titolo/utente/password mentre è aperta</li>
+          <li>Popup di ricerca (⌃⌘P): centrato per davvero al centro dello schermo</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="lboV1Pph2idZeClpjcdByevJezOI1hjLUjb6seExd+QF0YrVGkV0lIQfLhReU1hx+IkiJjFMBbr5OogFnzWAAA=="
+        length="3594860"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.8</title>
+      <sparkle:version>21</sparkle:version>
+      <sparkle:shortVersionString>2.1.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 23 Aug 2026 13:05:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Popup di ricerca (⌃⌘P): il pannello non si ridimensiona più a ogni risultato — misura fissa, niente più sbandamento</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="5FaUMsBJOloz9FjvGisk9XjqmEblSUeiLzmo8eD2l4ne/gKNidMcXNcVjwBewTMcib3JbNA/fSa2CQ9mon3WDg=="
+        length="3592699"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.7</title>
+      <sparkle:version>20</sparkle:version>
+      <sparkle:shortVersionString>2.1.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 23:25:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Touch ID definitivamente a posto: la voce del portachiavi veniva cancellata per sbaglio subito dopo il salvataggio (la pulizia della copia vecchia colpiva anche quella nuova). Ora la voce nuova ha un nome tutto suo e il giro completo — salva, rileggi, cancella — è verificato passo per passo</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="xkfMuS54aBVyqKP8WZmkesSbZ1FF8hazBYE4lsGE2XDPZJ/oBluuaj+4JSmo1HUh9l/erncSGe8MewVolHaXBg=="
+        length="3594345"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.6</title>
+      <sparkle:version>19</sparkle:version>
+      <sparkle:shortVersionString>2.1.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 23:10:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Rimessa a posto la voce del portachiavi per Touch ID: se manca si ricrea da sola al primo sblocco con password digitata</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="lag0LrtmNzAntQElkYbBZNqm5XbOnSURQQdcBJStkXa8xS6XJ+e6qbtOVUY3akxZ2TQmp3Ov00UuzkF/jP0kAg=="
+        length="3594147"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.5</title>
+      <sparkle:version>18</sparkle:version>
+      <sparkle:shortVersionString>2.1.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 03:30:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Touch ID torna a funzionare: una migrazione del portachiavi poteva perdere la voce salvata (cancellata prima che la copia nuova fosse scritta) — ora la copia vecchia sparisce solo a scrittura riuscita, e se la voce manca si ricrea da sola al primo sblocco con password digitata</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="ssnuVur4BiZgIo23nOYCccC5fzjjNwey1pX+Foq97y6f+UJRsCmxxntWLA1iUitusGuuQXmAyC7Ij4p0fCo8Bw=="
+        length="3595847"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.4</title>
+      <sparkle:version>17</sparkle:version>
+      <sparkle:shortVersionString>2.1.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 03:05:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>⌘P apre di nuovo l'aggiunta rapida: con due scorciatoie attive, entrambe finivano nella ricerca (⌃⌘P) — ognuna ora risponde solo alla propria combinazione</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="6kt5iVBIrRk7BHBeVvI2YZf6Bj56NdYqG57F6L759IhHCB/qCHkivEhd0v3DPp+iLL0lkbQCAIj3OYsohqeZBg=="
+        length="3595956"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.3</title>
+      <sparkle:version>16</sparkle:version>
+      <sparkle:shortVersionString>2.1.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 02:40:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Il pannello "Hush vuole utilizzare i dati riservati nel portachiavi" non compare più: la master password ora vive nel portachiavi moderno, legato all'app e non alla singola build. Alla prima apertura può chiederlo un'ultima volta per spostare la voce, poi mai più</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="1v6Wo8e0MUSrzXtYWK8cmHkqN8qaaGgwuyXV+zV3x/12jv89rHKQKTahBL4Aef8xwwtrTcYlj8Pf8xrL+TiwCQ=="
+        length="3595772"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.2</title>
+      <sparkle:version>15</sparkle:version>
+      <sparkle:shortVersionString>2.1.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 02:10:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Correzioni</h3>
+        <ul>
+          <li>Non chiede più la password del portachiavi di sistema a ogni sblocco: il controllo che decide quando riscrivere la voce del Keychain guardava solo il bundle id, non la firma vera, e con build diverse (test vs quella vera installata) non si accorgeva mai del cambio</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="pR/xoBvJ8iugL7RTpBLmT+N9dbhRmLApe43zRNZAOP+s/oF/FDINPXuJd1sdHuP7NH6OtBOM2B+E0tsjW3dmDA=="
+        length="3591850"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1.1</title>
+      <sparkle:version>14</sparkle:version>
+      <sparkle:shortVersionString>2.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 22 Aug 2026 01:35:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Numero di versione visibile in fondo alle Impostazioni</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="i2M3P1KCZMffNFfhdsgxAu5zz5JxRmcLypru05LN7UA37q3Ov58bhYM/ILYu0kRwGyV142RvcIHMAGoanySBAQ=="
+        length="3589601"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.1</title>
+      <sparkle:version>13</sparkle:version>
+      <sparkle:shortVersionString>2.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Fri, 21 Aug 2026 17:11:57 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Nuova scorciatoia ⌃⌘P: cerca una voce e copia la password senza aprire Hush</li>
+          <li>Le scorciatoie (aggiungi voce e cerca password) ora si possono cambiare da Impostazioni → Scorciatoie</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="2D44IyugSWIA2NJhuydmtZ7EQG3tkfgmTVf+QhxKuODR11beEhsyQwpkdUA0XYuVtqNNBm68NrwPZV697/0+Bw=="
+        length="3587998"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>2.0</title>
+      <sparkle:version>11</sparkle:version>
+      <sparkle:shortVersionString>2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 14:50:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Il Mac cerca da sé il telefono appena sblocchi Hush: niente più "Accendi la ricerca" da Impostazioni ogni volta</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="LlmpdCkE+x/aM0IK05tgFxZm5yPfhU7cYexHHvr/+o9t5p43dGr77OznaonVXWCeyaawM2StSckBEZYMwQa2AQ=="
+        length="3432325"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.9</title>
+      <sparkle:version>10</sparkle:version>
+      <sparkle:shortVersionString>1.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 03:40:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>La scorciatoia rapida (⌘P) non va più in crash e ora apre lo stesso editor della parete: categorie, campi per categoria e campi extra, identico a "nuova voce"</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="IJNlXMy13PGuJG9leKX1eshgKECB7UAw3JCX1Ohz1r3YZhYG3Z140D9zdfK/4mVNvE+MOiW7v7nxMJp5rds9BA=="
+        length="3415494"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.8</title>
+      <sparkle:version>9</sparkle:version>
+      <sparkle:shortVersionString>1.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 03:24:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Corretto un crash della scorciatoia rapida (⌘P) quando il vault principale era già sbloccato</li>
+          <li>Corretta la versione dell'app, rimasta bloccata su 1.0 fin dalla prima release: ora si aggiorna a ogni pubblicazione</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="pQevywPghx7d1SG91IZLJzJKOUZuqIG9bsqgnp5iUsEb7Z7z4Qrmbxu7xUZwe/cCidWbtDZ+JBAK7dVpSptgBw=="
+        length="3429449"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.7</title>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>1.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 02:56:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>L'icona nel Dock torna per default; nuovo interruttore "Mostra nel Dock" in Impostazioni per chi preferisce solo la menu bar</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="/FDtsm4RfIN48XWfBDGpVbEdoi2IxLfwe3+fTFG9w5ZVpb5bkPhVa1LBqwOUF66P/05QHD0tDfNWyCC9o2IZBw=="
+        length="3428067"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.6</title>
+      <sparkle:version>7</sparkle:version>
+      <sparkle:shortVersionString>1.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 02:45:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Hush ora vive nella menu bar: chiudere la finestra non chiude più l'app, l'estensione resta raggiungibile senza doverla riaprire ogni volta</li>
+          <li>Nuovo interruttore "Avvia al login" nelle Impostazioni</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="cQJmurazm9UKWBL1eZ0InxKEo40GK7pn8/ssV08anFmWkH10u6CzOIr3jbhtwGZJYLy7Awphq8wKoLtDw4nnCA=="
+        length="3426389"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.5</title>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>1.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 02:15:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Riempimento automatico: riconosce il sito anche con sottodomini (accounts.google.com, id.qualcosa.com…), non solo il dominio nudo</li>
+          <li>Estensione: campo email riconosciuto sempre, riempie solo l'email — la password resta separata</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="nINAKMd18mBCAwBs9jah1GwlZqHOsgWjF8S61vO0BRUqjcMxZlw072rppgDb06ogTQYT+g293zqrfAfTVi9iCw=="
+        length="3415667"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.4</title>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>1.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 01:13:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Il riempimento automatico ora combacia anche per titolo, non solo per URL — utile per le voci senza link salvato</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/hush.dmg"
+        sparkle:edSignature="1Dj2q1pkaw/zutPh909okFo/XU3Rr/Iu93HiSKS94OU64B2nVxAUgs0i/mdtSm8hKPKHRealc0KM2pB35LgTAA=="
+        length="3415038"
+        type="application/octet-stream"
+      />
+    </item>
+    <item>
+      <title>1.3</title>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>1.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 01:03:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>AutoFill di sistema su Mac (come 1Password): compare nel menu "chiave" dei campi password, non solo in Safari</li>
+          <li>Estensione Safari: il tasto 🔒 compare da solo appena tocchi il campo password</li>
+          <li>Impostazioni: stato vero dell'estensione Safari, e token pronto da copiare per l'estensione Chrome</li>
+          <li>La licenza attivata da Impostazioni spegne subito il promemoria della prova</li>
+        </ul>
+      ]]></description>
+    </item>
+    <item>
+      <title>1.2</title>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>1.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 11 Aug 2026 20:02:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Scorciatoia rapida (⌘P): aggiungi una password da qualunque app, senza aprire la finestra principale</li>
+          <li>Sblocco con Touch ID o master password prima di ogni aggiunta rapida</li>
+        </ul>
+      ]]></description>
+    </item>
+    <item>
+      <title>1.1</title>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 11 Aug 2026 19:20:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Novità</h3>
+        <ul>
+          <li>Nuova icona: il post-it con la chiave, come nell'app</li>
+          <li>Schermata di licenza scaduta ora centrata correttamente</li>
+          <li>Finestra di installazione disegnata su misura</li>
+        </ul>
+      ]]></description>
+    </item>
+    <item>
+      <title>1.0</title>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 11 Aug 2026 18:59:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Prima versione</h3>
+        <ul>
+          <li>Compilazione automatica delle password in Safari</li>
+          <li>Sincronizzazione Mac ↔ iPhone via WiFi, senza server</li>
+          <li>Aggiornamenti automatici</li>
+          <li>App notarizzata da Apple</li>
+        </ul>
+      ]]></description>
+    </item>
+  </channel>
+</rss>
