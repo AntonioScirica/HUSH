@@ -3,9 +3,7 @@
 Il gestore di password che resta sul tuo Mac. Niente server, niente account:
 le tue password stanno in file che possiedi tu, nel formato aperto di KeePass.
 
-[![Hush in 20 secondi](docs/hush-demo.gif)](docs/hush-demo.mp4)
-
-[Guarda il video con l'audio](docs/hush-demo.mp4)
+![Hush in 25 secondi](docs/hush-demo.gif)
 
 ## Scarica
 
