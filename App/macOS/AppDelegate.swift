@@ -39,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         // Se è passata una settimana dall'ultimo backup su Drive, parte da
         // sé — non costa niente controllare se non è ancora il momento.
-        Task { await GoogleDriveBackup.backupIfDue() }
+        if !DemoMode.attivo { Task { await GoogleDriveBackup.backupIfDue() } }
 
         setupStatusItem()
         NSApp.setActivationPolicy(Preferences.mostraDock ? .regular : .accessory)

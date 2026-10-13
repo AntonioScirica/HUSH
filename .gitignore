@@ -20,3 +20,6 @@ Packages/
 # Chiavi di firma delle licenze: mai nel repository
 *CHIAVE-PRIVATA*
 scrigno-licenze/
+
+# Video di lancio (brag)
+brag-output/

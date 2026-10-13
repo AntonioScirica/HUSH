@@ -46,9 +46,12 @@ public struct RootView: View {
     public init() {
         // Prima di qualunque lettura: l'app si chiamava Scrigno, e i suoi
         // dati stanno ancora sotto quel nome.
-        Migration.run()
+        // in demo niente migrazione: copierebbe nella copia demo le
+        // preferenze e la cartella del vecchio Scrigno, cioè dati veri
+        if !DemoMode.attivo { Migration.run() }
         VaultTransfer.assegnaIconeDalNome()
         Preferences.registerDefaults()
+        DemoMode.seedIfNeeded()
     }
 
     private func lockUp() {
@@ -226,10 +229,14 @@ public struct RootView: View {
                 // Sbloccato Hush, l'ascolto parte da sé: il telefono deve
                 // trovare il Mac senza passare prima da Impostazioni ad
                 // accenderlo a mano.
-                sync.avviaAscolto()
-                // l'estensione Safari compila le password parlando in loopback
-                // con questo bridge: sbloccato Hush, sblocca anche lui.
-                LocalBridgeServer.shared.start()
+                // in demo niente sync col telefono né bridge per le
+                // estensioni: parlerebbero con i dispositivi e i browser veri
+                if !DemoMode.attivo {
+                    sync.avviaAscolto()
+                    // l'estensione Safari compila le password parlando in
+                    // loopback con questo bridge: sbloccato Hush, sblocca anche lui.
+                    LocalBridgeServer.shared.start()
+                }
             } else {
                 // richiuso Hush: l'ascolto si ferma comunque, di sicuro
                 sync.ferma()

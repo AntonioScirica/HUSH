@@ -3,6 +3,8 @@
 Il gestore di password che resta sul tuo Mac. Niente server, niente account:
 le tue password stanno in file che possiedi tu, nel formato aperto di KeePass.
 
+[![Guarda Hush in 20 secondi](docs/hush-demo.jpg)](docs/hush-demo.mp4)
+
 ## Scarica
 
 ### ⬇️ [Scarica Hush per Mac](https://github.com/AntonioScirica/hush/releases/latest/download/Hush.dmg)

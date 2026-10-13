@@ -134,6 +134,15 @@ final class VaultFileManager {
     /// Dove finiscono i cassetti se non scegli tu.
     static var cartellaPredefinita: URL {
         #if os(macOS)
+        #if DEBUG
+        // Modalità demo (vedi DemoMode): i .kdbx finti in una cartella a
+        // parte, mai accanto ai vault veri. Il flag è letto qui direttamente
+        // perché questo file è compilato anche nelle estensioni, che non
+        // includono DemoMode.
+        if ProcessInfo.processInfo.environment["HUSH_DEMO"] == "1" {
+            return FileManager.default.temporaryDirectory.appendingPathComponent("hush-demo", isDirectory: true)
+        }
+        #endif
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Hush", isDirectory: true)
         #else
