@@ -1,7 +1,7 @@
-# Specifica XcodeGen per Scrigno.
+# Specifica XcodeGen per Hush.
 #
 # Uso: installa XcodeGen una volta (`brew install xcodegen`), poi da questa
-# cartella lancia `xcodegen generate` per creare Scrigno.xcodeproj, quindi
+# cartella lancia `xcodegen generate` per creare Hush.xcodeproj, quindi
 # aprilo con Xcode. Vedi ISTRUZIONI.md per i passaggi completi, incluso cosa
 # personalizzare (Team ID, bundle identifier, App Group).
 #
@@ -9,7 +9,7 @@
 # XcodeGen a partire dalle sezioni `info:` / `entitlements:` qui sotto — non
 # servono file .plist scritti a mano.
 
-name: Scrigno
+name: Hush
 options:
   bundleIdPrefix: com.antonioscirica
   deploymentTarget:
@@ -32,7 +32,7 @@ packages:
     from: 2.6.4
 
 targets:
-  Scrigno-macOS:
+  Hush-macOS:
     type: application
     platform: macOS
     deploymentTarget: "14.0"
@@ -44,9 +44,9 @@ targets:
         product: VaultCore
       - package: Sparkle
         product: Sparkle
-      - target: ScrignoSafariExtension
+      - target: HushSafariExtension
         embed: true
-      - target: ScrignoMacAutoFill
+      - target: HushMacAutoFill
         embed: true
     settings:
       base:
@@ -114,12 +114,12 @@ targets:
         SUEnableAutomaticChecks: true
         SUScheduledCheckInterval: 86400
     entitlements:
-      path: App/macOS/Scrigno-macOS.entitlements
+      path: App/macOS/Hush-macOS.entitlements
       properties:
         keychain-access-groups:
           - 69SHH7M6DY.com.antonioscirica.hush.bridge
 
-  Scrigno-iOS:
+  Hush-iOS:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
@@ -129,7 +129,7 @@ targets:
     dependencies:
       - package: VaultCore
         product: VaultCore
-      - target: ScrignoAutoFill
+      - target: HushAutoFill
         embed: true
     settings:
       base:
@@ -179,7 +179,7 @@ targets:
         NSBonjourServices:
           - _hush-sync._tcp
     entitlements:
-      path: App/iOS/Scrigno-iOS.entitlements
+      path: App/iOS/Hush-iOS.entitlements
       properties:
         # Apple valida l'upload su App Store Connect anche sull'app
         # contenitore, non solo sull'estensione: senza questa riga qui
@@ -191,7 +191,7 @@ targets:
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.antonioscirica.scrigno.shared
 
-  ScrignoAutoFill:
+  HushAutoFill:
     type: app-extension
     platform: iOS
     deploymentTarget: "17.0"
@@ -237,7 +237,7 @@ targets:
               ProvidesPasskeys: false
         NSFaceIDUsageDescription: "Hush usa Face ID per sbloccare rapidamente il tuo vault."
     entitlements:
-      path: AutoFillExtension/ScrignoAutoFill.entitlements
+      path: AutoFillExtension/HushAutoFill.entitlements
       properties:
         com.apple.developer.authentication-services.autofill-credential-provider: true
         com.apple.security.application-groups:
@@ -245,7 +245,7 @@ targets:
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.antonioscirica.scrigno.shared
 
-  ScrignoSafariExtension:
+  HushSafariExtension:
     type: app-extension
     platform: macOS
     deploymentTarget: "14.0"
@@ -282,7 +282,7 @@ targets:
         keychain-access-groups:
           - 69SHH7M6DY.com.antonioscirica.hush.bridge
 
-  ScrignoMacAutoFill:
+  HushMacAutoFill:
     type: app-extension
     platform: macOS
     deploymentTarget: "14.0"
@@ -318,18 +318,18 @@ targets:
     # dallo stesso posto, senza bisogno di App Group.
 
 schemes:
-  Scrigno-macOS:
+  Hush-macOS:
     build:
       targets:
-        Scrigno-macOS: all
-        ScrignoSafariExtension: all
-        ScrignoMacAutoFill: all
+        Hush-macOS: all
+        HushSafariExtension: all
+        HushMacAutoFill: all
     run:
       config: Debug
-  Scrigno-iOS:
+  Hush-iOS:
     build:
       targets:
-        Scrigno-iOS: all
-        ScrignoAutoFill: all
+        Hush-iOS: all
+        HushAutoFill: all
     run:
       config: Debug

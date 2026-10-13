@@ -3,7 +3,9 @@
 Il gestore di password che resta sul tuo Mac. Niente server, niente account:
 le tue password stanno in file che possiedi tu, nel formato aperto di KeePass.
 
-[![Guarda Hush in 20 secondi](docs/hush-demo.jpg)](docs/hush-demo.mp4)
+[![Hush in 20 secondi](docs/hush-demo.gif)](docs/hush-demo.mp4)
+
+[Guarda il video con l'audio](docs/hush-demo.mp4)
 
 ## Scarica
 
@@ -44,7 +46,7 @@ Servono Xcode 16+ e [XcodeGen](https://github.com/yonaskolb/XcodeGen):
 cd VaultCore && swift test && cd ..   # verifica la parte crittografica
 brew install xcodegen
 xcodegen generate
-open Scrigno.xcodeproj
+open Hush.xcodeproj
 ```
 
 `project.yml` usa il team Apple Developer e gli identificativi dell'autore. Per
