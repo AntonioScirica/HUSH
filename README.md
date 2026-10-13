@@ -13,7 +13,8 @@ le tue password stanno in file che possiedi tu, nel formato aperto di KeePass.
 2. Trascina l'icona di Hush nella cartella **Applicazioni**.
 3. Apri Hush da Applicazioni (o da Spotlight) e scegli la tua password principale.
 
-Serve macOS 14 (Sonoma) o successivo. L'app è firmata e verificata da Apple, si
+Hush è solo per Mac: serve macOS 14 (Sonoma) o successivo. Non esiste una
+versione per Windows o Linux. L'app è firmata e verificata da Apple, si
 apre senza avvisi e si aggiorna da sola quando esce una nuova versione.
 
 ## Cosa fa
