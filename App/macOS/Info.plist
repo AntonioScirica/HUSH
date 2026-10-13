@@ -35,7 +35,7 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/AntonioScirica/HUSH/master/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>MG3Sq4+mqad/IhevSFSj3xupTO14vk2hZSKHcivJilA=</string>
 	<key>SUScheduledCheckInterval</key>

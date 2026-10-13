@@ -4,10 +4,8 @@ import AppKit
 #endif
 import VaultCore
 
-/// Trasloco delHush da un computer all'altro.
-///
-/// Serve quando si stacca la licenza da un Mac per attaccarla a un altro: la
-/// licenza da sola non basta, dall'altra parte servono anche i cassetti.
+/// Trasloco di Hush da un computer all'altro: dall'altra parte servono i
+/// cassetti.
 ///
 /// Quel che esce è una cartella con dentro i `.kdbx` così come sono — già
 /// cifrati con la master password, quindi il trasloco non li espone mai in

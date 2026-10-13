@@ -21,8 +21,8 @@ settings:
   base:
     DEVELOPMENT_TEAM: "" # <-- inserisci qui il tuo Team ID (Xcode > Signing & Capabilities)
     SWIFT_VERSION: "5.9"
-    MARKETING_VERSION: "2.1.21"
-    CURRENT_PROJECT_VERSION: "34"
+    MARKETING_VERSION: "2.2.0"
+    CURRENT_PROJECT_VERSION: "35"
 
 packages:
   VaultCore:
@@ -109,7 +109,7 @@ targets:
         # verificare che ogni update sia firmato da chi ha la privata (sul
         # Mac di build, nel Keychain — mai nel repo). Vedi ISTRUZIONI.md
         # per come si pubblica una nuova versione.
-        SUFeedURL: "https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/appcast.xml"
+        SUFeedURL: "https://raw.githubusercontent.com/AntonioScirica/HUSH/master/appcast.xml"
         SUPublicEDKey: "MG3Sq4+mqad/IhevSFSj3xupTO14vk2hZSKHcivJilA="
         SUEnableAutomaticChecks: true
         SUScheduledCheckInterval: 86400

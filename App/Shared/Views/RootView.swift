@@ -12,13 +12,6 @@ public struct RootView: View {
     @State private var lockedByHand = false
     /// Richiude Hush lasciato lì aperto.
     @StateObject private var idle = IdleWatcher()
-    /// Prova finita e nessuna licenza: si passa dal muro, non dai cassetti.
-    /// Vale anche su iOS ora: da quando l'onboarding permette di creare il
-    /// vault direttamente sul telefono (senza Mac), la licenza è l'unica
-    /// cosa che distingue prova da acquisto — stessa licenza, stessa
-    /// chiave pubblica, vale su entrambe le piattaforme.
-    @State private var licensed = License.isLicensed
-    @State private var trialLeft = License.trialDaysLeft
     @State private var openSettings = false
     /// Nome dell'app all'avvio: parte centrato e scivola nella posizione
     /// del titolo del primo passo dell'onboarding (misurata dal vivo), poi
@@ -67,12 +60,7 @@ public struct RootView: View {
 
     public var body: some View {
         Group {
-            if !licensed && trialLeft <= 0 {
-                LicenseWall {
-                    licensed = true
-                    trialLeft = License.trialDaysLeft
-                }
-            } else if !configured {
+            if !configured {
                 OnboardingView(titoloNascosto: showSplash) {
                     // niente dissolvenza qui: la porta deve comparire già
                     // chiusa e opaca, non in fade — altrimenti sotto si
@@ -121,11 +109,7 @@ public struct RootView: View {
                     ProjectsHomeView(
                         onLock: { lockUp() },
                         chromeVisible: unlocked,
-                        showSettingsSignal: $openSettings,
-                        onSettingsClosed: {
-                            licensed = License.isLicensed
-                            trialLeft = License.trialDaysLeft
-                        }
+                        showSettingsSignal: $openSettings
                     )
                     .environmentObject(vm)
                     // a scrigno chiuso si guarda soltanto: niente click che
@@ -133,30 +117,6 @@ public struct RootView: View {
                     .allowsHitTesting(unlocked)
                     }
                     #endif
-
-                    // promemoria della prova nell'angolo, fuori dai piedi:
-                    // in alto sulla parete, in basso nella vista a elenco
-                    // (lì sopra c'è la barra laterale coi progetti) — su
-                    // iOS conta come vista a elenco, stesso posizionamento.
-                    #if os(macOS)
-                    let vistaAElenco = vistaClassica
-                    #else
-                    let vistaAElenco = true
-                    #endif
-                    if !licensed && unlocked && !DemoMode.attivo {
-                        VStack {
-                            if vistaAElenco { Spacer() }
-                            HStack {
-                                // vista a elenco: in basso a destra, fuori
-                                // dalla sidebar. Parete: in alto a sinistra.
-                                if vistaAElenco { Spacer() }
-                                TrialBanner { openSettings = true }
-                                if !vistaAElenco { Spacer() }
-                            }
-                            if !vistaAElenco { Spacer() }
-                        }
-                        .padding(20)
-                    }
 
                     if !unlocked {
                         VaultDoorView(closing: lockedByHand,
@@ -188,10 +148,6 @@ public struct RootView: View {
             // si lascia la vista classica: il suo store va chiuso, così la
             // parete rilegge da disco e non restano due copie in memoria
             if !classica { vm.lock() }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: License.changed)) { _ in
-            licensed = License.isLicensed
-            trialLeft = License.trialDaysLeft
         }
         #if os(macOS)
         .onChange(of: unlocked) { _, on in

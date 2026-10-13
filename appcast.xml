@@ -2,9 +2,30 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Hush</title>
-    <link>https://ndbiydpyjrgflmhtuxuw.supabase.co/storage/v1/object/public/assets/appcast.xml</link>
+    <link>https://raw.githubusercontent.com/AntonioScirica/HUSH/master/appcast.xml</link>
     <description>Aggiornamenti di Hush per Mac</description>
     <language>it</language>
+    <item>
+      <title>2.2.0</title>
+      <sparkle:version>35</sparkle:version>
+      <sparkle:shortVersionString>2.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 13 Oct 2026 16:30:00 +0000</pubDate>
+      <description><![CDATA[
+        <h3>Hush è gratis</h3>
+        <ul>
+          <li>Niente più prova a tempo né licenza: Hush è gratis e open source, con licenza MIT</li>
+          <li>Il codice è pubblico su GitHub: github.com/AntonioScirica/HUSH</li>
+          <li>Gli aggiornamenti ora arrivano da GitHub</li>
+        </ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/AntonioScirica/HUSH/releases/download/v2.2.0/Hush.dmg"
+        sparkle:edSignature="DOQA3ODbhkjgZ8ej1pc+oZLW1Whjaz53j2HZhquMAensELvutIvBOmtR18Zb+2uIFwJoT/fKxV1miyiTJzA+AQ=="
+        length="3618737"
+        type="application/octet-stream"
+      />
+    </item>
     <item>
       <title>2.1.21</title>
       <sparkle:version>34</sparkle:version>

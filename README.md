@@ -31,7 +31,7 @@ apre senza avvisi e si aggiorna da sola quando esce una nuova versione.
 - **Riempimento automatico** su iPhone, su Mac, in Safari (inclusa nell'app) e
   in Chrome con l'[estensione dal Chrome Web Store](https://chromewebstore.google.com/detail/hush/pfifohnafgmhkdfeahhpojbbehoigean).
 
-Le versioni ufficiali chiedono una licenza dopo 7 giorni di prova.
+Gratis, senza prova a tempo né licenze.
 
 ---
 
@@ -64,8 +64,6 @@ Team ID). Guida passo passo in [ISTRUZIONI.md](ISTRUZIONI.md).
 
 L'estensione Chrome è in un repository a parte:
 [hush-chrome-extension](https://github.com/AntonioScirica/hush-chrome-extension).
-
-Le licenze sono firmate con Ed25519: nel codice c'è solo la chiave pubblica.
 
 ## Licenza
 

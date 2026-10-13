@@ -28,8 +28,6 @@ struct SettingsView: View {
     /// Chiave appena generata: mostrata finché la finestra resta aperta.
     @State private var newRecovery: String?
     @State private var confirmRegenerate = false
-    @State private var licenseText = ""
-    @State private var confirmDetach = false
     /// I dati viaggiano CON la presentazione, non in uno stato letto a parte:
     /// assegnare l'elenco e alzare un flag nello stesso istante faceva
     /// costruire la sheet con lo stato di prima, cioè vuota, la prima volta.
@@ -79,66 +77,6 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Solo Mac: la licenza si compra e si attiva lì. Il
-                    // telefono non funziona da solo comunque (l'onboarding
-                    // pretende i cassetti del Mac), quindi non ha un suo
-                    // conto alla rovescia — vedi RootView.
-                    section("Licenza")
-
-                    if let info = License.active {
-                        HStack(spacing: 8) {
-                            Image(systemName: "checkmark.seal")
-                            Text("Attiva · \(info.email)")
-                                .font(Theme.mono(11, .semibold))
-                        }
-                        .foregroundStyle(Theme.ink)
-
-                        Text("Vale per un dispositivo. Per spostarla su un altro staccala da qui, poi esporta i cassetti e riattivala di là.")
-                            .font(Theme.mono(10))
-                            .foregroundStyle(Theme.inkSoft)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Button { confirmDetach = true } label: {
-                            Label("Stacca da questo dispositivo", systemImage: "rectangle.portrait.and.arrow.right")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(OutlineButtonStyle())
-                    } else {
-                        Text(License.trialDaysLeft > 0
-                             ? "Prova: mancano \(License.trialDaysLeft) giorni."
-                             : "La prova è finita: inserisci la licenza per continuare.")
-                            .font(Theme.mono(10))
-                            .foregroundStyle(License.trialDaysLeft > 0 ? Theme.inkSoft : Theme.danger)
-
-                        // Dirlo prima, non quando succede: chi affida le
-                        // proprie password a un programma ha diritto di
-                        // sapere in partenza cosa gli resta in mano.
-                        Text("Passati i 7 giorni Hush si blocca: i cassetti non si aprono più da qui finché non attivi la licenza.\n\nquello che ci hai messo dentro resta comunque tuo: dalla schermata di blocco puoi sempre portartelo via, e lo riapri anche senza Hush.")
-                            .font(Theme.mono(10))
-                            .foregroundStyle(Theme.inkSoft)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        TextField("Incolla qui la licenza", text: $licenseText, axis: .vertical)
-                            .textFieldStyle(PaperFieldStyle())
-                            .lineLimit(1...4)
-
-                        Button {
-                            if License.register(licenseText) != nil {
-                                licenseText = ""; note = "Licenza attivata."; error = nil
-                            } else {
-                                error = "Questa licenza non è valida."
-                            }
-                        } label: {
-                            Label("Attiva", systemImage: "checkmark.seal")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(OutlineButtonStyle())
-                        .disabled(licenseText.isEmpty)
-                    }
-
-                    divider
                     section("Chiave d'accesso")
 
                     if MasterKey.biometryAvailable {
@@ -548,12 +486,6 @@ struct SettingsView: View {
                 importJob = nil
             }
             .sheetPaperLocal()
-        }
-        .alert("Staccare la licenza da questo computer?", isPresented: $confirmDetach) {
-            Button("Annulla", role: .cancel) {}
-            Button("Stacca", role: .destructive) { License.detach(); onClose() }
-        } message: {
-            Text("Hush tornerà bloccato qui e potrai attivare la licenza su un altro Mac.\n\nI cassetti restano su questo computer: se ti servono di là, esportali PRIMA di staccare.")
         }
         .alert("Rigenerare la chiave di recupero?", isPresented: $confirmRegenerate) {
             Button("Annulla", role: .cancel) {}

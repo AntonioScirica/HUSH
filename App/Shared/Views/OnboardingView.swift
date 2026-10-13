@@ -72,8 +72,7 @@ struct OnboardingView: View {
     /// direttamente qui — Apple ha rifiutato l'app (Guideline 5.6) perché
     /// senza questa via il reviewer restava bloccato per sempre alla
     /// ricerca del Mac, un pattern che il loro sistema legge come
-    /// funzionalità nascosta. La prova di 7 giorni e la licenza (vedi
-    /// License.swift) restano invariate: non è più "o Mac o niente".
+    /// funzionalità nascosta: non è più "o Mac o niente".
     @State private var creaSenzaMac = false
     /// Se il permesso "Rete locale" è negato, la ricerca resta in silenzio
     /// per sempre — niente errore, niente peer, un'attesa che non finisce
@@ -262,8 +261,8 @@ struct OnboardingView: View {
                        "Tutto organizzato in cassetti, ognuno racchiude i dati di un progetto.")
                 bullet("Una chiave per aprirle tutte",
                        "Una sola password sblocca tutti i cassetti.")
-                bullet("7 giorni di prova",
-                       "Poi serve una licenza. Quello che hai messo dentro resta tuo: puoi portartelo via quando vuoi.")
+                bullet("Gratis e open source",
+                       "Niente prova, niente licenza. Quello che ci metti dentro resta tuo: puoi portartelo via quando vuoi.")
             }
         }
     }
