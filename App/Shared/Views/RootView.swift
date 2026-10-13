@@ -143,7 +143,7 @@ public struct RootView: View {
                     #else
                     let vistaAElenco = true
                     #endif
-                    if !licensed && unlocked {
+                    if !licensed && unlocked && !DemoMode.attivo {
                         VStack {
                             if vistaAElenco { Spacer() }
                             HStack {

@@ -975,6 +975,21 @@ struct ProjectsHomeView: View {
             // i vault si aprono in anticipo, in sottofondo: così cliccando un
             // cassetto le cartelle ci sono già invece di comparire dopo
             Task { await library.preload(projects) }
+            // Modalità demo: apre da sé un cassetto ed estrae una cartella,
+            // così il video si registra solo da tastiera, senza clic.
+            if DemoMode.attivo, let p = projects.first(where: { $0.name == "Streaming" }) {
+                Task { @MainActor in
+                    // la parete può stare già sotto la porta chiusa: si
+                    // aspetta lo sblocco e la fine dell'animazione della porta
+                    while !MasterKey.isUnlocked { try? await Task.sleep(for: .seconds(0.2)) }
+                    try? await Task.sleep(for: .seconds(3.5))
+                    openEntry(project: p, folder: 1)
+                    try? await Task.sleep(for: .seconds(5.5))
+                    selectedFolder = nil
+                    try? await Task.sleep(for: .seconds(1.0))
+                    openCell = nil
+                }
+            }
         }
         // Un cassetto può nascere fuori da qui — dal popup rapido ⌃⌘P, per
         // esempio: senza questo la parete restava vecchia finché non si
