@@ -24,7 +24,8 @@ apre senza avvisi e si aggiorna da sola quando esce una nuova versione.
 - **Scorciatoie da qualsiasi app**: `⌘P` cerca una voce e ne copia password,
   utente o qualsiasi altro campo; `⌃⌘P` aggiunge una voce al volo. Si
   cambiano nelle Impostazioni.
-- **Riempimento automatico** su iPhone, su Mac, in Safari e in Chrome.
+- **Riempimento automatico** su iPhone, su Mac, in Safari (inclusa nell'app) e
+  in Chrome con l'[estensione dal Chrome Web Store](https://chromewebstore.google.com/detail/hush/pfifohnafgmhkdfeahhpojbbehoigean).
 
 Le versioni ufficiali chiedono una licenza dopo 7 giorni di prova.
 
